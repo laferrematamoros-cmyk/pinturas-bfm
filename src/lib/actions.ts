@@ -24,10 +24,24 @@ export async function loadColorSettings(): Promise<
   return result;
 }
 
-export async function saveColorPrices(code: string, prices: Record<string, string>): Promise<void> {
+export async function loadDurabilityPrices(): Promise<Record<string, string>> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "durability_prices")
+    .single();
+  if (!data?.value) return {};
+  try {
+    return JSON.parse(data.value) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+export async function saveDurabilityPrices(prices: Record<string, string>): Promise<void> {
   await supabaseAdmin
-    .from("color_settings")
-    .upsert({ code, prices, updated_at: new Date().toISOString() }, { onConflict: "code" });
+    .from("site_settings")
+    .upsert({ key: "durability_prices", value: JSON.stringify(prices) }, { onConflict: "key" });
 }
 
 export async function saveColorHex(code: string, hex: string): Promise<void> {

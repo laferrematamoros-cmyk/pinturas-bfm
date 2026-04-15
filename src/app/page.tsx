@@ -7,7 +7,8 @@ import {
   saveColorHex,
   deleteColorHex,
   saveColorDurability,
-  saveColorPrices,
+  loadDurabilityPrices,
+  saveDurabilityPrices,
   loadSiteSettings,
   saveSiteName,
   saveSiteLogoUrl,
@@ -503,9 +504,9 @@ export default function Home() {
   const [selectedColor, setSelectedColor] = useState<Color | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [durability, setDurability] = useState<Record<string, number[]>>({});
-  const [prices, setPrices] = useState<Record<string, Record<string, string>>>({});
+  const [durabilityPrices, setDurabilityPrices] = useState<Record<string, string>>({});
+  const [editDurabilityPrices, setEditDurabilityPrices] = useState<Record<string, string>>({});
   const [editHex, setEditHex] = useState("");
-  const [editPrice, setEditPrice] = useState<Record<string, string>>({});
   const [savedFlash, setSavedFlash] = useState(false);
   const [eyedropperSupported] = useState(() => typeof window !== "undefined" && "EyeDropper" in window);
 
@@ -531,21 +532,20 @@ export default function Home() {
     loadColorSettings().then((data) => {
       const hexMap: Record<string, string> = {};
       const durMap: Record<string, number[]> = {};
-      const priceMap: Record<string, Record<string, string>> = {};
       for (const [code, val] of Object.entries(data)) {
         if (val.hex) hexMap[code] = val.hex;
         if (val.durability_years?.length) durMap[code] = val.durability_years;
-        if (val.prices) priceMap[code] = val.prices;
       }
       setOverrides(hexMap);
       setDurability(durMap);
-      setPrices(priceMap);
     });
     // Load site branding from Supabase
     loadSiteSettings().then(({ name, logoUrl: logo }) => {
       setSiteName(name);
       if (logo) setLogoUrl(logo);
     });
+    // Load global durability prices
+    loadDurabilityPrices().then((p) => setDurabilityPrices(p));
   }, []);
 
   function handleUserClick() {
@@ -578,6 +578,7 @@ export default function Home() {
   function openSiteSettings() {
     setEditSiteName(siteName);
     setEditLogoUrl(logoUrl);
+    setEditDurabilityPrices({ ...durabilityPrices });
     setShowSiteSettings(true);
     setShowAdminMenu(false);
   }
@@ -596,6 +597,7 @@ export default function Home() {
     setLogoSaveError("");
     try {
       await saveSiteName(editSiteName);
+      await saveDurabilityPrices(editDurabilityPrices);
       if (editLogoUrl && editLogoUrl.startsWith("data:")) {
         // Nueva imagen — subir a Supabase Storage
         const mime = editLogoUrl.split(";")[0].replace("data:", "");
@@ -613,14 +615,14 @@ export default function Home() {
       return;
     }
     setSiteName(editSiteName);
+    setDurabilityPrices(editDurabilityPrices);
     setShowSiteSettings(false);
   }
 
-  // Sync editHex and editPrice when selected color changes
+  // Sync editHex when selected color changes
   React.useEffect(() => {
     if (selectedColor) {
       setEditHex(overrides[selectedColor.code] ?? selectedColor.hex);
-      setEditPrice(prices[selectedColor.code] ?? {});
     }
   }, [selectedColor?.code]);
 
@@ -633,11 +635,9 @@ export default function Home() {
     const normalized = editHex.startsWith("#") ? editHex : "#" + editHex;
     setOverrides((prev) => ({ ...prev, [selectedColor.code]: normalized }));
     setSelectedColor({ ...selectedColor, hex: normalized });
-    setPrices((prev) => ({ ...prev, [selectedColor.code]: editPrice }));
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
     await saveColorHex(selectedColor.code, normalized);
-    await saveColorPrices(selectedColor.code, editPrice);
   }
 
   async function handleEyedropper() {
@@ -814,6 +814,23 @@ export default function Home() {
               className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-400 mb-6"
               placeholder="Pinturas BFM"
             />
+
+            {/* Precios por durabilidad */}
+            <p className="text-xs font-semibold text-gray-600 mb-2">Precios por durabilidad</p>
+            <div className="flex flex-col gap-2 mb-6">
+              {DURABILITY_OPTIONS.map((opt) => (
+                <div key={opt.years} className="flex items-center gap-3">
+                  <span className="text-xs text-gray-500 w-16 flex-shrink-0">{opt.years} años</span>
+                  <input
+                    type="text"
+                    value={editDurabilityPrices[String(opt.years)] ?? ""}
+                    onChange={(e) => setEditDurabilityPrices((prev) => ({ ...prev, [String(opt.years)]: e.target.value }))}
+                    placeholder="ej: $350"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+                  />
+                </div>
+              ))}
+            </div>
 
             {logoSaveError && (
               <p className="text-[11px] text-red-400 mb-3">{logoSaveError}</p>
@@ -1028,31 +1045,23 @@ export default function Home() {
                                     <div className="flex flex-col gap-1.5">
                                       {DURABILITY_OPTIONS.map((opt) => {
                                         const checked = (durability[selectedColor.code] ?? []).includes(opt.years);
-                                        const yearKey = String(opt.years);
+                                        const price = durabilityPrices[String(opt.years)];
                                         return (
-                                          <div key={opt.years} className="flex flex-col gap-1">
-                                            <label
-                                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-[11px] cursor-pointer select-none transition-colors ${
-                                                checked ? "bg-teal-500 border-teal-500 text-white" : "bg-white border-gray-200 text-gray-600 hover:border-teal-300"
-                                              }`}
-                                            >
-                                              <div className="flex items-center gap-2">
-                                                <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDurability(selectedColor.code, opt.years)} />
-                                                <span className="font-semibold">{opt.years} años</span>
-                                              </div>
+                                          <label
+                                            key={opt.years}
+                                            className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-[11px] cursor-pointer select-none transition-colors ${
+                                              checked ? "bg-teal-500 border-teal-500 text-white" : "bg-white border-gray-200 text-gray-600 hover:border-teal-300"
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDurability(selectedColor.code, opt.years)} />
+                                              <span className="font-semibold">{opt.years} años</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              {price && <span className={checked ? "text-white font-bold" : "text-teal-600 font-bold"}>{price}</span>}
                                               <span className={checked ? "text-white/80" : "text-gray-400"}>{opt.yield}</span>
-                                            </label>
-                                            {checked && (
-                                              <input
-                                                type="text"
-                                                value={editPrice[yearKey] ?? ""}
-                                                onChange={(e) => setEditPrice((prev) => ({ ...prev, [yearKey]: e.target.value }))}
-                                                placeholder={`Precio ${opt.years} años (ej: $350)`}
-                                                className="w-full border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 focus:outline-none focus:border-teal-400"
-                                                onClick={(e) => e.stopPropagation()}
-                                              />
-                                            )}
-                                          </div>
+                                            </div>
+                                          </label>
                                         );
                                       })}
                                     </div>
@@ -1078,8 +1087,7 @@ export default function Home() {
                                         <p className="text-[11px] font-semibold text-gray-500 mb-1.5">Rendimiento aproximado</p>
                                         <div className="flex flex-col gap-1.5">
                                           {selected.map((opt) => {
-                                            const yearKey = String(opt.years);
-                                            const price = prices[selectedColor.code]?.[yearKey];
+                                            const price = durabilityPrices[String(opt.years)];
                                             return (
                                               <div
                                                 key={opt.years}
