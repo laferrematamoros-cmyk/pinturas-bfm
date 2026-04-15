@@ -1109,13 +1109,33 @@ export default function Home() {
         <>
             {/* Title */}
             <h1 className="text-center text-3xl font-light text-gray-800 mb-5">
-              Elegí tu paleta de colores
+              Elige tu paleta de colores
             </h1>
+
+            {/* Search */}
+            <div className="flex justify-center mb-6 px-4">
+              <div className="relative w-full max-w-lg">
+                <svg
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Buscar color"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-gray-400 text-gray-700"
+                />
+              </div>
+            </div>
 
             {/* Quality / price selector */}
             {DURABILITY_OPTIONS.some((opt) => durabilityPrices[String(opt.years)]) && (
               <div className="px-4 mb-6">
-                <p className="text-center text-xs text-gray-400 mb-3 uppercase tracking-widest font-medium">
+                <p className="text-center text-base text-gray-900 mb-3 uppercase tracking-widest font-bold">
                   Filtrá por calidad y precio
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
@@ -1173,26 +1193,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Search */}
-            <div className="flex justify-center mb-6 px-4">
-              <div className="relative w-full max-w-lg">
-                <svg
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Buscar color"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-gray-400 text-gray-700"
-                />
-              </div>
-            </div>
-
             {search.trim() ? (
               /* Search results - show all matching colors */
               <div className="px-4 pb-10">
@@ -1222,7 +1222,7 @@ export default function Home() {
                       key={family.name}
                       onClick={() => { setSelectedFamily(i); setSelectedColor(null); }}
                       title={family.name}
-                      className={`w-5 h-5 rounded-sm transition-all ${
+                      className={`w-8 h-8 rounded-md transition-all ${
                         selectedFamily === i
                           ? "ring-2 ring-offset-1 ring-gray-400 scale-110"
                           : "hover:scale-110"
