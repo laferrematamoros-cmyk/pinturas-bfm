@@ -13,12 +13,17 @@ import {
   saveSiteName,
   saveSiteLogoUrl,
   createLogoUploadUrl,
+  loadCustomColors,
+  addCustomColor,
+  deleteCustomColor,
+  type CustomColor,
 } from "@/lib/actions";
 
 interface Color {
   name: string;
   hex: string;
   code: string;
+  id?: string;
 }
 
 interface ColorFamily {
@@ -453,7 +458,7 @@ const colorFamilies: ColorFamily[] = [
   },
 ];
 
-function ColorSwatch({ color, onClick, selected }: { color: Color; onClick: () => void; selected: boolean }) {
+function ColorSwatch({ color, onClick, selected, onDelete }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void }) {
   return (
     <div
       onClick={onClick}
@@ -469,6 +474,17 @@ function ColorSwatch({ color, onClick, selected }: { color: Color; onClick: () =
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
+        )}
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/40 hover:bg-red-500 flex items-center justify-center transition-colors"
+            title="Eliminar color"
+          >
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         )}
       </div>
       <div className="bg-white px-2 py-1.5 group-hover:bg-gray-50 transition-colors duration-150" style={{ minHeight: "38px" }}>
@@ -506,6 +522,13 @@ export default function Home() {
   const [durability, setDurability] = useState<Record<string, number[]>>({});
   const [durabilityPrices, setDurabilityPrices] = useState<Record<string, string>>({});
   const [editDurabilityPrices, setEditDurabilityPrices] = useState<Record<string, string>>({});
+  const [customColors, setCustomColors] = useState<Record<string, Color[]>>({});
+  const [showAddColorModal, setShowAddColorModal] = useState(false);
+  const [addColorFamily, setAddColorFamily] = useState("");
+  const [newColorName, setNewColorName] = useState("");
+  const [newColorHex, setNewColorHex] = useState("#FF0000");
+  const [newColorCode, setNewColorCode] = useState("");
+  const [addColorSaving, setAddColorSaving] = useState(false);
   const [editHex, setEditHex] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
   const [eyedropperSupported] = useState(() => typeof window !== "undefined" && "EyeDropper" in window);
@@ -546,6 +569,14 @@ export default function Home() {
     });
     // Load global durability prices
     loadDurabilityPrices().then((p) => setDurabilityPrices(p));
+    // Load custom colors
+    loadCustomColors().then((data) => {
+      const mapped: Record<string, Color[]> = {};
+      for (const [family, colors] of Object.entries(data)) {
+        mapped[family] = colors.map((c) => ({ name: c.name, hex: c.hex, code: c.code, id: c.id }));
+      }
+      setCustomColors(mapped);
+    });
   }, []);
 
   function handleUserClick() {
@@ -573,6 +604,38 @@ export default function Home() {
     sessionStorage.removeItem("pinturas-admin");
     setIsAdmin(false);
     setShowAdminMenu(false);
+  }
+
+  function openAddColorModal(familyName: string) {
+    setAddColorFamily(familyName);
+    setNewColorName("");
+    setNewColorHex("#FF0000");
+    setNewColorCode("");
+    setShowAddColorModal(true);
+  }
+
+  async function handleAddColor() {
+    if (!newColorName.trim()) return;
+    setAddColorSaving(true);
+    try {
+      const saved = await addCustomColor(addColorFamily, newColorName.trim(), newColorHex, newColorCode.trim());
+      const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id };
+      setCustomColors((prev) => ({
+        ...prev,
+        [addColorFamily]: [newColor, ...(prev[addColorFamily] ?? [])],
+      }));
+      setShowAddColorModal(false);
+    } finally {
+      setAddColorSaving(false);
+    }
+  }
+
+  async function handleDeleteCustomColor(id: string, familyName: string) {
+    await deleteCustomColor(id);
+    setCustomColors((prev) => ({
+      ...prev,
+      [familyName]: (prev[familyName] ?? []).filter((c) => c.id !== id),
+    }));
   }
 
   function openSiteSettings() {
@@ -676,12 +739,14 @@ export default function Home() {
   const currentFamily = colorFamilies[selectedFamily];
 
   const displayedColors = useMemo(() => {
-    if (!search.trim()) return currentFamily.colors;
+    const custom = customColors[currentFamily.name] ?? [];
+    const all = [...custom, ...currentFamily.colors];
+    if (!search.trim()) return all;
     const q = search.toLowerCase();
-    return currentFamily.colors.filter(
+    return all.filter(
       (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
     );
-  }, [search, currentFamily]);
+  }, [search, currentFamily, customColors]);
 
   const allSearchResults = useMemo(() => {
     if (!search.trim()) return [];
@@ -862,6 +927,67 @@ export default function Home() {
         </div>
       )}
 
+      {/* Add color modal */}
+      {showAddColorModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs mx-4">
+            <h2 className="text-base font-semibold text-gray-800 mb-4">Agregar color — {addColorFamily}</h2>
+
+            {/* Color picker */}
+            <div className="flex items-center gap-3 mb-4">
+              <label className="cursor-pointer relative flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg border-2 border-gray-200 shadow-sm" style={{ backgroundColor: newColorHex }} />
+                <input
+                  type="color"
+                  value={newColorHex}
+                  onChange={(e) => setNewColorHex(e.target.value)}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                />
+              </label>
+              <input
+                type="text"
+                value={newColorHex}
+                onChange={(e) => setNewColorHex(e.target.value)}
+                maxLength={7}
+                className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-xs font-mono text-gray-700 focus:outline-none focus:border-teal-400"
+                placeholder="#000000"
+              />
+            </div>
+
+            <input
+              type="text"
+              value={newColorName}
+              onChange={(e) => setNewColorName(e.target.value)}
+              placeholder="Nombre del color *"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-teal-400"
+            />
+            <input
+              type="text"
+              value={newColorCode}
+              onChange={(e) => setNewColorCode(e.target.value)}
+              placeholder="Código (opcional, ej: 14RR 12/349)"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-5 focus:outline-none focus:border-teal-400"
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAddColorModal(false)}
+                className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddColor}
+                disabled={!newColorName.trim() || addColorSaving}
+                className="flex-1 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white text-sm font-semibold transition-colors"
+              >
+                {addColorSaving ? "Guardando..." : "Agregar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1">
         <>
             {/* Title */}
@@ -941,6 +1067,21 @@ export default function Home() {
                   {currentFamily.name}
                 </p>
 
+                {/* Add color button — admin only */}
+                {isAdmin && (
+                  <div className="flex justify-start px-3 mb-3">
+                    <button
+                      onClick={() => openAddColorModal(currentFamily.name)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-teal-400 text-teal-500 text-xs font-semibold hover:bg-teal-50 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Agregar color
+                    </button>
+                  </div>
+                )}
+
                 {/* Color swatches grid — row-by-row so panel opens below selected row */}
                 <div key={selectedFamily} className="pb-10 px-3">
                   {Array.from({ length: Math.ceil(displayedColors.length / 3) }, (_, rowIndex) => {
@@ -953,10 +1094,11 @@ export default function Home() {
                         <div className="grid grid-cols-3 gap-3 mb-3">
                           {rowColors.map((color) => (
                             <ColorSwatch
-                              key={color.code}
+                              key={color.id ?? color.code}
                               color={{ ...color, hex: getEffectiveHex(color) }}
                               onClick={() => setSelectedColor(selectedColor?.code === color.code ? null : color)}
                               selected={selectedColor?.code === color.code}
+                              onDelete={isAdmin && color.id ? () => handleDeleteCustomColor(color.id!, currentFamily.name) : undefined}
                             />
                           ))}
                         </div>

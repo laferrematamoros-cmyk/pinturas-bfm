@@ -108,3 +108,45 @@ export async function createLogoUploadUrl(ext: string): Promise<{ signedUrl: str
 
   return { signedUrl: data.signedUrl, path, publicUrl: pub.publicUrl };
 }
+
+// ── Custom colors ───────────────────────────────────────────
+
+export interface CustomColor {
+  id: string;
+  family_name: string;
+  name: string;
+  hex: string;
+  code: string;
+}
+
+export async function loadCustomColors(): Promise<Record<string, CustomColor[]>> {
+  const { data } = await supabaseAdmin
+    .from("custom_colors")
+    .select("*")
+    .order("created_at", { ascending: true });
+  const result: Record<string, CustomColor[]> = {};
+  for (const row of data ?? []) {
+    if (!result[row.family_name]) result[row.family_name] = [];
+    result[row.family_name].push(row);
+  }
+  return result;
+}
+
+export async function addCustomColor(
+  familyName: string,
+  name: string,
+  hex: string,
+  code: string
+): Promise<CustomColor> {
+  const { data, error } = await supabaseAdmin
+    .from("custom_colors")
+    .insert({ family_name: familyName, name, hex, code })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteCustomColor(id: string): Promise<void> {
+  await supabaseAdmin.from("custom_colors").delete().eq("id", id);
+}
