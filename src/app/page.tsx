@@ -16,7 +16,12 @@ import {
   createLogoUploadUrl,
   loadCustomColors,
   addCustomColor,
+  updateCustomColor,
   deleteCustomColor,
+  loadColorNameOverrides,
+  saveColorNameOverride,
+  loadDeletedColors,
+  saveDeletedColors,
   type CustomColor,
 } from "@/lib/actions";
 
@@ -25,6 +30,7 @@ interface Color {
   hex: string;
   code: string;
   id?: string;
+  originalCode?: string; // built-in colors with overridden code
 }
 
 interface ColorFamily {
@@ -530,6 +536,11 @@ export default function Home() {
   const [newColorHex, setNewColorHex] = useState("#FF0000");
   const [newColorCode, setNewColorCode] = useState("");
   const [addColorSaving, setAddColorSaving] = useState(false);
+  const [selectedQuality, setSelectedQuality] = useState<number | null>(null);
+  const [nameOverrides, setNameOverrides] = useState<Record<string, { name: string; code: string }>>({});
+  const [deletedColorCodes, setDeletedColorCodes] = useState<string[]>([]);
+  const [editName, setEditName] = useState("");
+  const [editCode, setEditCode] = useState("");
   const [editHex, setEditHex] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
   const [eyedropperSupported] = useState(() => typeof window !== "undefined" && "EyeDropper" in window);
@@ -581,6 +592,9 @@ export default function Home() {
       }
       setCustomColors(mapped);
     });
+    // Load built-in color overrides and deleted list
+    loadColorNameOverrides().then(setNameOverrides);
+    loadDeletedColors().then(setDeletedColorCodes);
   }, []);
 
   function handleUserClick() {
@@ -634,12 +648,25 @@ export default function Home() {
     }
   }
 
-  async function handleDeleteCustomColor(id: string, familyName: string) {
-    await deleteCustomColor(id);
-    setCustomColors((prev) => ({
-      ...prev,
-      [familyName]: (prev[familyName] ?? []).filter((c) => c.id !== id),
-    }));
+  async function handleDeleteColor(color: Color) {
+    if (color.id) {
+      // Custom color — remove from DB and state
+      await deleteCustomColor(color.id);
+      setCustomColors((prev) => {
+        const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === color.id));
+        if (!family) return prev;
+        return { ...prev, [family]: prev[family].filter((c) => c.id !== color.id) };
+      });
+    } else {
+      // Built-in color — add original code to deleted list
+      const oc = origCode(color);
+      const next = [...deletedColorCodes, oc];
+      setDeletedColorCodes(next);
+      await saveDeletedColors(next);
+    }
+    if (selectedColor && origCode(selectedColor) === origCode(color)) {
+      setSelectedColor(null);
+    }
   }
 
   function openSiteSettings() {
@@ -706,10 +733,17 @@ export default function Home() {
     setShowSiteSettings(false);
   }
 
-  // Sync editHex when selected color changes
+  // Helper: get the DB key for a color (original code before any override)
+  function origCode(color: Color) {
+    return color.originalCode ?? color.code;
+  }
+
+  // Sync editHex/editName/editCode when selected color changes
   React.useEffect(() => {
     if (selectedColor) {
-      setEditHex(overrides[selectedColor.code] ?? selectedColor.hex);
+      setEditHex(overrides[origCode(selectedColor)] ?? selectedColor.hex);
+      setEditName(selectedColor.name);
+      setEditCode(selectedColor.code);
     }
   }, [selectedColor?.code]);
 
@@ -719,12 +753,39 @@ export default function Home() {
 
   async function handleSave() {
     if (!selectedColor) return;
+    const oc = origCode(selectedColor);
     const normalized = editHex.startsWith("#") ? editHex : "#" + editHex;
-    setOverrides((prev) => ({ ...prev, [selectedColor.code]: normalized }));
-    setSelectedColor({ ...selectedColor, hex: normalized });
+
+    // Save hex
+    setOverrides((prev) => ({ ...prev, [oc]: normalized }));
+    await saveColorHex(oc, normalized);
+
+    // Save name/code if changed
+    const nameChanged = editName.trim() !== selectedColor.name || editCode.trim() !== selectedColor.code;
+    if (nameChanged) {
+      if (selectedColor.id) {
+        // Custom color — update in DB
+        await updateCustomColor(selectedColor.id, editName.trim(), normalized, editCode.trim());
+        setCustomColors((prev) => {
+          const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === selectedColor.id));
+          if (!family) return prev;
+          return {
+            ...prev,
+            [family]: prev[family].map((c) =>
+              c.id === selectedColor.id ? { ...c, name: editName.trim(), hex: normalized, code: editCode.trim() } : c
+            ),
+          };
+        });
+      } else {
+        // Built-in — store override
+        await saveColorNameOverride(oc, editName.trim(), editCode.trim());
+        setNameOverrides((prev) => ({ ...prev, [oc]: { name: editName.trim(), code: editCode.trim() } }));
+      }
+    }
+
+    setSelectedColor({ ...selectedColor, name: editName.trim(), code: editCode.trim(), hex: normalized });
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
-    await saveColorHex(selectedColor.code, normalized);
   }
 
   async function handleEyedropper() {
@@ -749,30 +810,41 @@ export default function Home() {
   }
 
   function getEffectiveHex(color: Color) {
-    return overrides[color.code] ?? color.hex;
+    return overrides[origCode(color)] ?? color.hex;
   }
 
   const currentFamily = colorFamilies[selectedFamily];
 
   const displayedColors = useMemo(() => {
     const custom = customColors[currentFamily.name] ?? [];
-    const all = [...custom, ...currentFamily.colors];
+    const builtIn = currentFamily.colors.filter((c) => !deletedColorCodes.includes(c.code));
+    const builtInWithOverrides: Color[] = builtIn.map((c) => {
+      const ov = nameOverrides[c.code];
+      if (!ov) return c;
+      return { ...c, name: ov.name, code: ov.code, originalCode: c.code };
+    });
+    let all = [...custom, ...builtInWithOverrides];
+    if (selectedQuality !== null) {
+      all = all.filter((c) => (durability[origCode(c)] ?? []).includes(selectedQuality));
+    }
     if (!search.trim()) return all;
     const q = search.toLowerCase();
     return all.filter(
       (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
     );
-  }, [search, currentFamily, customColors]);
+  }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, selectedQuality, durability]);
 
   const allSearchResults = useMemo(() => {
     if (!search.trim()) return [];
     const q = search.toLowerCase();
     return colorFamilies.flatMap((f) =>
-      f.colors.filter(
-        (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
-      )
+      f.colors.filter((c) => {
+        if (deletedColorCodes.includes(c.code)) return false;
+        if (selectedQuality !== null && !(durability[c.code] ?? []).includes(selectedQuality)) return false;
+        return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+      })
     );
-  }, [search]);
+  }, [search, selectedQuality, durability, deletedColorCodes]);
 
   // Banner gradient from first 5 colors of the family
   const bannerGradient = currentFamily.colors
@@ -1040,6 +1112,67 @@ export default function Home() {
               Elegí tu paleta de colores
             </h1>
 
+            {/* Quality / price selector */}
+            {DURABILITY_OPTIONS.some((opt) => durabilityPrices[String(opt.years)]) && (
+              <div className="px-4 mb-6">
+                <p className="text-center text-xs text-gray-400 mb-3 uppercase tracking-widest font-medium">
+                  Filtrá por calidad y precio
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  {/* "Todos" chip */}
+                  <button
+                    onClick={() => { setSelectedQuality(null); setSelectedColor(null); }}
+                    className={`px-5 py-2 rounded-full text-sm font-medium border transition-all ${
+                      selectedQuality === null
+                        ? "bg-gray-800 text-white border-gray-800 shadow"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                    }`}
+                  >
+                    Todos los colores
+                  </button>
+
+                  {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)]).map((opt) => {
+                    const price = durabilityPrices[String(opt.years)];
+                    const active = selectedQuality === opt.years;
+                    return (
+                      <button
+                        key={opt.years}
+                        onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
+                        className={`flex flex-col items-center px-5 py-2.5 rounded-2xl border transition-all shadow-sm ${
+                          active
+                            ? "bg-teal-500 border-teal-500 text-white shadow-md scale-105"
+                            : "bg-white text-gray-700 border-gray-200 hover:border-teal-300 hover:shadow"
+                        }`}
+                      >
+                        <span className="font-bold text-sm">{opt.years} años</span>
+                        <span className={`text-base font-extrabold leading-tight ${active ? "text-white" : "text-teal-600"}`}>
+                          {price}
+                        </span>
+                        <span className={`text-[10px] leading-tight ${active ? "text-white/70" : "text-gray-400"}`}>
+                          {opt.yield}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Active filter banner */}
+                {selectedQuality !== null && (
+                  <div className="mt-3 flex items-center justify-center gap-2">
+                    <span className="text-xs text-teal-600 font-medium">
+                      Mostrando solo colores disponibles en pintura de {selectedQuality} años
+                    </span>
+                    <button
+                      onClick={() => { setSelectedQuality(null); setSelectedColor(null); }}
+                      className="text-xs text-gray-400 hover:text-gray-600 underline"
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Search */}
             <div className="flex justify-center mb-6 px-4">
               <div className="relative w-full max-w-lg">
@@ -1143,7 +1276,7 @@ export default function Home() {
                               color={{ ...color, hex: getEffectiveHex(color) }}
                               onClick={() => setSelectedColor(selectedColor?.code === color.code ? null : color)}
                               selected={selectedColor?.code === color.code}
-                              onDelete={isAdmin && color.id ? () => handleDeleteCustomColor(color.id!, currentFamily.name) : undefined}
+                              onDelete={isAdmin ? () => handleDeleteColor(color) : undefined}
                             />
                           ))}
                         </div>
@@ -1173,6 +1306,24 @@ export default function Home() {
                                 /* ── ADMIN: edit panel ── */
                                 <>
                                   <p className="text-[11px] font-semibold text-gray-700">Editar color</p>
+
+                                  {/* Name + code */}
+                                  <div className="flex flex-col gap-1.5">
+                                    <input
+                                      type="text"
+                                      value={editName}
+                                      onChange={(e) => setEditName(e.target.value)}
+                                      className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-teal-400"
+                                      placeholder="Nombre del color"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={editCode}
+                                      onChange={(e) => setEditCode(e.target.value)}
+                                      className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs font-mono text-gray-500 focus:outline-none focus:border-teal-400"
+                                      placeholder="Código"
+                                    />
+                                  </div>
 
                                   {/* Color picker row */}
                                   <div className="flex items-center gap-3">
@@ -1216,16 +1367,17 @@ export default function Home() {
                                     {savedFlash ? "Guardado" : "Guardar color"}
                                   </button>
 
-                                  {overrides[selectedColor.code] && (
+                                  {overrides[origCode(selectedColor)] && (
                                     <button
                                       onClick={async () => {
+                                        const oc = origCode(selectedColor);
                                         setOverrides((prev) => {
                                           const next = { ...prev };
-                                          delete next[selectedColor.code];
+                                          delete next[oc];
                                           return next;
                                         });
                                         applyHex(selectedColor.hex);
-                                        await deleteColorHex(selectedColor.code);
+                                        await deleteColorHex(oc);
                                       }}
                                       className="text-[10px] text-gray-400 hover:text-red-400 transition-colors text-center"
                                     >
@@ -1233,13 +1385,20 @@ export default function Home() {
                                     </button>
                                   )}
 
+                                  <button
+                                    onClick={() => handleDeleteColor(selectedColor)}
+                                    className="text-[10px] text-red-400 hover:text-red-500 transition-colors text-center"
+                                  >
+                                    Eliminar color
+                                  </button>
+
                                   <hr className="w-full border-gray-100" />
 
                                   <div>
                                     <p className="text-[11px] font-semibold text-gray-700 mb-1">Rendimiento aproximado</p>
                                     <div className="flex flex-col gap-1.5">
                                       {DURABILITY_OPTIONS.map((opt) => {
-                                        const checked = (durability[selectedColor.code] ?? []).includes(opt.years);
+                                        const checked = (durability[origCode(selectedColor)] ?? []).includes(opt.years);
                                         const price = durabilityPrices[String(opt.years)];
                                         return (
                                           <label
@@ -1249,7 +1408,7 @@ export default function Home() {
                                             }`}
                                           >
                                             <div className="flex items-center gap-2">
-                                              <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDurability(selectedColor.code, opt.years)} />
+                                              <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDurability(origCode(selectedColor), opt.years)} />
                                               <span className="font-semibold">{opt.years} años</span>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -1275,7 +1434,7 @@ export default function Home() {
 
                                   {(() => {
                                     const selected = DURABILITY_OPTIONS.filter((opt) =>
-                                      (durability[selectedColor.code] ?? []).includes(opt.years)
+                                      (durability[origCode(selectedColor)] ?? []).includes(opt.years)
                                     );
                                     return selected.length > 0 ? (
                                       <div>

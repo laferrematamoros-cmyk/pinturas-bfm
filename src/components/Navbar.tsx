@@ -42,9 +42,6 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2U
 
         {/* Nav links */}
         <div className="hidden md:flex items-center gap-7 text-sm font-medium text-gray-700">
-          <Link href="/calculadora" className="hover:text-gray-900 transition-colors">
-            Calculadora
-          </Link>
         </div>
 
         {/* Icons */}

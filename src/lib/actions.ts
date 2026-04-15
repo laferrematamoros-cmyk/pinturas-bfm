@@ -158,6 +158,55 @@ export async function addCustomColor(
   return data;
 }
 
+export async function updateCustomColor(id: string, name: string, hex: string, code: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("custom_colors")
+    .update({ name, hex, code })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function deleteCustomColor(id: string): Promise<void> {
   await supabaseAdmin.from("custom_colors").delete().eq("id", id);
+}
+
+// ── Built-in color overrides (name/code) ────────────────────
+
+export async function loadColorNameOverrides(): Promise<Record<string, { name: string; code: string }>> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "color_name_overrides")
+    .single();
+  if (!data?.value) return {};
+  try { return JSON.parse(data.value); } catch { return {}; }
+}
+
+export async function saveColorNameOverride(originalCode: string, name: string, newCode: string): Promise<void> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "color_name_overrides")
+    .single();
+  const current = data?.value ? (JSON.parse(data.value) as Record<string, { name: string; code: string }>) : {};
+  current[originalCode] = { name, code: newCode };
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "color_name_overrides", value: JSON.stringify(current) }, { onConflict: "key" });
+}
+
+export async function loadDeletedColors(): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "deleted_colors")
+    .single();
+  if (!data?.value) return [];
+  try { return JSON.parse(data.value) as string[]; } catch { return []; }
+}
+
+export async function saveDeletedColors(codes: string[]): Promise<void> {
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "deleted_colors", value: JSON.stringify(codes) }, { onConflict: "key" });
 }
