@@ -476,10 +476,12 @@ function ColorSwatch({ color, onClick, selected, onDelete }: { color: Color; onC
         style={{ backgroundColor: color.hex, height: "52px" }}
       >
         {selected && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-            <svg className="w-6 h-6 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-white/80 flex items-center justify-center shadow">
+              <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
           </div>
         )}
         {onDelete && (
@@ -1216,7 +1218,7 @@ export default function Home() {
             ) : (
               <>
                 {/* Family selector dots */}
-                <div className="flex justify-center gap-1.5 mb-5">
+                <div className="flex justify-center gap-1.5 mb-4">
                   {colorFamilies.map((family, i) => (
                     <button
                       key={family.name}
@@ -1230,6 +1232,16 @@ export default function Home() {
                       style={{ backgroundColor: familyMainColors[i] }}
                     />
                   ))}
+                </div>
+
+                {/* Disclaimer */}
+                <div className="mx-auto max-w-xl px-4 mb-5 text-center">
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Los colores mostrados son aproximados. Para apreciar el tono más real, te invitamos a consultar nuestro catálogo físico en tienda.
+                  </p>
+                  <p className="text-xs text-gray-500 leading-relaxed mt-1">
+                    💡 <span className="font-medium">Tip:</span> La iluminación de tu espacio —ya sea amarilla o blanca— puede influir en la percepción del tono final.
+                  </p>
                 </div>
 
                 {/* Banner */}
