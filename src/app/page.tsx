@@ -12,7 +12,6 @@ import {
   loadSiteSettings,
   saveSiteName,
   saveSiteLogoUrl,
-  uploadLogo,
 } from "@/lib/actions";
 
 interface Color {
@@ -599,9 +598,15 @@ export default function Home() {
       await saveSiteName(editSiteName);
       await saveDurabilityPrices(editDurabilityPrices);
       if (editLogoUrl && editLogoUrl.startsWith("data:")) {
-        // Nueva imagen — subir a Supabase Storage
+        // Nueva imagen — subir via API Route (evita límite de Server Actions)
         const mime = editLogoUrl.split(";")[0].replace("data:", "");
-        const publicUrl = await uploadLogo(editLogoUrl, mime);
+        const ext = mime.split("/")[1] ?? "png";
+        const blob = await fetch(editLogoUrl).then((r) => r.blob());
+        const fd = new FormData();
+        fd.append("file", blob, `logo.${ext}`);
+        const res = await fetch("/api/upload-logo", { method: "POST", body: fd });
+        if (!res.ok) throw new Error(await res.text());
+        const { url: publicUrl } = await res.json();
         await saveSiteLogoUrl(publicUrl);
         setLogoUrl(publicUrl);
       } else {
