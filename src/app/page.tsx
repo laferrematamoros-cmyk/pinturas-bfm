@@ -12,6 +12,7 @@ import {
   loadSiteSettings,
   saveSiteName,
   saveSiteLogoUrl,
+  createLogoUploadUrl,
 } from "@/lib/actions";
 
 interface Color {
@@ -598,15 +599,17 @@ export default function Home() {
       await saveSiteName(editSiteName);
       await saveDurabilityPrices(editDurabilityPrices);
       if (editLogoUrl && editLogoUrl.startsWith("data:")) {
-        // Nueva imagen — subir via API Route (evita límite de Server Actions)
+        // Subir directo a Supabase desde el navegador (sin pasar por Vercel)
         const mime = editLogoUrl.split(";")[0].replace("data:", "");
         const ext = mime.split("/")[1] ?? "png";
+        const { signedUrl, publicUrl } = await createLogoUploadUrl(ext);
         const blob = await fetch(editLogoUrl).then((r) => r.blob());
-        const fd = new FormData();
-        fd.append("file", blob, `logo.${ext}`);
-        const res = await fetch("/api/upload-logo", { method: "POST", body: fd });
-        if (!res.ok) throw new Error(await res.text());
-        const { url: publicUrl } = await res.json();
+        const uploadRes = await fetch(signedUrl, {
+          method: "PUT",
+          body: blob,
+          headers: { "Content-Type": mime },
+        });
+        if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`);
         await saveSiteLogoUrl(publicUrl);
         setLogoUrl(publicUrl);
       } else {

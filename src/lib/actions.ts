@@ -91,27 +91,20 @@ export async function saveSiteLogoUrl(url: string | null): Promise<void> {
   }
 }
 
-// ── Logo upload to Storage ──────────────────────────────────
+// ── Logo upload — signed URL (client uploads directly to Supabase) ──────────
 
-export async function uploadLogo(base64: string, mimeType: string): Promise<string> {
-  // Convert base64 to buffer
-  const base64Data = base64.replace(/^data:[^;]+;base64,/, "");
-  const buffer = Buffer.from(base64Data, "base64");
-  const ext = mimeType.split("/")[1] ?? "png";
-  const fileName = `logo-${Date.now()}.${ext}`;
+export async function createLogoUploadUrl(ext: string): Promise<{ signedUrl: string; path: string; publicUrl: string }> {
+  const path = `logo-${Date.now()}.${ext}`;
 
-  const { error } = await supabaseAdmin.storage
+  const { data, error } = await supabaseAdmin.storage
     .from("pinturas-assets")
-    .upload(fileName, buffer, {
-      contentType: mimeType,
-      upsert: true,
-    });
+    .createSignedUploadUrl(path);
 
   if (error) throw new Error(error.message);
 
-  const { data } = supabaseAdmin.storage
+  const { data: pub } = supabaseAdmin.storage
     .from("pinturas-assets")
-    .getPublicUrl(fileName);
+    .getPublicUrl(path);
 
-  return data.publicUrl;
+  return { signedUrl: data.signedUrl, path, publicUrl: pub.publicUrl };
 }
