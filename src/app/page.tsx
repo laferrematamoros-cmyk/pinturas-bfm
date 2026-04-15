@@ -7,6 +7,7 @@ import {
   saveColorHex,
   deleteColorHex,
   saveColorDurability,
+  saveColorPrice,
   loadSiteSettings,
   saveSiteName,
   saveSiteLogoUrl,
@@ -502,7 +503,9 @@ export default function Home() {
   const [selectedColor, setSelectedColor] = useState<Color | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [durability, setDurability] = useState<Record<string, number[]>>({});
+  const [prices, setPrices] = useState<Record<string, string>>({});
   const [editHex, setEditHex] = useState("");
+  const [editPrice, setEditPrice] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
   const [eyedropperSupported] = useState(() => typeof window !== "undefined" && "EyeDropper" in window);
 
@@ -528,12 +531,15 @@ export default function Home() {
     loadColorSettings().then((data) => {
       const hexMap: Record<string, string> = {};
       const durMap: Record<string, number[]> = {};
+      const priceMap: Record<string, string> = {};
       for (const [code, val] of Object.entries(data)) {
         if (val.hex) hexMap[code] = val.hex;
         if (val.durability_years?.length) durMap[code] = val.durability_years;
+        if (val.price) priceMap[code] = val.price;
       }
       setOverrides(hexMap);
       setDurability(durMap);
+      setPrices(priceMap);
     });
     // Load site branding from Supabase
     loadSiteSettings().then(({ name, logoUrl: logo }) => {
@@ -610,10 +616,11 @@ export default function Home() {
     setShowSiteSettings(false);
   }
 
-  // Sync editHex when selected color changes
+  // Sync editHex and editPrice when selected color changes
   React.useEffect(() => {
     if (selectedColor) {
       setEditHex(overrides[selectedColor.code] ?? selectedColor.hex);
+      setEditPrice(prices[selectedColor.code] ?? "");
     }
   }, [selectedColor?.code]);
 
@@ -626,9 +633,15 @@ export default function Home() {
     const normalized = editHex.startsWith("#") ? editHex : "#" + editHex;
     setOverrides((prev) => ({ ...prev, [selectedColor.code]: normalized }));
     setSelectedColor({ ...selectedColor, hex: normalized });
+    if (editPrice.trim()) {
+      setPrices((prev) => ({ ...prev, [selectedColor.code]: editPrice.trim() }));
+    } else {
+      setPrices((prev) => { const next = { ...prev }; delete next[selectedColor.code]; return next; });
+    }
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
     await saveColorHex(selectedColor.code, normalized);
+    await saveColorPrice(selectedColor.code, editPrice.trim());
   }
 
   async function handleEyedropper() {
@@ -986,6 +999,14 @@ export default function Home() {
                                     )}
                                   </div>
 
+                                  <input
+                                    type="text"
+                                    value={editPrice}
+                                    onChange={(e) => setEditPrice(e.target.value)}
+                                    placeholder="Precio (ej: $350)"
+                                    className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-teal-400"
+                                  />
+
                                   <button
                                     onClick={handleSave}
                                     className={`w-full py-1.5 rounded text-xs font-semibold transition-colors ${
@@ -1069,6 +1090,13 @@ export default function Home() {
                                       </div>
                                     ) : null;
                                   })()}
+
+                                  {prices[selectedColor.code] && (
+                                    <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[11px]">
+                                      <span className="font-semibold text-gray-600">Precio</span>
+                                      <span className="font-bold text-teal-600">{prices[selectedColor.code]}</span>
+                                    </div>
+                                  )}
                                 </>
                               )}
                             </div>

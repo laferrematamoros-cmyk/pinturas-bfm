@@ -10,14 +10,24 @@ const supabaseAdmin = createClient(
 // ── Color settings ──────────────────────────────────────────
 
 export async function loadColorSettings(): Promise<
-  Record<string, { hex: string; durability_years: number[] }>
+  Record<string, { hex: string; durability_years: number[]; price?: string }>
 > {
   const { data } = await supabaseAdmin.from("color_settings").select("*");
-  const result: Record<string, { hex: string; durability_years: number[] }> = {};
+  const result: Record<string, { hex: string; durability_years: number[]; price?: string }> = {};
   for (const row of data ?? []) {
-    result[row.code] = { hex: row.hex, durability_years: row.durability_years ?? [] };
+    result[row.code] = {
+      hex: row.hex,
+      durability_years: row.durability_years ?? [],
+      price: row.price ?? undefined,
+    };
   }
   return result;
+}
+
+export async function saveColorPrice(code: string, price: string): Promise<void> {
+  await supabaseAdmin
+    .from("color_settings")
+    .upsert({ code, price, updated_at: new Date().toISOString() }, { onConflict: "code" });
 }
 
 export async function saveColorHex(code: string, hex: string): Promise<void> {
