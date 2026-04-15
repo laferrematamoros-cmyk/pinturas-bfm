@@ -1111,7 +1111,7 @@ export default function Home() {
         <>
             {/* Title */}
             <h1 className="text-center text-3xl font-light text-gray-800 mb-5">
-              Elige tu paleta de colores
+              Elige tu color favorito
             </h1>
 
             {/* Search */}
