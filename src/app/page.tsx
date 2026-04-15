@@ -601,7 +601,8 @@ export default function Home() {
         await saveSiteLogoUrl(editLogoUrl);
         setLogoUrl(editLogoUrl);
       }
-    } catch {
+    } catch (err) {
+      console.error("Error al guardar configuración:", err);
       setLogoSaveError("No se pudo guardar. Verificá tu conexión e intentá de nuevo.");
       return;
     }

@@ -74,7 +74,7 @@ export async function uploadLogo(base64: string, mimeType: string): Promise<stri
   const base64Data = base64.replace(/^data:[^;]+;base64,/, "");
   const buffer = Buffer.from(base64Data, "base64");
   const ext = mimeType.split("/")[1] ?? "png";
-  const fileName = `logo.${ext}`;
+  const fileName = `logo-${Date.now()}.${ext}`;
 
   const { error } = await supabaseAdmin.storage
     .from("pinturas-assets")
