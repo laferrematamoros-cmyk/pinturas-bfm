@@ -469,7 +469,7 @@ function ColorSwatch({ color, onClick, selected, onDelete }: { color: Color; onC
   return (
     <div
       onClick={onClick}
-      className="flex flex-col cursor-pointer group relative z-0 hover:z-10 hover:shadow-lg hover:scale-105 hover:border-gray-400 transition-all duration-150 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm"
+      className="flex flex-col cursor-pointer group relative z-0 hover:z-10 hover:-translate-y-1 hover:shadow-xl hover:border-gray-400 transition-all duration-150 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm"
     >
       <div
         className="w-full transition-all duration-150 relative"
