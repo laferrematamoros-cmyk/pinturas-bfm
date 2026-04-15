@@ -65,14 +65,25 @@ export async function saveColorDurability(code: string, years: number[]): Promis
 
 // ── Site settings ───────────────────────────────────────────
 
-export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null }> {
+export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null }> {
   const { data } = await supabaseAdmin.from("site_settings").select("*");
   const map: Record<string, string> = {};
   for (const row of data ?? []) map[row.key] = row.value;
   return {
     name: map["site_name"] ?? "Pinturas BFM",
     logoUrl: map["logo_url"] ?? null,
+    logo2Url: map["logo2_url"] ?? null,
   };
+}
+
+export async function saveSiteLogo2Url(url: string | null): Promise<void> {
+  if (url) {
+    await supabaseAdmin
+      .from("site_settings")
+      .upsert({ key: "logo2_url", value: url }, { onConflict: "key" });
+  } else {
+    await supabaseAdmin.from("site_settings").delete().eq("key", "logo2_url");
+  }
 }
 
 export async function saveSiteName(name: string): Promise<void> {

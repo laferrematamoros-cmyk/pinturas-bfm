@@ -7,15 +7,16 @@ interface NavbarProps {
   onUserClick: () => void;
   siteName: string;
   logoUrl: string | null;
+  logo2Url?: string | null;
 }
 
-export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl }: NavbarProps) {
+export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2Url }: NavbarProps) {
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-32">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+        {/* Logo(s) */}
+        <Link href="/" className="flex items-center gap-3 shrink-0">
           {logoUrl ? (
             <img
               src={logoUrl}
@@ -26,6 +27,13 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl }: Navb
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 via-yellow-400 to-green-500 flex items-center justify-center flex-shrink-0">
               <span className="text-white font-bold text-xl">BFM</span>
             </div>
+          )}
+          {logo2Url && (
+            <img
+              src={logo2Url}
+              alt="logo2"
+              className="h-28 w-auto max-w-[360px] object-contain"
+            />
           )}
           <span className="font-bold text-lg text-gray-900 hidden sm:block">
             {siteName}

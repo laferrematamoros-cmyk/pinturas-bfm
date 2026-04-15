@@ -12,6 +12,7 @@ import {
   loadSiteSettings,
   saveSiteName,
   saveSiteLogoUrl,
+  saveSiteLogo2Url,
   createLogoUploadUrl,
   loadCustomColors,
   addCustomColor,
@@ -544,8 +545,10 @@ export default function Home() {
   // Site branding (editable by admin, persisted in localStorage)
   const [siteName, setSiteName] = useState("Pinturas BFM");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logo2Url, setLogo2Url] = useState<string | null>(null);
   const [editSiteName, setEditSiteName] = useState("Pinturas BFM");
   const [editLogoUrl, setEditLogoUrl] = useState<string | null>(null);
+  const [editLogo2Url, setEditLogo2Url] = useState<string | null>(null);
   const [logoSaveError, setLogoSaveError] = useState("");
 
   // Load data from Supabase on mount; restore admin session
@@ -563,9 +566,10 @@ export default function Home() {
       setDurability(durMap);
     });
     // Load site branding from Supabase
-    loadSiteSettings().then(({ name, logoUrl: logo }) => {
+    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2 }) => {
       setSiteName(name);
       if (logo) setLogoUrl(logo);
+      if (logo2) setLogo2Url(logo2);
     });
     // Load global durability prices
     loadDurabilityPrices().then((p) => setDurabilityPrices(p));
@@ -641,6 +645,7 @@ export default function Home() {
   function openSiteSettings() {
     setEditSiteName(siteName);
     setEditLogoUrl(logoUrl);
+    setEditLogo2Url(logo2Url);
     setEditDurabilityPrices({ ...durabilityPrices });
     setShowSiteSettings(true);
     setShowAdminMenu(false);
@@ -656,29 +661,40 @@ export default function Home() {
     reader.readAsDataURL(file);
   }
 
+  async function uploadLogoData(dataUrl: string): Promise<string> {
+    const mime = dataUrl.split(";")[0].replace("data:", "");
+    const ext = mime.split("/")[1] ?? "png";
+    const { signedUrl, publicUrl } = await createLogoUploadUrl(ext);
+    const blob = await fetch(dataUrl).then((r) => r.blob());
+    const uploadRes = await fetch(signedUrl, { method: "PUT", body: blob, headers: { "Content-Type": mime } });
+    if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`);
+    return publicUrl;
+  }
+
   async function saveSiteSettings() {
     setLogoSaveError("");
     try {
       await saveSiteName(editSiteName);
       await saveDurabilityPrices(editDurabilityPrices);
+
+      // Logo 1
       if (editLogoUrl && editLogoUrl.startsWith("data:")) {
-        // Subir directo a Supabase desde el navegador (sin pasar por Vercel)
-        const mime = editLogoUrl.split(";")[0].replace("data:", "");
-        const ext = mime.split("/")[1] ?? "png";
-        const { signedUrl, publicUrl } = await createLogoUploadUrl(ext);
-        const blob = await fetch(editLogoUrl).then((r) => r.blob());
-        const uploadRes = await fetch(signedUrl, {
-          method: "PUT",
-          body: blob,
-          headers: { "Content-Type": mime },
-        });
-        if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`);
+        const publicUrl = await uploadLogoData(editLogoUrl);
         await saveSiteLogoUrl(publicUrl);
         setLogoUrl(publicUrl);
       } else {
-        // Sin cambio de imagen o se quitó
         await saveSiteLogoUrl(editLogoUrl);
         setLogoUrl(editLogoUrl);
+      }
+
+      // Logo 2
+      if (editLogo2Url && editLogo2Url.startsWith("data:")) {
+        const publicUrl = await uploadLogoData(editLogo2Url);
+        await saveSiteLogo2Url(publicUrl);
+        setLogo2Url(publicUrl);
+      } else {
+        await saveSiteLogo2Url(editLogo2Url);
+        setLogo2Url(editLogo2Url);
       }
     } catch (err) {
       console.error("Error al guardar configuración:", err);
@@ -766,7 +782,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} />
+      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} />
 
       {/* Login modal */}
       {showLoginModal && (
@@ -872,6 +888,35 @@ export default function Home() {
                     onClick={() => setEditLogoUrl(null)}
                     className="text-[11px] text-red-400 hover:text-red-500 transition-colors"
                   >
+                    Quitar logo
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Logo 2 upload */}
+            <p className="text-xs font-semibold text-gray-600 mb-2">Logo secundario</p>
+            <div className="flex items-center gap-4 mb-5">
+              <div className="h-32 w-72 flex items-center justify-start flex-shrink-0 border border-gray-100 rounded-lg bg-gray-50 px-2">
+                {editLogo2Url ? (
+                  <img src={editLogo2Url} alt="logo2" className="h-28 w-auto max-w-full object-contain" />
+                ) : (
+                  <span className="text-xs text-gray-400">Sin logo secundario</span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="cursor-pointer px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors text-center">
+                  Cargar imagen
+                  <input type="file" accept="image/*" className="sr-only" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setEditLogo2Url(ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+                {editLogo2Url && (
+                  <button onClick={() => setEditLogo2Url(null)} className="text-[11px] text-red-400 hover:text-red-500 transition-colors">
                     Quitar logo
                   </button>
                 )}
