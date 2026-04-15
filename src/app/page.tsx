@@ -457,21 +457,21 @@ function ColorSwatch({ color, onClick, selected }: { color: Color; onClick: () =
   return (
     <div
       onClick={onClick}
-      className="flex flex-col cursor-pointer group relative z-0 hover:z-10 hover:shadow-xl transition-all duration-150"
+      className="flex flex-col cursor-pointer group relative z-0 hover:z-10 hover:shadow-md transition-all duration-150 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm"
     >
       <div
         className="w-full group-hover:brightness-110 transition-all duration-150 relative"
-        style={{ backgroundColor: color.hex, height: "60px" }}
+        style={{ backgroundColor: color.hex, height: "52px" }}
       >
         {selected && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-            <svg className="w-8 h-8 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-6 h-6 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
         )}
       </div>
-      <div className="bg-white px-1.5 py-1 group-hover:bg-gray-50 transition-colors duration-150" style={{ minHeight: "38px" }}>
+      <div className="bg-white px-2 py-1.5 group-hover:bg-gray-50 transition-colors duration-150" style={{ minHeight: "38px" }}>
         <p className="text-[8px] font-semibold text-gray-800 leading-tight line-clamp-2">
           {color.name}
         </p>
@@ -942,7 +942,7 @@ export default function Home() {
                 </p>
 
                 {/* Color swatches grid — row-by-row so panel opens below selected row */}
-                <div key={selectedFamily} className="pb-10">
+                <div key={selectedFamily} className="pb-10 px-3">
                   {Array.from({ length: Math.ceil(displayedColors.length / 3) }, (_, rowIndex) => {
                     const rowColors = displayedColors.slice(rowIndex * 3, rowIndex * 3 + 3);
                     const selectedRowIndex = selectedColor
@@ -950,7 +950,7 @@ export default function Home() {
                       : -1;
                     return (
                       <React.Fragment key={rowIndex}>
-                        <div className="grid grid-cols-3 gap-1.5 mb-1.5">
+                        <div className="grid grid-cols-3 gap-3 mb-3">
                           {rowColors.map((color) => (
                             <ColorSwatch
                               key={color.code}
