@@ -989,13 +989,28 @@ export default function Home() {
               </svg>
               Configuración del sitio
             </button>
+            <button
+              onClick={() => {
+                if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.controller.postMessage({ type: "FORCE_UPDATE" });
+                }
+                setTimeout(() => window.location.reload(), 300);
+                setShowAdminMenu(false);
+              }}
+              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-teal-600 hover:bg-teal-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Actualizar página en todos
+            </button>
             <hr className="my-1 border-gray-100" />
             <button
               onClick={handleLogout}
               className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
               Cerrar sesión
             </button>

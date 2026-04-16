@@ -23,7 +23,13 @@ export default function RootLayout({
         {children}
         <script
           dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}`,
+            __html: `
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js');
+  navigator.serviceWorker.addEventListener('message', function(e){
+    if(e.data && e.data.type === 'SW_UPDATED') window.location.reload();
+  });
+}`,
           }}
         />
       </body>
