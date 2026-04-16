@@ -562,8 +562,12 @@ export default function Home() {
 
   // Site branding (editable by admin, persisted in localStorage)
   const [siteName, setSiteName] = useState("Pinturas BFM");
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [logo2Url, setLogo2Url] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("pinturas_logoUrl") : null
+  );
+  const [logo2Url, setLogo2Url] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("pinturas_logo2Url") : null
+  );
   const [editSiteName, setEditSiteName] = useState("Pinturas BFM");
   const [editLogoUrl, setEditLogoUrl] = useState<string | null>(null);
   const [editLogo2Url, setEditLogo2Url] = useState<string | null>(null);
@@ -586,8 +590,8 @@ export default function Home() {
     // Load site branding from Supabase
     loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2 }) => {
       setSiteName(name);
-      if (logo) setLogoUrl(logo);
-      if (logo2) setLogo2Url(logo2);
+      if (logo) { setLogoUrl(logo); localStorage.setItem("pinturas_logoUrl", logo); }
+      if (logo2) { setLogo2Url(logo2); localStorage.setItem("pinturas_logo2Url", logo2); }
     });
     // Load global durability prices and on-sale flags
     loadDurabilityPrices().then((p) => setDurabilityPrices(p));
@@ -727,9 +731,11 @@ export default function Home() {
         const publicUrl = await uploadLogoData(editLogoUrl);
         await saveSiteLogoUrl(publicUrl);
         setLogoUrl(publicUrl);
+        localStorage.setItem("pinturas_logoUrl", publicUrl);
       } else {
         await saveSiteLogoUrl(editLogoUrl);
         setLogoUrl(editLogoUrl);
+        if (editLogoUrl) localStorage.setItem("pinturas_logoUrl", editLogoUrl);
       }
 
       // Logo 2
@@ -737,9 +743,11 @@ export default function Home() {
         const publicUrl = await uploadLogoData(editLogo2Url);
         await saveSiteLogo2Url(publicUrl);
         setLogo2Url(publicUrl);
+        localStorage.setItem("pinturas_logo2Url", publicUrl);
       } else {
         await saveSiteLogo2Url(editLogo2Url);
         setLogo2Url(editLogo2Url);
+        if (editLogo2Url) localStorage.setItem("pinturas_logo2Url", editLogo2Url);
       }
     } catch (err) {
       console.error("Error al guardar configuración:", err);
