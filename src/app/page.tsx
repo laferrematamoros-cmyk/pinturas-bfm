@@ -671,11 +671,11 @@ export default function Home() {
           return { ...prev, [family]: prev[family].filter((c) => c.id !== color.id) };
         });
       } else {
-        // Built-in color — add original code to deleted list
+        // Built-in color — save to DB first, then update UI
         const oc = origCode(color);
         const next = [...deletedColorCodes, oc];
-        setDeletedColorCodes(next);
         await saveDeletedColors(next);
+        setDeletedColorCodes(next);
       }
       if (selectedColor && origCode(selectedColor) === origCode(color)) {
         setSelectedColor(null);
@@ -777,16 +777,23 @@ export default function Home() {
     setSaveError("");
 
     try {
-      // Save hex
-      setOverrides((prev) => ({ ...prev, [oc]: normalized }));
+      // Save to DB first — UI updates only after DB confirms
       await saveColorHex(oc, normalized);
 
       // Save name/code if changed
       const nameChanged = editName.trim() !== selectedColor.name || editCode.trim() !== selectedColor.code;
       if (nameChanged) {
         if (selectedColor.id) {
-          // Custom color — update in DB
           await updateCustomColor(selectedColor.id, editName.trim(), normalized, editCode.trim());
+        } else {
+          await saveColorNameOverride(oc, editName.trim(), editCode.trim());
+        }
+      }
+
+      // DB saves confirmed — now update UI state
+      setOverrides((prev) => ({ ...prev, [oc]: normalized }));
+      if (nameChanged) {
+        if (selectedColor.id) {
           setCustomColors((prev) => {
             const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === selectedColor.id));
             if (!family) return prev;
@@ -798,12 +805,9 @@ export default function Home() {
             };
           });
         } else {
-          // Built-in — store override
-          await saveColorNameOverride(oc, editName.trim(), editCode.trim());
           setNameOverrides((prev) => ({ ...prev, [oc]: { name: editName.trim(), code: editCode.trim() } }));
         }
       }
-
       setSelectedColor({ ...selectedColor, name: editName.trim(), code: editCode.trim(), hex: normalized });
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1500);
