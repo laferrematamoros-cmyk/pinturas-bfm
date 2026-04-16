@@ -1550,12 +1550,21 @@ export default function Home() {
                                             return (
                                               <div
                                                 key={opt.years}
-                                                className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-[11px]"
+                                                className={`relative flex items-center justify-between px-3 py-1.5 rounded-lg text-[11px] ${
+                                                  durabilityOnSale.includes(opt.years)
+                                                    ? "bg-orange-50 border border-orange-400"
+                                                    : "bg-teal-50 border border-teal-200"
+                                                }`}
                                               >
-                                                <span className="font-semibold text-teal-700">{opt.years} años</span>
+                                                {durabilityOnSale.includes(opt.years) && (
+                                                  <span className="absolute -top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap leading-none">
+                                                    EN OFERTA
+                                                  </span>
+                                                )}
+                                                <span className={`font-semibold ${durabilityOnSale.includes(opt.years) ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
                                                 <div className="flex items-center gap-3">
-                                                  {price && <span className="font-bold text-teal-700">{price}</span>}
-                                                  <span className="text-teal-500">{opt.yield}</span>
+                                                  {price && <span className={`font-bold ${durabilityOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-700"}`}>{price}</span>}
+                                                  <span className={durabilityOnSale.includes(opt.years) ? "text-orange-400" : "text-teal-500"}>{opt.yield}</span>
                                                 </div>
                                               </div>
                                             );
