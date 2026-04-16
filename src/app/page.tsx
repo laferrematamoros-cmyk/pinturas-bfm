@@ -562,12 +562,8 @@ export default function Home() {
 
   // Site branding (editable by admin, persisted in localStorage)
   const [siteName, setSiteName] = useState("Pinturas BFM");
-  const [logoUrl, setLogoUrl] = useState<string | null>(() =>
-    typeof window !== "undefined" ? localStorage.getItem("pinturas_logoUrl") : null
-  );
-  const [logo2Url, setLogo2Url] = useState<string | null>(() =>
-    typeof window !== "undefined" ? localStorage.getItem("pinturas_logo2Url") : null
-  );
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logo2Url, setLogo2Url] = useState<string | null>(null);
   const [editSiteName, setEditSiteName] = useState("Pinturas BFM");
   const [editLogoUrl, setEditLogoUrl] = useState<string | null>(null);
   const [editLogo2Url, setEditLogo2Url] = useState<string | null>(null);
@@ -587,6 +583,11 @@ export default function Home() {
       setOverrides(hexMap);
       setDurability(durMap);
     });
+    // Restore logos from cache immediately (before Supabase responds)
+    const cachedLogo = localStorage.getItem("pinturas_logoUrl");
+    const cachedLogo2 = localStorage.getItem("pinturas_logo2Url");
+    if (cachedLogo) setLogoUrl(cachedLogo);
+    if (cachedLogo2) setLogo2Url(cachedLogo2);
     // Load site branding from Supabase
     loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2 }) => {
       setSiteName(name);
