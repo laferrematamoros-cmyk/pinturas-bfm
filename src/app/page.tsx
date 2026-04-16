@@ -953,7 +953,7 @@ export default function Home() {
           onClick={() => setShowAdminMenu(false)}
         >
           <div
-            className="absolute right-4 top-16 bg-white rounded-xl shadow-xl border border-gray-100 py-1 w-52"
+            className="absolute right-4 top-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 w-52"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1159,10 +1159,10 @@ export default function Home() {
         </div>
       )}
 
-      <main className="flex-1">
+      <main className="flex-1 pt-6">
         <>
             {/* Title */}
-            <h1 className="text-center text-3xl font-light text-gray-800 mb-5">
+            <h1 className="text-center text-2xl sm:text-3xl font-light text-gray-800 mb-5 px-4">
               Elige tu color favorito
             </h1>
 
@@ -1259,7 +1259,7 @@ export default function Home() {
                     <p className="text-sm text-gray-500 mb-4 text-center">
                       {allSearchResults.length} colores encontrados
                     </p>
-                    <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-12 gap-0">
+                    <div className="grid grid-cols-4 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-12 gap-0">
                       {allSearchResults.map((color) => (
                         <ColorSwatch key={color.code} color={color} onClick={() => setSelectedColor(color)} selected={selectedColor?.code === color.code} />
                       ))}
@@ -1345,17 +1345,17 @@ export default function Home() {
                           ))}
                         </div>
                         {selectedRowIndex === rowIndex && selectedColor && (
-                          <div className="flex w-full mb-1.5" style={{ minHeight: "220px" }}>
-                            {/* Left: color preview (live, updates with editHex) */}
-                            <div className="relative w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex }}>
+                          <div className="flex flex-col sm:flex-row w-full mb-1.5">
+                            {/* Top/Left: color preview (live, updates with editHex) */}
+                            <div className="relative w-full sm:w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex, minHeight: "80px" }}>
                               <div>
                                 <p className="text-white text-xs font-semibold drop-shadow leading-tight">{selectedColor.name}</p>
                                 <p className="text-white/80 text-[10px] drop-shadow mt-0.5">{selectedColor.code}</p>
                               </div>
                             </div>
 
-                            {/* Right: admin editor OR public read-only */}
-                            <div className="relative flex-1 bg-white flex flex-col justify-center gap-3 px-5 py-4 border-l border-gray-100">
+                            {/* Bottom/Right: admin editor OR public read-only */}
+                            <div className="relative flex-1 bg-white flex flex-col justify-center gap-3 px-5 py-4 border-t sm:border-t-0 sm:border-l border-gray-100">
                               {/* Close button — always visible */}
                               <button
                                 onClick={() => setSelectedColor(null)}
