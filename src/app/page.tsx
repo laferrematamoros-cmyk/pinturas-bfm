@@ -523,7 +523,7 @@ const DURABILITY_OPTIONS: { years: number; yield: string }[] = [
   { years: 7, yield: "7 a 9 m²/L" },
 ];
 
-const ADMIN_PASSWORD = "bfm2024";
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
 
 export default function Home() {
   const [selectedFamily, setSelectedFamily] = useState(0);
