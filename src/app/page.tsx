@@ -545,6 +545,7 @@ export default function Home() {
   const [editCode, setEditCode] = useState("");
   const [editHex, setEditHex] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [eyedropperSupported] = useState(() => typeof window !== "undefined" && "EyeDropper" in window);
 
   // Admin auth
@@ -637,6 +638,7 @@ export default function Home() {
   async function handleAddColor() {
     if (!newColorName.trim()) return;
     setAddColorSaving(true);
+    setSaveError("");
     try {
       const saved = await addCustomColor(addColorFamily, newColorName.trim(), newColorHex, newColorCode.trim());
       const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id };
@@ -645,29 +647,36 @@ export default function Home() {
         [addColorFamily]: [newColor, ...(prev[addColorFamily] ?? [])],
       }));
       setShowAddColorModal(false);
+    } catch {
+      setSaveError("No se pudo guardar el color. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setAddColorSaving(false);
     }
   }
 
   async function handleDeleteColor(color: Color) {
-    if (color.id) {
-      // Custom color — remove from DB and state
-      await deleteCustomColor(color.id);
-      setCustomColors((prev) => {
-        const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === color.id));
-        if (!family) return prev;
-        return { ...prev, [family]: prev[family].filter((c) => c.id !== color.id) };
-      });
-    } else {
-      // Built-in color — add original code to deleted list
-      const oc = origCode(color);
-      const next = [...deletedColorCodes, oc];
-      setDeletedColorCodes(next);
-      await saveDeletedColors(next);
-    }
-    if (selectedColor && origCode(selectedColor) === origCode(color)) {
-      setSelectedColor(null);
+    setSaveError("");
+    try {
+      if (color.id) {
+        // Custom color — remove from DB and state
+        await deleteCustomColor(color.id);
+        setCustomColors((prev) => {
+          const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === color.id));
+          if (!family) return prev;
+          return { ...prev, [family]: prev[family].filter((c) => c.id !== color.id) };
+        });
+      } else {
+        // Built-in color — add original code to deleted list
+        const oc = origCode(color);
+        const next = [...deletedColorCodes, oc];
+        setDeletedColorCodes(next);
+        await saveDeletedColors(next);
+      }
+      if (selectedColor && origCode(selectedColor) === origCode(color)) {
+        setSelectedColor(null);
+      }
+    } catch {
+      setSaveError("No se pudo eliminar el color. Verificá tu conexión e intentá de nuevo.");
     }
   }
 
@@ -757,37 +766,42 @@ export default function Home() {
     if (!selectedColor) return;
     const oc = origCode(selectedColor);
     const normalized = editHex.startsWith("#") ? editHex : "#" + editHex;
+    setSaveError("");
 
-    // Save hex
-    setOverrides((prev) => ({ ...prev, [oc]: normalized }));
-    await saveColorHex(oc, normalized);
+    try {
+      // Save hex
+      setOverrides((prev) => ({ ...prev, [oc]: normalized }));
+      await saveColorHex(oc, normalized);
 
-    // Save name/code if changed
-    const nameChanged = editName.trim() !== selectedColor.name || editCode.trim() !== selectedColor.code;
-    if (nameChanged) {
-      if (selectedColor.id) {
-        // Custom color — update in DB
-        await updateCustomColor(selectedColor.id, editName.trim(), normalized, editCode.trim());
-        setCustomColors((prev) => {
-          const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === selectedColor.id));
-          if (!family) return prev;
-          return {
-            ...prev,
-            [family]: prev[family].map((c) =>
-              c.id === selectedColor.id ? { ...c, name: editName.trim(), hex: normalized, code: editCode.trim() } : c
-            ),
-          };
-        });
-      } else {
-        // Built-in — store override
-        await saveColorNameOverride(oc, editName.trim(), editCode.trim());
-        setNameOverrides((prev) => ({ ...prev, [oc]: { name: editName.trim(), code: editCode.trim() } }));
+      // Save name/code if changed
+      const nameChanged = editName.trim() !== selectedColor.name || editCode.trim() !== selectedColor.code;
+      if (nameChanged) {
+        if (selectedColor.id) {
+          // Custom color — update in DB
+          await updateCustomColor(selectedColor.id, editName.trim(), normalized, editCode.trim());
+          setCustomColors((prev) => {
+            const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === selectedColor.id));
+            if (!family) return prev;
+            return {
+              ...prev,
+              [family]: prev[family].map((c) =>
+                c.id === selectedColor.id ? { ...c, name: editName.trim(), hex: normalized, code: editCode.trim() } : c
+              ),
+            };
+          });
+        } else {
+          // Built-in — store override
+          await saveColorNameOverride(oc, editName.trim(), editCode.trim());
+          setNameOverrides((prev) => ({ ...prev, [oc]: { name: editName.trim(), code: editCode.trim() } }));
+        }
       }
-    }
 
-    setSelectedColor({ ...selectedColor, name: editName.trim(), code: editCode.trim(), hex: normalized });
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 1500);
+      setSelectedColor({ ...selectedColor, name: editName.trim(), code: editCode.trim(), hex: normalized });
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+    } catch {
+      setSaveError("No se pudo guardar. Verificá tu conexión e intentá de nuevo.");
+    }
   }
 
   async function handleEyedropper() {
@@ -808,7 +822,14 @@ export default function Home() {
       ? current.filter((y) => y !== years)
       : [...current, years];
     setDurability((prev) => ({ ...prev, [code]: next }));
-    await saveColorDurability(code, next);
+    setSaveError("");
+    try {
+      await saveColorDurability(code, next);
+    } catch {
+      // Revert state if save fails
+      setDurability((prev) => ({ ...prev, [code]: current }));
+      setSaveError("No se pudo guardar la durabilidad. Verificá tu conexión e intentá de nuevo.");
+    }
   }
 
   function getEffectiveHex(color: Color) {
@@ -839,14 +860,29 @@ export default function Home() {
   const allSearchResults = useMemo(() => {
     if (!search.trim()) return [];
     const q = search.toLowerCase();
-    return colorFamilies.flatMap((f) =>
-      f.colors.filter((c) => {
-        if (deletedColorCodes.includes(c.code)) return false;
-        if (selectedQuality !== null && !(durability[c.code] ?? []).includes(selectedQuality)) return false;
-        return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
-      })
+
+    // Built-in colors with name/code overrides applied
+    const builtInResults = colorFamilies.flatMap((f) =>
+      f.colors
+        .filter((c) => !deletedColorCodes.includes(c.code))
+        .map((c) => {
+          const ov = nameOverrides[c.code];
+          return ov ? { ...c, name: ov.name, code: ov.code, originalCode: c.code } : c;
+        })
+        .filter((c) => {
+          if (selectedQuality !== null && !(durability[origCode(c)] ?? []).includes(selectedQuality)) return false;
+          return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+        })
     );
-  }, [search, selectedQuality, durability, deletedColorCodes]);
+
+    // Custom colors across all families
+    const customResults = Object.values(customColors).flat().filter((c) => {
+      if (selectedQuality !== null && !(durability[c.code] ?? []).includes(selectedQuality)) return false;
+      return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+    });
+
+    return [...customResults, ...builtInResults];
+  }, [search, selectedQuality, durability, deletedColorCodes, nameOverrides, customColors]);
 
   // Banner gradient from first 5 colors of the family
   const bannerGradient = currentFamily.colors
@@ -857,6 +893,18 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} />
+
+      {/* Error toast */}
+      {saveError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] bg-red-500 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+          <span>{saveError}</span>
+          <button onClick={() => setSaveError("")} className="text-white/80 hover:text-white transition-colors">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Login modal */}
       {showLoginModal && (
@@ -1088,9 +1136,13 @@ export default function Home() {
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-5 focus:outline-none focus:border-teal-400"
             />
 
+            {saveError && (
+              <p className="text-[11px] text-red-400 mb-3">{saveError}</p>
+            )}
+
             <div className="flex gap-2">
               <button
-                onClick={() => setShowAddColorModal(false)}
+                onClick={() => { setShowAddColorModal(false); setSaveError(""); }}
                 className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Cancelar
