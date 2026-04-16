@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
+import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import {
   loadColorSettings,
   saveColorHex,
@@ -646,11 +647,14 @@ export default function Home() {
   }
 
   async function handleAddColor() {
-    if (!newColorName.trim()) return;
+    const cleanName = sanitizeText(newColorName, LIMITS.COLOR_NAME);
+    const cleanCode = sanitizeText(newColorCode, LIMITS.COLOR_CODE);
+    if (!cleanName) { setSaveError("El nombre del color es obligatorio."); return; }
+    if (!isValidHex(newColorHex)) { setSaveError("El color debe tener formato #RRGGBB (ej: #FF0000)."); return; }
     setAddColorSaving(true);
     setSaveError("");
     try {
-      const saved = await addCustomColor(addColorFamily, newColorName.trim(), newColorHex, newColorCode.trim());
+      const saved = await addCustomColor(addColorFamily, cleanName, newColorHex, cleanCode);
       const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id };
       setCustomColors((prev) => ({
         ...prev,
@@ -721,9 +725,14 @@ export default function Home() {
   }
 
   async function saveSiteSettings() {
+    const cleanSiteName = sanitizeText(editSiteName, LIMITS.SITE_NAME);
+    if (!cleanSiteName) { setLogoSaveError("El nombre del sitio es obligatorio."); return; }
+    for (const [k, v] of Object.entries(editDurabilityPrices)) {
+      if (!isValidPrice(v)) { setLogoSaveError(`Precio inválido para ${k} años. Solo se permiten números, $, comas y puntos.`); return; }
+    }
     setLogoSaveError("");
     try {
-      await saveSiteName(editSiteName);
+      await saveSiteName(cleanSiteName);
       await saveDurabilityPrices(editDurabilityPrices);
       await saveDurabilityOnSale(editDurabilityOnSale);
 
@@ -783,19 +792,23 @@ export default function Home() {
     if (!selectedColor) return;
     const oc = origCode(selectedColor);
     const normalized = editHex.startsWith("#") ? editHex : "#" + editHex;
+    const cleanName = sanitizeText(editName, LIMITS.COLOR_NAME);
+    const cleanCode = sanitizeText(editCode, LIMITS.COLOR_CODE);
+    if (!cleanName) { setSaveError("El nombre del color es obligatorio."); return; }
+    if (!isValidHex(normalized)) { setSaveError("El color debe tener formato #RRGGBB (ej: #FF0000)."); return; }
     setSaveError("");
 
     try {
       // Save to DB first — UI updates only after DB confirms
-      const nameChanged = editName.trim() !== selectedColor.name || editCode.trim() !== selectedColor.code;
+      const nameChanged = cleanName !== selectedColor.name || cleanCode !== selectedColor.code;
       if (selectedColor.id) {
         // Custom color: single table update (custom_colors)
-        await updateCustomColor(selectedColor.id, editName.trim(), normalized, editCode.trim());
+        await updateCustomColor(selectedColor.id, cleanName, normalized, cleanCode);
       } else {
         // Built-in color: save hex override + optional name/code override
         await saveColorHex(oc, normalized);
         if (nameChanged) {
-          await saveColorNameOverride(oc, editName.trim(), editCode.trim());
+          await saveColorNameOverride(oc, cleanName, cleanCode);
         }
       }
 
@@ -808,7 +821,7 @@ export default function Home() {
           return {
             ...prev,
             [family]: prev[family].map((c) =>
-              c.id === selectedColor.id ? { ...c, name: editName.trim(), hex: normalized, code: editCode.trim() } : c
+              c.id === selectedColor.id ? { ...c, name: cleanName, hex: normalized, code: cleanCode } : c
             ),
           };
         });
@@ -816,10 +829,10 @@ export default function Home() {
         // Built-in color: update hex overrides + name overrides if changed
         setOverrides((prev) => ({ ...prev, [oc]: normalized }));
         if (nameChanged) {
-          setNameOverrides((prev) => ({ ...prev, [oc]: { name: editName.trim(), code: editCode.trim() } }));
+          setNameOverrides((prev) => ({ ...prev, [oc]: { name: cleanName, code: cleanCode } }));
         }
       }
-      setSelectedColor({ ...selectedColor, name: editName.trim(), code: editCode.trim(), hex: normalized });
+      setSelectedColor({ ...selectedColor, name: cleanName, code: cleanCode, hex: normalized });
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1500);
     } catch {
