@@ -787,33 +787,35 @@ export default function Home() {
 
     try {
       // Save to DB first — UI updates only after DB confirms
-      await saveColorHex(oc, normalized);
-
-      // Save name/code if changed
       const nameChanged = editName.trim() !== selectedColor.name || editCode.trim() !== selectedColor.code;
-      if (nameChanged) {
-        if (selectedColor.id) {
-          await updateCustomColor(selectedColor.id, editName.trim(), normalized, editCode.trim());
-        } else {
+      if (selectedColor.id) {
+        // Custom color: single table update (custom_colors)
+        await updateCustomColor(selectedColor.id, editName.trim(), normalized, editCode.trim());
+      } else {
+        // Built-in color: save hex override + optional name/code override
+        await saveColorHex(oc, normalized);
+        if (nameChanged) {
           await saveColorNameOverride(oc, editName.trim(), editCode.trim());
         }
       }
 
       // DB saves confirmed — now update UI state
-      setOverrides((prev) => ({ ...prev, [oc]: normalized }));
-      if (nameChanged) {
-        if (selectedColor.id) {
-          setCustomColors((prev) => {
-            const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === selectedColor.id));
-            if (!family) return prev;
-            return {
-              ...prev,
-              [family]: prev[family].map((c) =>
-                c.id === selectedColor.id ? { ...c, name: editName.trim(), hex: normalized, code: editCode.trim() } : c
-              ),
-            };
-          });
-        } else {
+      if (selectedColor.id) {
+        // Custom color: update customColors list
+        setCustomColors((prev) => {
+          const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === selectedColor.id));
+          if (!family) return prev;
+          return {
+            ...prev,
+            [family]: prev[family].map((c) =>
+              c.id === selectedColor.id ? { ...c, name: editName.trim(), hex: normalized, code: editCode.trim() } : c
+            ),
+          };
+        });
+      } else {
+        // Built-in color: update hex overrides + name overrides if changed
+        setOverrides((prev) => ({ ...prev, [oc]: normalized }));
+        if (nameChanged) {
           setNameOverrides((prev) => ({ ...prev, [oc]: { name: editName.trim(), code: editCode.trim() } }));
         }
       }
@@ -1390,7 +1392,11 @@ export default function Home() {
                               color={{ ...color, hex: getEffectiveHex(color) }}
                               onClick={() => setSelectedColor(selectedColor?.code === color.code ? null : color)}
                               selected={selectedColor?.code === color.code}
-                              onDelete={isAdmin ? () => handleDeleteColor(color) : undefined}
+                              onDelete={isAdmin ? () => {
+                                if (window.confirm(`¿Eliminar "${color.name}"? Esta acción no se puede deshacer.`)) {
+                                  handleDeleteColor(color);
+                                }
+                              } : undefined}
                             />
                           ))}
                         </div>
@@ -1485,13 +1491,17 @@ export default function Home() {
                                     <button
                                       onClick={async () => {
                                         const oc = origCode(selectedColor);
-                                        setOverrides((prev) => {
-                                          const next = { ...prev };
-                                          delete next[oc];
-                                          return next;
-                                        });
-                                        applyHex(selectedColor.hex);
-                                        await deleteColorHex(oc);
+                                        try {
+                                          await deleteColorHex(oc);
+                                          setOverrides((prev) => {
+                                            const next = { ...prev };
+                                            delete next[oc];
+                                            return next;
+                                          });
+                                          applyHex(selectedColor.hex);
+                                        } catch {
+                                          setSaveError("No se pudo restablecer. Verificá tu conexión e intentá de nuevo.");
+                                        }
                                       }}
                                       className="text-[10px] text-gray-400 hover:text-red-400 transition-colors text-center"
                                     >
@@ -1500,7 +1510,11 @@ export default function Home() {
                                   )}
 
                                   <button
-                                    onClick={() => handleDeleteColor(selectedColor)}
+                                    onClick={() => {
+                                      if (window.confirm(`¿Eliminar "${selectedColor.name}"? Esta acción no se puede deshacer.`)) {
+                                        handleDeleteColor(selectedColor);
+                                      }
+                                    }}
                                     className="text-[10px] text-red-400 hover:text-red-500 transition-colors text-center"
                                   >
                                     Eliminar color
