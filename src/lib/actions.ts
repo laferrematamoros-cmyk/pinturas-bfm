@@ -44,6 +44,26 @@ export async function saveDurabilityPrices(prices: Record<string, string>): Prom
     .upsert({ key: "durability_prices", value: JSON.stringify(prices) }, { onConflict: "key" });
 }
 
+export async function loadDurabilityOnSale(): Promise<number[]> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "durability_on_sale")
+    .single();
+  if (!data?.value) return [];
+  try {
+    return JSON.parse(data.value) as number[];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveDurabilityOnSale(years: number[]): Promise<void> {
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "durability_on_sale", value: JSON.stringify(years) }, { onConflict: "key" });
+}
+
 export async function saveColorHex(code: string, hex: string): Promise<void> {
   await supabaseAdmin
     .from("color_settings")
