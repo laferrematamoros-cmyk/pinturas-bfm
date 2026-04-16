@@ -21,6 +21,11 @@ export default function RootLayout({
     <html lang="es" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-white text-gray-900">
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}`,
+          }}
+        />
       </body>
     </html>
   );
