@@ -577,8 +577,8 @@ function PaintCalculator({
   const litersNeeded = yieldPerLiter && totalArea > 0 ? Math.ceil(totalArea / yieldPerLiter) : null;
   const buckets = litersNeeded ? calcBuckets(litersNeeded) : [];
 
-  const pricePerLiter = quality ? parsePrice(durabilityPrices[String(quality)] ?? "") : null;
-  const totalCost = pricePerLiter && litersNeeded ? pricePerLiter * litersNeeded : null;
+  const pricePer19L = quality ? parsePrice(durabilityPrices[String(quality)] ?? "") : null;
+  const totalCost = pricePer19L && litersNeeded ? (pricePer19L / 19) * litersNeeded : null;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
