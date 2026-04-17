@@ -16,6 +16,8 @@ import {
   saveRoomPreviewEnabled,
   saveRendimientoLabel,
   saveCardHeight,
+  loadGalonPrices,
+  saveGalonPrices,
   saveSiteName,
   saveSiteLogoUrl,
   saveSiteLogo2Url,
@@ -850,6 +852,8 @@ export default function Home() {
   const [durability, setDurability] = useState<Record<string, number[]>>({});
   const [durabilityPrices, setDurabilityPrices] = useState<Record<string, string>>({});
   const [editDurabilityPrices, setEditDurabilityPrices] = useState<Record<string, string>>({});
+  const [galonPrices, setGalonPrices] = useState<Record<string, string>>({});
+  const [editGalonPrices, setEditGalonPrices] = useState<Record<string, string>>({});
   const [durabilityOnSale, setDurabilityOnSale] = useState<number[]>([]);
   const [editDurabilityOnSale, setEditDurabilityOnSale] = useState<number[]>([]);
   const [customColors, setCustomColors] = useState<Record<string, Color[]>>({});
@@ -927,6 +931,7 @@ export default function Home() {
     });
     // Load global durability prices and on-sale flags
     loadDurabilityPrices().then((p) => setDurabilityPrices(p));
+    loadGalonPrices().then((p) => { setGalonPrices(p); setEditGalonPrices(p); });
     loadDurabilityOnSale().then((s) => setDurabilityOnSale(s));
     // Load custom colors
     loadCustomColors().then((data) => {
@@ -1068,6 +1073,7 @@ export default function Home() {
       await saveRoomPreviewEnabled(editRoomPreviewEnabled);
       await saveRendimientoLabel(editRendimientoLabel);
       await saveCardHeight(editCardHeight);
+      await saveGalonPrices(editGalonPrices);
 
       // Logo 1
       if (editLogoUrl && editLogoUrl.startsWith("data:")) {
@@ -1103,6 +1109,7 @@ export default function Home() {
     setRoomPreviewEnabled(editRoomPreviewEnabled);
     setRendimientoLabel(editRendimientoLabel);
     setCardHeight(editCardHeight);
+    setGalonPrices(editGalonPrices);
     setShowSiteSettings(false);
   }
 
@@ -1499,6 +1506,23 @@ export default function Home() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Precios por galón 4L */}
+            <p className="text-xs font-semibold text-gray-600 mb-2">Precios por galón (4 L)</p>
+            <div className="flex flex-col gap-2 mb-4">
+              {DURABILITY_OPTIONS.map((opt) => (
+                <div key={opt.years} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-16 flex-shrink-0">{opt.years} años</span>
+                  <input
+                    type="text"
+                    value={editGalonPrices[String(opt.years)] ?? ""}
+                    onChange={(e) => setEditGalonPrices((prev) => ({ ...prev, [String(opt.years)]: e.target.value }))}
+                    placeholder="ej: $120"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+                  />
+                </div>
+              ))}
             </div>
 
             {/* Card height */}
@@ -2006,8 +2030,9 @@ export default function Home() {
                                               <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDurability(origCode(selectedColor), opt.years)} />
                                               <span className="font-semibold">{opt.years} años</span>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                              {price && <span className={checked ? "text-white font-bold" : "text-teal-600 font-bold"}>{price}</span>}
+                                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                                              {price && <span className={checked ? "text-white font-bold" : "text-teal-600 font-bold"}>{price}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/19L</span></span>}
+                                              {galonPrices[String(opt.years)] && <span className={checked ? "text-white/90 font-bold" : "text-teal-500 font-bold"}>{galonPrices[String(opt.years)]}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/4L</span></span>}
                                               <span className={checked ? "text-white/80" : "text-gray-400"}>{opt.yield}</span>
                                             </div>
                                           </label>
@@ -2067,9 +2092,18 @@ export default function Home() {
                                                   </span>
                                                 )}
                                                 <span className={`font-semibold ${durabilityOnSale.includes(opt.years) ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
-                                                <div className="flex items-center gap-3">
-                                                  {price && <span className={`font-bold ${durabilityOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-700"}`}>{price}</span>}
-                                                  <span className={durabilityOnSale.includes(opt.years) ? "text-orange-400" : "text-teal-500"}>{opt.yield}</span>
+                                                <div className="flex items-center gap-2 flex-wrap justify-end">
+                                                  {price && (
+                                                    <span className={`font-bold text-xs ${durabilityOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-700"}`}>
+                                                      {price} <span className="font-normal opacity-70">/ 19L</span>
+                                                    </span>
+                                                  )}
+                                                  {galonPrices[String(opt.years)] && (
+                                                    <span className={`font-bold text-xs ${durabilityOnSale.includes(opt.years) ? "text-orange-400" : "text-teal-600"}`}>
+                                                      {galonPrices[String(opt.years)]} <span className="font-normal opacity-70">/ 4L</span>
+                                                    </span>
+                                                  )}
+                                                  <span className={`text-xs ${durabilityOnSale.includes(opt.years) ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
                                                 </div>
                                               </div>
                                             );

@@ -50,6 +50,31 @@ export async function saveDurabilityPrices(prices: Record<string, string>): Prom
     .upsert({ key: "durability_prices", value: JSON.stringify(clean) }, { onConflict: "key" });
 }
 
+export async function loadGalonPrices(): Promise<Record<string, string>> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "galon_prices")
+    .single();
+  if (!data?.value) return {};
+  try {
+    return JSON.parse(data.value) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+export async function saveGalonPrices(prices: Record<string, string>): Promise<void> {
+  const clean: Record<string, string> = {};
+  for (const [k, v] of Object.entries(prices)) {
+    if (v && !isValidPrice(v)) throw new Error(`Precio inválido para ${k} años`);
+    if (v) clean[k] = sanitizeText(v, LIMITS.PRICE);
+  }
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "galon_prices", value: JSON.stringify(clean) }, { onConflict: "key" });
+}
+
 export async function loadDurabilityOnSale(): Promise<number[]> {
   const { data } = await supabaseAdmin
     .from("site_settings")
