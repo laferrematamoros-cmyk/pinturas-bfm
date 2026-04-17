@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import {
@@ -526,6 +526,219 @@ const DURABILITY_OPTIONS: { years: number; yield: string }[] = [
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
 
+// ── Paint yield (conservative lower bound per durability tier) ──
+const YIELD_MAP: Record<number, number> = { 2: 4, 3: 6, 4: 7, 7: 7 };
+
+// ── Bucket sizes available (liters) ──
+const BUCKET_SIZES = [19, 4, 1];
+
+function calcBuckets(liters: number): { size: number; qty: number }[] {
+  let rem = liters;
+  const result: { size: number; qty: number }[] = [];
+  for (const size of BUCKET_SIZES) {
+    if (rem <= 0) break;
+    const qty = Math.floor(rem / size);
+    if (qty > 0) { result.push({ size, qty }); rem -= qty * size; }
+  }
+  if (rem > 0) {
+    const last = result[result.length - 1];
+    if (last?.size === 1) last.qty += rem;
+    else result.push({ size: 1, qty: Math.ceil(rem) });
+  }
+  return result;
+}
+
+function parsePrice(priceStr: string): number | null {
+  const n = parseFloat(priceStr.replace(/[^0-9.]/g, ""));
+  return isNaN(n) ? null : n;
+}
+
+// ── Calculator modal ──────────────────────────────────────────
+
+function PaintCalculator({
+  durabilityPrices,
+  durabilityOnSale,
+  onClose,
+}: {
+  durabilityPrices: Record<string, string>;
+  durabilityOnSale: number[];
+  onClose: () => void;
+}) {
+  const [area, setArea] = useState("");
+  const [coats, setCoats] = useState(2);
+  const [quality, setQuality] = useState<number | null>(null);
+
+  const availableOptions = DURABILITY_OPTIONS.filter((o) => durabilityPrices[String(o.years)]);
+
+  const areaNum = parseFloat(area.replace(",", "."));
+  const validArea = !isNaN(areaNum) && areaNum > 0;
+  const totalArea = validArea ? areaNum * coats : 0;
+  const yieldPerLiter = quality ? YIELD_MAP[quality] : null;
+  const litersNeeded = yieldPerLiter && totalArea > 0 ? Math.ceil(totalArea / yieldPerLiter) : null;
+  const buckets = litersNeeded ? calcBuckets(litersNeeded) : [];
+
+  const pricePerLiter = quality ? parsePrice(durabilityPrices[String(quality)] ?? "") : null;
+  const totalCost = pricePerLiter && litersNeeded ? pricePerLiter * litersNeeded : null;
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <h2 className="font-bold text-base">Calculadora de Pintura</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+        </div>
+
+        <div className="p-5 flex flex-col gap-5">
+          {/* Area input */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              Superficie a pintar
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                placeholder="Ej: 25"
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-gray-900 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 pr-14"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">m²</span>
+            </div>
+          </div>
+
+          {/* Coats */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              Número de manos
+            </label>
+            <div className="flex gap-2">
+              {[1, 2, 3].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setCoats(n)}
+                  className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                    coats === n
+                      ? "bg-teal-500 border-teal-500 text-white shadow-md"
+                      : "bg-white border-gray-200 text-gray-600 hover:border-teal-300"
+                  }`}
+                >
+                  {n} {n === 1 ? "mano" : "manos"}
+                  {n === 2 && <span className="block text-[10px] opacity-70">recomendado</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quality selector */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              Calidad de pintura
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {availableOptions.map((opt) => {
+                const onSale = durabilityOnSale.includes(opt.years);
+                const active = quality === opt.years;
+                return (
+                  <button
+                    key={opt.years}
+                    onClick={() => setQuality(active ? null : opt.years)}
+                    className={`relative flex-1 min-w-[calc(50%-4px)] flex flex-col items-center px-3 py-2.5 rounded-xl border transition-all ${
+                      active
+                        ? "bg-teal-500 border-teal-500 text-white shadow-md"
+                        : onSale
+                        ? "bg-orange-50 border-orange-300 text-gray-700 hover:shadow"
+                        : "bg-white border-gray-200 text-gray-700 hover:border-teal-300"
+                    }`}
+                  >
+                    {onSale && (
+                      <span className={`absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>
+                        OFERTA
+                      </span>
+                    )}
+                    <span className="font-bold text-sm">{opt.years} años</span>
+                    <span className={`font-extrabold text-base leading-tight ${active ? "text-white" : onSale ? "text-orange-500" : "text-teal-600"}`}>
+                      {durabilityPrices[String(opt.years)]}
+                    </span>
+                    <span className={`text-[10px] ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Result */}
+          {litersNeeded && (
+            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-teal-500" />
+                <p className="text-xs text-teal-700 font-semibold uppercase tracking-wide">
+                  Resultado para {areaNum} m² · {coats} {coats === 1 ? "mano" : "manos"}
+                </p>
+              </div>
+
+              {/* Liters */}
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-teal-700">{litersNeeded}</span>
+                <span className="text-lg font-semibold text-teal-600">litros</span>
+                <span className="text-xs text-teal-500 ml-1">(rendimiento mínimo {yieldPerLiter} m²/L)</span>
+              </div>
+
+              {/* Buckets */}
+              <div>
+                <p className="text-xs text-gray-500 font-medium mb-2">Cubetas sugeridas:</p>
+                <div className="flex flex-wrap gap-2">
+                  {buckets.map(({ size, qty }) => (
+                    <div key={size} className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-3 py-2">
+                      <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-black text-gray-800 leading-none">{qty}×</p>
+                        <p className="text-[10px] text-gray-500 leading-none">{size} litro{size !== 1 ? "s" : ""}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cost estimate */}
+              {totalCost !== null && (
+                <div className="flex items-center justify-between border-t border-teal-200 pt-3">
+                  <span className="text-sm text-gray-600">Costo estimado</span>
+                  <span className="text-xl font-black text-teal-700">
+                    {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(totalCost)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!litersNeeded && (
+            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-5 text-center text-gray-400 text-sm">
+              Ingresa los m², las manos y selecciona la calidad para calcular
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [selectedFamily, setSelectedFamily] = useState(0);
   const [search, setSearch] = useState("");
@@ -555,6 +768,7 @@ export default function Home() {
 
   // Admin auth
   const [isAdmin, setIsAdmin] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState(false);
@@ -929,6 +1143,15 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} />
+
+      {/* Paint calculator modal */}
+      {calcOpen && (
+        <PaintCalculator
+          durabilityPrices={durabilityPrices}
+          durabilityOnSale={durabilityOnSale}
+          onClose={() => setCalcOpen(false)}
+        />
+      )}
 
       {/* Error toast */}
       {saveError && (
@@ -1324,6 +1547,19 @@ export default function Home() {
                     </button>
                   </div>
                 )}
+
+                {/* Calculator button */}
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => setCalcOpen(true)}
+                    className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all active:scale-95 text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Calcular cuánta pintura necesito
+                  </button>
+                </div>
               </div>
             )}
 
