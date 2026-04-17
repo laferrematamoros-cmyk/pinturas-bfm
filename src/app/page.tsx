@@ -1510,6 +1510,9 @@ export default function Home() {
                         <span className={`text-base font-extrabold leading-tight ${active ? "text-white" : onSale ? "text-orange-500" : "text-teal-600"}`}>
                           {price}
                         </span>
+                        <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/90" : "text-gray-500"}`}>
+                          cubeta 19 L
+                        </span>
                         <span className={`text-[10px] leading-tight ${active ? "text-white/70" : "text-gray-400"}`}>
                           {opt.yield}
                         </span>
@@ -1517,6 +1520,11 @@ export default function Home() {
                     );
                   })}
                 </div>
+
+                {/* Price clarification note */}
+                <p className="mt-2 text-center text-[11px] text-gray-400">
+                  * Precios por cubeta de 19 litros
+                </p>
 
                 {/* Active filter banner */}
                 {selectedQuality !== null && (
