@@ -529,9 +529,9 @@ const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
 // ── Paint yield (conservative lower bound per durability tier) ──
 const YIELD_MAP: Record<number, number> = { 2: 4, 3: 6, 4: 7, 7: 7 };
 
-// Round up to nearest 0.5
+// Round up to 1 decimal place (e.g. 19L = 1.0, 20L = 1.1, 28.5L = 1.5)
 function calcCubetas19(liters: number): number {
-  return Math.ceil((liters / 19) * 2) / 2;
+  return Math.ceil((liters / 19) * 10) / 10;
 }
 
 function parsePrice(priceStr: string): number | null {
