@@ -696,10 +696,13 @@ function PaintCalculator({
   const litersNeeded = yieldPerLiter && totalArea > 0 ? Math.ceil(totalArea / yieldPerLiter) : null;
   const hasGalonPrice = quality ? !!galonPrices[String(quality)] : false;
 
-  // Combined: full cubetas first, remainder in galones
-  const fullCubetas = litersNeeded ? Math.floor(litersNeeded / 19) : null;
-  const remainingLiters = (litersNeeded && fullCubetas !== null) ? litersNeeded - fullCubetas * 19 : 0;
-  const galonsForRemainder = (hasGalonPrice && remainingLiters > 0) ? Math.ceil(remainingLiters / 4) : 0;
+  // Combined using 0.055 factor: 1 liter = 0.055 container-units
+  // 0.055 × 19 ≈ 1 cubeta; 0.055 × 4 ≈ 1 galón (scaled)
+  const FACTOR = 0.055;
+  const totalUnits = litersNeeded ? litersNeeded * FACTOR : null;
+  const fullCubetas = totalUnits !== null ? Math.floor(totalUnits) : null;
+  const remainingUnits = (totalUnits !== null && fullCubetas !== null) ? totalUnits - fullCubetas : 0;
+  const galonsForRemainder = (hasGalonPrice && remainingUnits > 0) ? Math.ceil(remainingUnits / (4 * FACTOR)) : 0;
   // Fallback: fractional cubetas when no galón option
   const cubetas19 = (!hasGalonPrice && litersNeeded) ? calcCubetas19(litersNeeded) : null;
 
