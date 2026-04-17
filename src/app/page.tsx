@@ -1350,7 +1350,7 @@ export default function Home() {
           onClick={() => setShowAdminMenu(false)}
         >
           <div
-            className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-1 w-48 sm:w-52"
+            className="fixed right-4 top-16 sm:top-24 bg-white rounded-xl shadow-xl border border-gray-100 py-1 w-48 sm:w-52 z-[91]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
