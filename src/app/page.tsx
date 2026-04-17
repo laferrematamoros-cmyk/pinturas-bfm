@@ -1343,7 +1343,7 @@ export default function Home() {
           onClick={() => setShowAdminMenu(false)}
         >
           <div
-            className="absolute right-4 top-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 w-52"
+            className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-1 w-48 sm:w-52"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1399,9 +1399,9 @@ export default function Home() {
 
             {/* Logo upload */}
             <p className="text-xs font-semibold text-gray-600 mb-2">Logo</p>
-            <div className="flex items-center gap-4 mb-5">
+            <div className="flex flex-col gap-2 mb-4">
               {/* Preview — matches exactly how it looks in navbar */}
-              <div className="h-32 w-72 flex items-center justify-start flex-shrink-0 border border-gray-100 rounded-lg bg-gray-50 px-2">
+              <div className="h-24 sm:h-32 w-full flex items-center justify-start flex-shrink-0 border border-gray-100 rounded-lg bg-gray-50 px-2">
                 {editLogoUrl ? (
                   <img src={editLogoUrl} alt="logo" className="h-28 w-auto max-w-full object-contain" />
                 ) : (
@@ -1410,7 +1410,7 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
                 <label className="cursor-pointer px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors text-center">
                   Cargar imagen
                   <input type="file" accept="image/*" className="sr-only" onChange={handleLogoFile} />
@@ -1428,15 +1428,15 @@ export default function Home() {
 
             {/* Logo 2 upload */}
             <p className="text-xs font-semibold text-gray-600 mb-2">Logo secundario</p>
-            <div className="flex items-center gap-4 mb-5">
-              <div className="h-32 w-72 flex items-center justify-start flex-shrink-0 border border-gray-100 rounded-lg bg-gray-50 px-2">
+            <div className="flex flex-col gap-2 mb-4">
+              <div className="h-24 sm:h-32 w-full flex items-center justify-start flex-shrink-0 border border-gray-100 rounded-lg bg-gray-50 px-2">
                 {editLogo2Url ? (
-                  <img src={editLogo2Url} alt="logo2" className="h-28 w-auto max-w-full object-contain" />
+                  <img src={editLogo2Url} alt="logo2" className="h-20 sm:h-28 w-auto max-w-full object-contain" />
                 ) : (
                   <span className="text-xs text-gray-400">Sin logo secundario</span>
                 )}
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
                 <label className="cursor-pointer px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors text-center">
                   Cargar imagen
                   <input type="file" accept="image/*" className="sr-only" onChange={(e) => {
@@ -1695,7 +1695,7 @@ export default function Home() {
                       <button
                         key={opt.years}
                         onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
-                        className={`relative flex flex-col items-center px-5 py-2.5 rounded-2xl border transition-all duration-200 shadow-sm ${
+                        className={`relative flex flex-col items-center px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl border transition-all duration-200 shadow-sm ${
                           active
                             ? "bg-teal-500 border-teal-400 text-white shadow-md scale-110"
                             : onSale
@@ -1777,7 +1777,7 @@ export default function Home() {
                     <p className="text-sm text-gray-500 mb-4 text-center">
                       {allSearchResults.length} colores encontrados
                     </p>
-                    <div className="grid grid-cols-4 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-12 gap-0">
+                    <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-0">
                       {allSearchResults.map((color) => (
                         <ColorSwatch key={color.code} color={color} onClick={() => setSelectedColor(color)} selected={selectedColor?.code === color.code} cardHeight={cardHeight} />
                       ))}
@@ -1851,7 +1851,7 @@ export default function Home() {
                       : -1;
                     return (
                       <React.Fragment key={rowIndex}>
-                        <div className="grid grid-cols-3 gap-3 mb-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-3">
                           {rowColors.map((color) => (
                             <ColorSwatch
                               key={color.id ?? color.code}

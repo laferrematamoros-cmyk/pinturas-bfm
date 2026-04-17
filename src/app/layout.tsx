@@ -10,6 +10,7 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: "Pinturas BFM",
   description: "Catálogo de pinturas, paleta de colores y calculadora",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
 
 export default function RootLayout({
@@ -19,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-white text-gray-900">
+      <body className="min-h-full flex flex-col bg-white text-gray-900 overflow-x-hidden">
         {children}
         <script
           dangerouslySetInnerHTML={{
