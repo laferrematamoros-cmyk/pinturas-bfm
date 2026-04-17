@@ -92,7 +92,7 @@ export async function saveColorDurability(code: string, years: number[]): Promis
 
 // ── Site settings ───────────────────────────────────────────
 
-export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null }> {
+export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean }> {
   const { data } = await supabaseAdmin.from("site_settings").select("*");
   const map: Record<string, string> = {};
   for (const row of data ?? []) map[row.key] = row.value;
@@ -100,7 +100,14 @@ export async function loadSiteSettings(): Promise<{ name: string; logoUrl: strin
     name: map["site_name"] ?? "Pinturas BFM",
     logoUrl: map["logo_url"] ?? null,
     logo2Url: map["logo2_url"] ?? null,
+    roomPreviewEnabled: (map["room_preview_enabled"] ?? "true") === "true",
   };
+}
+
+export async function saveRoomPreviewEnabled(enabled: boolean): Promise<void> {
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "room_preview_enabled", value: String(enabled) }, { onConflict: "key" });
 }
 
 export async function saveSiteLogo2Url(url: string | null): Promise<void> {
