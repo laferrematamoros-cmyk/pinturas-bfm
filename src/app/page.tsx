@@ -1714,86 +1714,105 @@ export default function Home() {
             </div>
 
             {/* Quality / price selector */}
-            {DURABILITY_OPTIONS.some((opt) => durabilityPrices[String(opt.years)]) && (
+            {DURABILITY_OPTIONS.some((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]) && (
               <div className="px-4 mb-6">
                 <p className="text-center text-base text-gray-900 mb-3 uppercase tracking-widest font-bold">
                   Filtrá por calidad y precio
                 </p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  {/* "Todos" chip */}
-                  <button
-                    onClick={() => { setSelectedQuality(null); setSelectedColor(null); }}
-                    className={`px-5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
-                      selectedQuality === null
-                        ? "bg-gray-800 text-white border-gray-800 shadow-lg scale-105"
-                        : "bg-white text-gray-500 border-gray-200 hover:scale-110 hover:border-gray-600 hover:text-gray-800"
-                    }`}
-                    style={selectedQuality !== null ? undefined : { boxShadow: "0 0 8px #6b7280, 0 0 18px #4b556380" }}
-                    onMouseEnter={e => { if (selectedQuality !== null) (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #6b7280, 0 0 18px #4b556380"; }}
-                    onMouseLeave={e => { if (selectedQuality !== null) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
-                  >
-                    Todos los colores
-                  </button>
 
-                  {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]).map((opt) => {
-                    const price = durabilityPrices[String(opt.years)];
-                    const galon = galonPrices[String(opt.years)];
-                    const active = selectedQuality === opt.years;
-                    const onSale = durabilityOnSale.includes(opt.years);
-                    const galonSale = galonOnSale.includes(opt.years);
-                    const anyOnSale = onSale || galonSale;
-                    const neonColor = anyOnSale ? "#f97316" : "#2dd4bf";
-                    const neonShadow = `0 0 8px ${neonColor}, 0 0 20px ${neonColor}80`;
-                    return (
-                      <button
-                        key={opt.years}
-                        onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
-                        className={`relative flex flex-col items-center px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl border transition-all duration-200 shadow-sm ${
-                          active
-                            ? "bg-teal-500 border-teal-400 text-white shadow-md scale-110"
-                            : anyOnSale
-                            ? "bg-orange-50 border-orange-400 text-gray-700 hover:scale-110"
-                            : "bg-white text-gray-700 border-gray-200 hover:scale-110 hover:border-teal-400"
-                        }`}
-                        style={active ? { boxShadow: neonShadow } : undefined}
-                        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
-                        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
-                      >
-                        {anyOnSale && (
-                          <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                            active ? "bg-white text-orange-500" : "bg-orange-500 text-white"
-                          }`}>
-                            EN OFERTA
-                          </span>
-                        )}
-                        <span className="font-bold text-sm">{opt.years} años</span>
-                        {price && (
-                          <>
-                            <span className={`text-base font-extrabold leading-tight ${active ? "text-white" : onSale ? "text-orange-500" : "text-teal-600"}`}>
-                              {price}
-                            </span>
-                            <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/90" : "text-gray-500"}`}>
-                              cubeta 19 L
-                            </span>
-                          </>
-                        )}
-                        {galon && (
-                          <>
-                            <span className={`text-sm font-extrabold leading-tight mt-0.5 ${active ? "text-white/90" : galonSale ? "text-orange-500" : "text-teal-500"}`}>
-                              {galon}
-                            </span>
-                            <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/80" : "text-gray-400"}`}>
-                              galón 4 L
-                            </span>
-                          </>
-                        )}
-                        <span className={`text-[10px] leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>
-                          {opt.yield}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {/* Row 1: Cubeta 19L */}
+                {DURABILITY_OPTIONS.some((opt) => durabilityPrices[String(opt.years)]) && (
+                  <div className="flex flex-wrap justify-center gap-3 mb-2">
+                    <button
+                      onClick={() => { setSelectedQuality(null); setSelectedColor(null); }}
+                      className={`px-5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
+                        selectedQuality === null
+                          ? "bg-gray-800 text-white border-gray-800 shadow-lg scale-105"
+                          : "bg-white text-gray-500 border-gray-200 hover:scale-110 hover:border-gray-600 hover:text-gray-800"
+                      }`}
+                      style={selectedQuality !== null ? undefined : { boxShadow: "0 0 8px #6b7280, 0 0 18px #4b556380" }}
+                      onMouseEnter={e => { if (selectedQuality !== null) (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #6b7280, 0 0 18px #4b556380"; }}
+                      onMouseLeave={e => { if (selectedQuality !== null) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
+                    >
+                      Todos los colores
+                    </button>
+                    {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)]).map((opt) => {
+                      const price = durabilityPrices[String(opt.years)];
+                      const active = selectedQuality === opt.years;
+                      const onSale = durabilityOnSale.includes(opt.years);
+                      const neonColor = onSale ? "#f97316" : "#2dd4bf";
+                      const neonShadow = `0 0 8px ${neonColor}, 0 0 20px ${neonColor}80`;
+                      return (
+                        <button
+                          key={opt.years}
+                          onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
+                          className={`relative flex flex-col items-center px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl border transition-all duration-200 shadow-sm min-w-[80px] ${
+                            active
+                              ? "bg-teal-500 border-teal-400 text-white shadow-md scale-110"
+                              : onSale
+                              ? "bg-orange-50 border-orange-400 text-gray-700 hover:scale-110"
+                              : "bg-white text-gray-700 border-gray-200 hover:scale-110 hover:border-teal-400"
+                          }`}
+                          style={active ? { boxShadow: neonShadow } : undefined}
+                          onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
+                          onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
+                        >
+                          {onSale && (
+                            <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                              active ? "bg-white text-orange-500" : "bg-orange-500 text-white"
+                            }`}>EN OFERTA</span>
+                          )}
+                          <span className="font-bold text-sm">{opt.years} años</span>
+                          <span className={`text-base font-extrabold leading-tight ${active ? "text-white" : onSale ? "text-orange-500" : "text-teal-600"}`}>{price}</span>
+                          <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/90" : "text-gray-500"}`}>cubeta 19 L</span>
+                          <span className={`text-[10px] leading-tight ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Row 2: Galón 4L */}
+                {DURABILITY_OPTIONS.some((opt) => galonPrices[String(opt.years)]) && (
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <div className="px-5 py-2 rounded-full text-sm font-medium border border-transparent text-transparent select-none">
+                      Todos los colores
+                    </div>
+                    {DURABILITY_OPTIONS.filter((opt) => galonPrices[String(opt.years)]).map((opt) => {
+                      const galon = galonPrices[String(opt.years)];
+                      const active = selectedQuality === opt.years;
+                      const galonSale = galonOnSale.includes(opt.years);
+                      const neonColor = galonSale ? "#f97316" : "#2dd4bf";
+                      const neonShadow = `0 0 8px ${neonColor}, 0 0 20px ${neonColor}80`;
+                      return (
+                        <button
+                          key={opt.years}
+                          onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
+                          className={`relative flex flex-col items-center px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl border transition-all duration-200 shadow-sm min-w-[80px] ${
+                            active
+                              ? "bg-teal-500 border-teal-400 text-white shadow-md scale-110"
+                              : galonSale
+                              ? "bg-orange-50 border-orange-400 text-gray-700 hover:scale-110"
+                              : "bg-white text-gray-700 border-gray-200 hover:scale-110 hover:border-teal-400"
+                          }`}
+                          style={active ? { boxShadow: neonShadow } : undefined}
+                          onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
+                          onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
+                        >
+                          {galonSale && (
+                            <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                              active ? "bg-white text-orange-500" : "bg-orange-500 text-white"
+                            }`}>EN OFERTA</span>
+                          )}
+                          <span className="font-bold text-sm">{opt.years} años</span>
+                          <span className={`text-base font-extrabold leading-tight ${active ? "text-white" : galonSale ? "text-orange-500" : "text-teal-600"}`}>{galon}</span>
+                          <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/90" : "text-gray-500"}`}>galón 4 L</span>
+                          <span className={`text-[10px] leading-tight ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Price clarification note */}
                 <p className="mt-2 text-center text-[11px] text-gray-400">
