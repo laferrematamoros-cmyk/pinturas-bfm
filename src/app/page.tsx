@@ -1052,15 +1052,6 @@ function PaintCalculator({
                 </div>
               )}
 
-              {/* Cost estimate removed */}
-              {false && totalCost !== null && (
-                <div className="flex items-center justify-between border-t border-teal-200 pt-3">
-                  <span className="text-sm text-gray-600">Costo estimado</span>
-                  <span className="text-xl font-black text-teal-700">
-                    {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(totalCost)}
-                  </span>
-                </div>
-              )}
             </div>
           )}
 
