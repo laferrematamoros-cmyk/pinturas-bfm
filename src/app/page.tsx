@@ -539,289 +539,50 @@ type RoomTab = typeof ROOM_TABS[number]["id"];
 
 function SalaRoom({ hex }: { hex: string }) {
   return (
-    <svg viewBox="0 0 480 310" className="w-full" style={{ display:"block" }}>
-      <polygon points="0,0 110,50 370,50 480,0" fill="#F2EFE8"/>
-      <rect x="110" y="50" width="260" height="185" fill={hex}/>
-      <polygon points="0,0 110,50 110,235 0,310" fill={hex}/>
-      <polygon points="0,0 110,50 110,235 0,310" fill="black" fillOpacity="0.2"/>
-      <polygon points="370,50 480,0 480,310 370,235" fill={hex}/>
-      <polygon points="370,50 480,0 480,310 370,235" fill="white" fillOpacity="0.17"/>
-      <polygon points="0,310 110,235 370,235 480,310" fill="#C4A265"/>
-      {[55,115,175,235,300,355,415,460].map((x,i)=>(
-        <line key={i} x1={x} y1="310" x2={110+x*260/480} y2="235" stroke="#A8853A" strokeWidth="0.8" strokeOpacity="0.4"/>
-      ))}
-      <rect x="110" y="50" width="260" height="5" fill="white" fillOpacity="0.2"/>
-      <rect x="110" y="224" width="260" height="11" fill="white" fillOpacity="0.14"/>
-      <line x1="240" y1="0" x2="240" y2="14" stroke="#AAA" strokeWidth="1.5"/>
-      <ellipse cx="240" cy="18" rx="15" ry="6" fill="#E0D5C0"/>
-      <polygon points="229,18 251,18 247,26 233,26" fill="#D0C5B0"/>
-      <ellipse cx="240" cy="27" rx="24" ry="11" fill="white" fillOpacity="0.1"/>
-      {/* Window */}
-      <rect x="168" y="65" width="144" height="112" fill="#B8DDEF"/>
-      <rect x="168" y="65" width="144" height="55" fill="#D0ECFA"/>
-      <rect x="168" y="130" width="144" height="47" fill="#78B040" fillOpacity="0.5"/>
-      <ellipse cx="262" cy="124" rx="16" ry="18" fill="#4A8A28" fillOpacity="0.5"/>
-      <rect x="260" y="138" width="4" height="12" fill="#5A3A10" fillOpacity="0.5"/>
-      <line x1="240" y1="65" x2="240" y2="177" stroke="white" strokeWidth="3"/>
-      <line x1="168" y1="121" x2="312" y2="121" stroke="white" strokeWidth="3"/>
-      <rect x="168" y="65" width="144" height="112" fill="none" stroke="white" strokeWidth="5"/>
-      <rect x="164" y="174" width="152" height="8" rx="1" fill="white" fillOpacity="0.8"/>
-      <rect x="168" y="65" width="24" height="112" fill="white" fillOpacity="0.06"/>
-      <polygon points="168,182 312,182 330,235 150,235" fill="white" fillOpacity="0.04"/>
-      {/* Curtains */}
-      <path d="M153,48 C155,88 150,140 153,182" stroke="#D4C4A0" strokeWidth="22" strokeLinecap="round" fill="none" strokeOpacity="0.95"/>
-      <path d="M148,48 C145,92 142,145 146,186" stroke="#C2B08A" strokeWidth="7" strokeLinecap="round" fill="none" strokeOpacity="0.45"/>
-      <path d="M327,48 C325,88 330,140 327,182" stroke="#D4C4A0" strokeWidth="22" strokeLinecap="round" fill="none" strokeOpacity="0.95"/>
-      <path d="M332,48 C335,92 338,145 334,186" stroke="#C2B08A" strokeWidth="7" strokeLinecap="round" fill="none" strokeOpacity="0.45"/>
-      <line x1="138" y1="48" x2="342" y2="48" stroke="#A09070" strokeWidth="3.5"/>
-      <circle cx="138" cy="48" r="4" fill="#A09070"/><circle cx="342" cy="48" r="4" fill="#A09070"/>
-      {/* Picture frame */}
-      <rect x="118" y="78" width="36" height="50" fill="#7A6040" fillOpacity="0.3" rx="1"/>
-      <rect x="121" y="81" width="30" height="42" fill="#9A8060" fillOpacity="0.25" rx="1"/>
-      <rect x="118" y="78" width="36" height="50" fill="none" stroke="white" strokeWidth="2.5" rx="1" strokeOpacity="0.8"/>
-      {/* TV on right wall */}
-      <rect x="378" y="82" width="76" height="46" rx="2" fill="#1a1a1a" fillOpacity="0.7"/>
-      <rect x="380" y="84" width="72" height="40" fill="#3a5a7a" fillOpacity="0.3"/>
-      <rect x="408" y="127" width="16" height="5" rx="1" fill="#1a1a1a" fillOpacity="0.6"/>
-      {/* Sofa */}
-      <rect x="138" y="204" width="204" height="30" rx="6" fill="#4A3828"/>
-      <line x1="240" y1="204" x2="240" y2="234" stroke="#3A2818" strokeWidth="2"/>
-      <rect x="134" y="215" width="212" height="20" rx="4" fill="#5A4535"/>
-      <rect x="130" y="206" width="14" height="30" rx="4" fill="#3A2818"/>
-      <rect x="336" y="206" width="14" height="30" rx="4" fill="#3A2818"/>
-      <circle cx="192" cy="210" r="4" fill="#6A5040" fillOpacity="0.6"/>
-      <circle cx="288" cy="210" r="4" fill="#6A5040" fillOpacity="0.6"/>
-      <rect x="142" y="234" width="8" height="7" rx="1" fill="#2A1808"/>
-      <rect x="330" y="234" width="8" height="7" rx="1" fill="#2A1808"/>
-      {/* Coffee table */}
-      <polygon points="160,247 320,247 310,260 170,260" fill="#8B6840" fillOpacity="0.65"/>
-      <rect x="175" y="259" width="5" height="6" rx="1" fill="#7A5830" fillOpacity="0.8"/>
-      <rect x="300" y="259" width="5" height="6" rx="1" fill="#7A5830" fillOpacity="0.8"/>
-      {/* Rug */}
-      <polygon points="126,268 150,237 330,237 354,268 328,280 152,280" fill="#8B5A3A" fillOpacity="0.35"/>
-      <polygon points="130,268 153,239 327,239 350,268 326,278 154,278" fill="none" stroke="#C09070" strokeWidth="1.2" strokeOpacity="0.4"/>
-      {/* Plant */}
-      <rect x="350" y="215" width="12" height="22" rx="2" fill="#7A5520"/>
-      <ellipse cx="356" cy="202" rx="13" ry="12" fill="#2D6B1A"/>
-      <ellipse cx="349" cy="197" rx="9" ry="9" fill="#3A8522" fillOpacity="0.8"/>
-      <ellipse cx="364" cy="198" rx="8" ry="8" fill="#2D6B1A"/>
-      <ellipse cx="356" cy="192" rx="7" ry="7" fill="#4A9A2A" fillOpacity="0.8"/>
-    </svg>
+    <div className="w-full relative" style={{ backgroundColor: hex }}>
+      <img
+        src="/sala-sofa.png"
+        alt="Sala"
+        className="w-full block"
+      />
+    </div>
   );
 }
 
+
 function RecamaraRoom({ hex }: { hex: string }) {
   return (
-    <svg viewBox="0 0 480 310" className="w-full" style={{ display:"block" }}>
-      <polygon points="0,0 110,50 370,50 480,0" fill="#F2EFE8"/>
-      <rect x="110" y="50" width="260" height="185" fill={hex}/>
-      <polygon points="0,0 110,50 110,235 0,310" fill={hex}/>
-      <polygon points="0,0 110,50 110,235 0,310" fill="black" fillOpacity="0.2"/>
-      <polygon points="370,50 480,0 480,310 370,235" fill={hex}/>
-      <polygon points="370,50 480,0 480,310 370,235" fill="white" fillOpacity="0.17"/>
-      <polygon points="0,310 110,235 370,235 480,310" fill="#A89080"/>
-      {[55,115,175,235,300,355,415,460].map((x,i)=>(
-        <line key={i} x1={x} y1="310" x2={110+x*260/480} y2="235" stroke="#8A7060" strokeWidth="0.6" strokeOpacity="0.3"/>
-      ))}
-      <rect x="110" y="50" width="260" height="5" fill="white" fillOpacity="0.2"/>
-      <rect x="110" y="224" width="260" height="11" fill="white" fillOpacity="0.14"/>
-      <circle cx="240" cy="4" r="18" fill="#F0E8C8" fillOpacity="0.6"/>
-      <ellipse cx="240" cy="8" rx="25" ry="12" fill="white" fillOpacity="0.12"/>
-      {/* Window */}
-      <rect x="190" y="62" width="100" height="75" fill="#B8DDEF"/>
-      <rect x="190" y="62" width="100" height="38" fill="#D0ECFA"/>
-      <rect x="190" y="100" width="100" height="37" fill="#78B040" fillOpacity="0.4"/>
-      <line x1="240" y1="62" x2="240" y2="137" stroke="white" strokeWidth="2.5"/>
-      <line x1="190" y1="100" x2="290" y2="100" stroke="white" strokeWidth="2.5"/>
-      <rect x="190" y="62" width="100" height="75" fill="none" stroke="white" strokeWidth="4"/>
-      <rect x="186" y="134" width="108" height="7" rx="1" fill="white" fillOpacity="0.8"/>
-      {/* Sheer curtains */}
-      <path d="M178,48 C180,75 176,110 178,143" stroke="#E8DCC8" strokeWidth="18" strokeLinecap="round" fill="none" strokeOpacity="0.8"/>
-      <path d="M302,48 C300,75 304,110 302,143" stroke="#E8DCC8" strokeWidth="18" strokeLinecap="round" fill="none" strokeOpacity="0.8"/>
-      <line x1="168" y1="48" x2="312" y2="48" stroke="#B0A080" strokeWidth="2.5"/>
-      {/* Bed */}
-      <rect x="148" y="176" width="184" height="26" rx="6" fill="#5C3A20"/>
-      <rect x="152" y="179" width="176" height="18" rx="4" fill="#7A5030"/>
-      <rect x="144" y="200" width="192" height="38" rx="3" fill="#6B4A28"/>
-      <rect x="148" y="200" width="184" height="34" rx="3" fill="#F0E8E0"/>
-      <rect x="148" y="200" width="184" height="14" rx="3" fill="#E8E0D8"/>
-      <rect x="160" y="200" width="72" height="16" rx="5" fill="white" fillOpacity="0.95"/>
-      <rect x="248" y="200" width="72" height="16" rx="5" fill="white" fillOpacity="0.95"/>
-      <rect x="163" y="202" width="66" height="11" rx="4" fill="#F8F4F0"/>
-      <rect x="251" y="202" width="66" height="11" rx="4" fill="#F8F4F0"/>
-      <rect x="149" y="234" width="7" height="7" rx="1" fill="#4A2A10"/>
-      <rect x="324" y="234" width="7" height="7" rx="1" fill="#4A2A10"/>
-      {/* Bedside tables */}
-      <rect x="116" y="206" width="32" height="28" rx="2" fill="#7A5A30"/>
-      <rect x="116" y="218" width="32" height="2" fill="#5A3A18" fillOpacity="0.4"/>
-      <rect x="128" y="198" width="6" height="8" rx="1" fill="#888"/>
-      <polygon points="122,193 142,193 138,198 126,198" fill="#F0E8C8" fillOpacity="0.9"/>
-      <ellipse cx="132" cy="193" rx="15" ry="7" fill="white" fillOpacity="0.15"/>
-      <rect x="332" y="206" width="32" height="28" rx="2" fill="#7A5A30"/>
-      <rect x="344" y="198" width="6" height="8" rx="1" fill="#888"/>
-      <polygon points="338,193 358,193 354,198 342,198" fill="#F0E8C8" fillOpacity="0.9"/>
-      <ellipse cx="348" cy="193" rx="15" ry="7" fill="white" fillOpacity="0.15"/>
-      {/* Rug */}
-      <polygon points="140,260 148,237 332,237 340,260 328,272 152,272" fill="#9B7A6A" fillOpacity="0.4"/>
-      <polygon points="144,260 151,239 329,239 336,260 326,270 154,270" fill="none" stroke="#C0A080" strokeWidth="1.2" strokeOpacity="0.4"/>
-      {/* Wardrobe on right wall */}
-      <polygon points="374,68 428,42 428,210 374,230" fill="#7A6040" fillOpacity="0.35"/>
-      <line x1="401" y1="53" x2="401" y2="222" stroke="#6A5030" strokeWidth="1.5" strokeOpacity="0.4"/>
-      <circle cx="398" cy="138" r="3" fill="#C0A060" fillOpacity="0.7"/>
-      <circle cx="404" cy="138" r="3" fill="#C0A060" fillOpacity="0.7"/>
-    </svg>
+    <div className="w-full relative" style={{ backgroundColor: hex }}>
+      <img
+        src="/recamara.png"
+        alt="Recámara"
+        className="w-full block"
+      />
+    </div>
   );
 }
 
 function CocinaRoom({ hex }: { hex: string }) {
   return (
-    <svg viewBox="0 0 480 310" className="w-full" style={{ display:"block" }}>
-      <polygon points="0,0 110,50 370,50 480,0" fill="#F2EFE8"/>
-      <rect x="110" y="50" width="260" height="185" fill={hex}/>
-      <polygon points="0,0 110,50 110,235 0,310" fill={hex}/>
-      <polygon points="0,0 110,50 110,235 0,310" fill="black" fillOpacity="0.2"/>
-      <polygon points="370,50 480,0 480,310 370,235" fill={hex}/>
-      <polygon points="370,50 480,0 480,310 370,235" fill="white" fillOpacity="0.17"/>
-      <polygon points="0,310 110,235 370,235 480,310" fill="#D8CFC0"/>
-      {[55,115,175,235,300,355,415,460].map((x,i)=>(
-        <line key={i} x1={x} y1="310" x2={110+x*260/480} y2="235" stroke="#C0B8A8" strokeWidth="1" strokeOpacity="0.5"/>
-      ))}
-      {[0.25,0.5,0.75].map((t,i)=>(
-        <line key={i} x1="0" y1={235+t*75} x2="480" y2={235+t*75} stroke="#C0B8A8" strokeWidth="0.8" strokeOpacity="0.35"/>
-      ))}
-      <rect x="110" y="50" width="260" height="5" fill="white" fillOpacity="0.2"/>
-      <circle cx="175" cy="5" r="5" fill="#F0E8C0"/>
-      <ellipse cx="175" cy="10" rx="12" ry="6" fill="white" fillOpacity="0.12"/>
-      <circle cx="305" cy="5" r="5" fill="#F0E8C0"/>
-      <ellipse cx="305" cy="10" rx="12" ry="6" fill="white" fillOpacity="0.12"/>
-      {/* Upper cabinets left */}
-      <rect x="114" y="70" width="80" height="60" rx="1" fill="white" fillOpacity="0.22"/>
-      <line x1="155" y1="70" x2="155" y2="130" stroke="white" strokeWidth="1.5" strokeOpacity="0.3"/>
-      <rect x="114" y="125" width="80" height="5" fill="white" fillOpacity="0.15"/>
-      <circle cx="141" cy="100" r="3" fill="white" fillOpacity="0.6"/>
-      <circle cx="169" cy="100" r="3" fill="white" fillOpacity="0.6"/>
-      {/* Upper cabinets right */}
-      <rect x="286" y="70" width="80" height="60" rx="1" fill="white" fillOpacity="0.22"/>
-      <line x1="327" y1="70" x2="327" y2="130" stroke="white" strokeWidth="1.5" strokeOpacity="0.3"/>
-      <rect x="286" y="125" width="80" height="5" fill="white" fillOpacity="0.15"/>
-      <circle cx="313" cy="100" r="3" fill="white" fillOpacity="0.6"/>
-      <circle cx="341" cy="100" r="3" fill="white" fillOpacity="0.6"/>
-      {/* Window above sink */}
-      <rect x="194" y="65" width="92" height="65" fill="#B8DDEF"/>
-      <rect x="194" y="65" width="92" height="32" fill="#D0ECFA"/>
-      <rect x="194" y="97" width="92" height="33" fill="#78B040" fillOpacity="0.4"/>
-      <line x1="240" y1="65" x2="240" y2="130" stroke="white" strokeWidth="2.5"/>
-      <line x1="194" y1="97" x2="286" y2="97" stroke="white" strokeWidth="2.5"/>
-      <rect x="194" y="65" width="92" height="65" fill="none" stroke="white" strokeWidth="4"/>
-      {/* Counter top */}
-      <rect x="112" y="170" width="256" height="10" rx="1" fill="#E0D8C8" fillOpacity="0.85"/>
-      {/* Lower cabinets left */}
-      <rect x="114" y="180" width="116" height="52" rx="1" fill="white" fillOpacity="0.18"/>
-      <line x1="173" y1="180" x2="173" y2="232" stroke="white" strokeWidth="1.5" strokeOpacity="0.3"/>
-      <circle cx="145" cy="206" r="3" fill="white" fillOpacity="0.55"/>
-      <circle cx="201" cy="206" r="3" fill="white" fillOpacity="0.55"/>
-      {/* Sink */}
-      <rect x="206" y="175" width="68" height="12" rx="2" fill="#C8D8E0" fillOpacity="0.7"/>
-      <ellipse cx="240" cy="181" rx="24" ry="5" fill="#A8B8C0" fillOpacity="0.5"/>
-      <rect x="238" y="168" width="4" height="10" rx="2" fill="#C0C8D0" fillOpacity="0.8"/>
-      <rect x="234" y="168" width="12" height="2.5" rx="1" fill="#C0C8D0" fillOpacity="0.8"/>
-      {/* Lower cabinets right */}
-      <rect x="250" y="180" width="118" height="52" rx="1" fill="white" fillOpacity="0.18"/>
-      <line x1="310" y1="180" x2="310" y2="232" stroke="white" strokeWidth="1.5" strokeOpacity="0.3"/>
-      <circle cx="282" cy="206" r="3" fill="white" fillOpacity="0.55"/>
-      <circle cx="338" cy="206" r="3" fill="white" fillOpacity="0.55"/>
-      {/* Refrigerator on left wall */}
-      <polygon points="0,62 55,84 55,256 0,278" fill="#E0E0DC" fillOpacity="0.5"/>
-      <line x1="0" y1="168" x2="55" y2="170" stroke="#C0C0BC" strokeWidth="1.5" strokeOpacity="0.4"/>
-      <ellipse cx="48" cy="120" rx="3" ry="3" fill="#C0C0BC" fillOpacity="0.6"/>
-      <ellipse cx="48" cy="215" rx="3" ry="3" fill="#C0C0BC" fillOpacity="0.6"/>
-      {/* Kitchen island */}
-      <polygon points="155,268 175,247 305,247 325,268 305,280 175,280" fill="#B8A888" fillOpacity="0.55"/>
-      <ellipse cx="196" cy="264" rx="12" ry="5" fill="#8A7050" fillOpacity="0.5"/>
-      <ellipse cx="240" cy="264" rx="12" ry="5" fill="#8A7050" fillOpacity="0.5"/>
-      <ellipse cx="284" cy="264" rx="12" ry="5" fill="#8A7050" fillOpacity="0.5"/>
-      {/* Stove */}
-      <rect x="130" y="165" width="55" height="10" rx="1" fill="#D0C8B8" fillOpacity="0.7"/>
-      <circle cx="147" cy="170" r="6" fill="#888" fillOpacity="0.45"/>
-      <circle cx="147" cy="170" r="3" fill="#666" fillOpacity="0.4"/>
-      <circle cx="168" cy="170" r="6" fill="#888" fillOpacity="0.45"/>
-      <circle cx="168" cy="170" r="3" fill="#666" fillOpacity="0.4"/>
-    </svg>
+    <div className="w-full relative" style={{ backgroundColor: hex }}>
+      <img
+        src="/cocina.png"
+        alt="Cocina"
+        className="w-full block"
+      />
+    </div>
   );
 }
 
 function FachadaRoom({ hex }: { hex: string }) {
   return (
-    <svg viewBox="0 0 480 310" className="w-full" style={{ display:"block" }}>
-      {/* Sky */}
-      <rect x="0" y="0" width="480" height="225" fill="#C8E8F8"/>
-      <rect x="0" y="0" width="480" height="100" fill="#D8F0FF"/>
-      <ellipse cx="80" cy="40" rx="35" ry="18" fill="white" fillOpacity="0.8"/>
-      <ellipse cx="110" cy="35" rx="28" ry="16" fill="white" fillOpacity="0.7"/>
-      <ellipse cx="55" cy="45" rx="22" ry="13" fill="white" fillOpacity="0.7"/>
-      <ellipse cx="360" cy="55" rx="40" ry="18" fill="white" fillOpacity="0.7"/>
-      <ellipse cx="395" cy="50" rx="28" ry="14" fill="white" fillOpacity="0.65"/>
-      {/* Ground */}
-      <rect x="0" y="225" width="480" height="85" fill="#4A8A28"/>
-      <rect x="0" y="225" width="480" height="12" fill="#3A7A1A" fillOpacity="0.6"/>
-      {/* Path */}
-      <polygon points="195,310 285,310 268,227 212,227" fill="#C0B8A8"/>
-      <line x1="240" y1="227" x2="240" y2="310" stroke="#A8A090" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="6,6"/>
-      {/* Shadow */}
-      <polygon points="95,225 385,225 395,236 85,236" fill="black" fillOpacity="0.12"/>
-      {/* House body */}
-      <rect x="95" y="112" width="290" height="118" fill={hex}/>
-      {/* Roof */}
-      <polygon points="72,118 240,42 408,118" fill="#7A4A30"/>
-      <polygon points="72,118 240,42 408,118" fill="black" fillOpacity="0.08"/>
-      <line x1="240" y1="42" x2="240" y2="118" stroke="#6A3A20" strokeWidth="2" strokeOpacity="0.4"/>
-      {[0.2,0.4,0.6,0.8].map((t,i)=>(
-        <line key={i} x1={72+t*(240-72)} y1={118-t*(118-42)} x2={408-t*(408-240)} y2={118-t*(118-42)} stroke="#6A3A20" strokeWidth="1" strokeOpacity="0.22"/>
-      ))}
-      <rect x="95" y="112" width="290" height="8" fill="black" fillOpacity="0.14"/>
-      {/* Front door */}
-      <rect x="210" y="162" width="60" height="68" rx="2" fill="#5C3A18"/>
-      <rect x="213" y="165" width="54" height="60" rx="1" fill="#7A5030"/>
-      <rect x="215" y="167" width="23" height="24" rx="1" fill="#6A4020" fillOpacity="0.5"/>
-      <rect x="242" y="167" width="23" height="24" rx="1" fill="#6A4020" fillOpacity="0.5"/>
-      <rect x="215" y="195" width="23" height="24" rx="1" fill="#6A4020" fillOpacity="0.5"/>
-      <rect x="242" y="195" width="23" height="24" rx="1" fill="#6A4020" fillOpacity="0.5"/>
-      <circle cx="237" cy="198" r="3.5" fill="#D4A830"/>
-      <rect x="208" y="160" width="64" height="72" rx="2" fill="none" stroke="white" strokeWidth="3.5" strokeOpacity="0.65"/>
-      <rect x="213" y="153" width="54" height="12" rx="1" fill="#B8DDEF" fillOpacity="0.7"/>
-      <line x1="240" y1="153" x2="240" y2="165" stroke="white" strokeWidth="1.5"/>
-      {/* Left window */}
-      <rect x="120" y="142" width="72" height="62" rx="2" fill="#B8DDEF"/>
-      <rect x="120" y="142" width="72" height="30" fill="#D0ECFA"/>
-      <line x1="156" y1="142" x2="156" y2="204" stroke="white" strokeWidth="2.5"/>
-      <line x1="120" y1="173" x2="192" y2="173" stroke="white" strokeWidth="2.5"/>
-      <rect x="120" y="142" width="72" height="62" fill="none" stroke="white" strokeWidth="4" rx="2"/>
-      <rect x="116" y="202" width="80" height="7" rx="1" fill="white" fillOpacity="0.8"/>
-      <rect x="110" y="140" width="12" height="66" rx="2" fill="#5C3A18" fillOpacity="0.55"/>
-      <rect x="190" y="140" width="12" height="66" rx="2" fill="#5C3A18" fillOpacity="0.55"/>
-      {/* Right window */}
-      <rect x="288" y="142" width="72" height="62" rx="2" fill="#B8DDEF"/>
-      <rect x="288" y="142" width="72" height="30" fill="#D0ECFA"/>
-      <line x1="324" y1="142" x2="324" y2="204" stroke="white" strokeWidth="2.5"/>
-      <line x1="288" y1="173" x2="360" y2="173" stroke="white" strokeWidth="2.5"/>
-      <rect x="288" y="142" width="72" height="62" fill="none" stroke="white" strokeWidth="4" rx="2"/>
-      <rect x="284" y="202" width="80" height="7" rx="1" fill="white" fillOpacity="0.8"/>
-      <rect x="278" y="140" width="12" height="66" rx="2" fill="#5C3A18" fillOpacity="0.55"/>
-      <rect x="358" y="140" width="12" height="66" rx="2" fill="#5C3A18" fillOpacity="0.55"/>
-      {/* Garage */}
-      <rect x="95" y="170" width="95" height="60" rx="1" fill="black" fillOpacity="0.22"/>
-      <line x1="143" y1="170" x2="143" y2="230" stroke="black" strokeWidth="1.5" strokeOpacity="0.18"/>
-      {[0.2,0.4,0.6,0.8].map((t,i)=>(
-        <line key={i} x1="95" y1={170+t*60} x2="190" y2={170+t*60} stroke="black" strokeWidth="1" strokeOpacity="0.1"/>
-      ))}
-      {/* Garden */}
-      <ellipse cx="105" cy="228" rx="20" ry="13" fill="#2D6B1A"/>
-      <ellipse cx="94" cy="225" rx="14" ry="10" fill="#3A7A22"/>
-      <ellipse cx="378" cy="228" rx="20" ry="13" fill="#2D6B1A"/>
-      <ellipse cx="389" cy="225" rx="14" ry="10" fill="#3A7A22"/>
-      <ellipse cx="202" cy="226" rx="13" ry="9" fill="#3A8A22" fillOpacity="0.8"/>
-      <ellipse cx="278" cy="226" rx="13" ry="9" fill="#3A8A22" fillOpacity="0.8"/>
-    </svg>
+    <div className="w-full relative" style={{ backgroundColor: hex }}>
+      <img
+        src="/fachada.png"
+        alt="Fachada"
+        className="w-full block"
+      />
+    </div>
   );
 }
 
