@@ -1923,11 +1923,87 @@ export default function Home() {
                     <p className="text-sm text-gray-500 mb-4 text-center">
                       {allSearchResults.length} colores encontrados
                     </p>
-                    <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-0">
+                    <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-0 mb-3">
                       {allSearchResults.map((color) => (
-                        <ColorSwatch key={color.code} color={color} onClick={() => setSelectedColor(color)} selected={selectedColor?.code === color.code} cardHeight={cardHeight} />
+                        <ColorSwatch key={color.code} color={color} onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setRoomPreviewOpen(false); }} selected={selectedColor?.code === color.code} cardHeight={cardHeight} />
                       ))}
                     </div>
+                    {selectedColor && (
+                      <div className="flex flex-col sm:flex-row w-full mb-3 rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                        <div className="relative w-full sm:w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex, minHeight: "80px" }}>
+                          <div>
+                            <p className="text-white text-xs font-semibold drop-shadow leading-tight">{selectedColor.name}</p>
+                            <p className="text-white/80 text-[10px] drop-shadow mt-0.5">{selectedColor.code}</p>
+                          </div>
+                        </div>
+                        <div className="relative flex-1 bg-white flex flex-col justify-center gap-3 px-5 py-4 border-t sm:border-t-0 sm:border-l border-gray-100">
+                          <button onClick={() => setSelectedColor(null)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                          <div>
+                            <p className="text-xl font-extrabold text-gray-800 leading-tight">{selectedColor.name}</p>
+                            <p className="text-sm text-gray-400 mt-0.5 font-mono">{selectedColor.code}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full border-4 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: editHex }} />
+                            {roomPreviewEnabled && (
+                              <button onClick={() => setRoomPreviewOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
+                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #2dd4bf, 0 0 20px #0d948880"; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                                Ver en habitación
+                              </button>
+                            )}
+                          </div>
+                          {(() => {
+                            const selected = DURABILITY_OPTIONS.filter((opt) => (durability[origCode(selectedColor)] ?? []).includes(opt.years));
+                            return selected.length > 0 ? (
+                              <div className="flex flex-col gap-3">
+                                <p className="text-base font-extrabold text-gray-800 mb-0">{rendimientoLabel}</p>
+                                {selected.some((opt) => durabilityPrices[String(opt.years)]) && (
+                                  <div>
+                                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1 px-1">Cubeta 19 L</p>
+                                    <div className="flex flex-col gap-1.5">
+                                      {selected.filter((opt) => durabilityPrices[String(opt.years)]).map((opt) => {
+                                        const price = durabilityPrices[String(opt.years)];
+                                        const onSale = durabilityOnSale.includes(opt.years);
+                                        return (
+                                          <div key={opt.years} className={`relative grid grid-cols-[1fr_auto_auto] items-center gap-x-2 px-3 py-1.5 rounded-lg text-[11px] ${onSale ? "bg-orange-50 border border-orange-400" : "bg-teal-50 border border-teal-200"}`}>
+                                            {onSale && <span className="absolute -top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap leading-none">EN OFERTA</span>}
+                                            <span className={`font-semibold ${onSale ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
+                                            <span className={`font-bold text-xs text-right w-20 ${onSale ? "text-orange-500" : "text-teal-700"}`}>{price}</span>
+                                            <span className={`text-xs text-right w-20 ${onSale ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                                {selected.some((opt) => galonPrices[String(opt.years)]) && (
+                                  <div>
+                                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1 px-1">Galón 4 L</p>
+                                    <div className="flex flex-col gap-1.5">
+                                      {selected.filter((opt) => galonPrices[String(opt.years)]).map((opt) => {
+                                        const galon = galonPrices[String(opt.years)];
+                                        const galonSale = galonOnSale.includes(opt.years);
+                                        return (
+                                          <div key={opt.years} className={`relative grid grid-cols-[1fr_auto_auto] items-center gap-x-2 px-3 py-1.5 rounded-lg text-[11px] ${galonSale ? "bg-orange-50 border border-orange-400" : "bg-teal-50 border border-teal-200"}`}>
+                                            {galonSale && <span className="absolute -top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap leading-none">EN OFERTA</span>}
+                                            <span className={`font-semibold ${galonSale ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
+                                            <span className={`font-bold text-xs text-right w-20 ${galonSale ? "text-orange-500" : "text-teal-700"}`}>{galon}</span>
+                                            <span className={`text-xs text-right w-20 ${galonSale ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
