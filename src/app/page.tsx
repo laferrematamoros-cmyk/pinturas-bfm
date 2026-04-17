@@ -694,9 +694,14 @@ function PaintCalculator({
   const totalArea = validArea ? areaNum * coats : 0;
   const yieldPerLiter = quality ? YIELD_MAP[quality] : null;
   const litersNeeded = yieldPerLiter && totalArea > 0 ? Math.ceil(totalArea / yieldPerLiter) : null;
-  const cubetas19 = litersNeeded ? calcCubetas19(litersNeeded) : null;
-  const galones4 = litersNeeded ? Math.ceil(litersNeeded / 4) : null;
   const hasGalonPrice = quality ? !!galonPrices[String(quality)] : false;
+
+  // Combined: full cubetas first, remainder in galones
+  const fullCubetas = litersNeeded ? Math.floor(litersNeeded / 19) : null;
+  const remainingLiters = (litersNeeded && fullCubetas !== null) ? litersNeeded - fullCubetas * 19 : 0;
+  const galonsForRemainder = (hasGalonPrice && remainingLiters > 0) ? Math.ceil(remainingLiters / 4) : 0;
+  // Fallback: fractional cubetas when no galón option
+  const cubetas19 = (!hasGalonPrice && litersNeeded) ? calcCubetas19(litersNeeded) : null;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -817,11 +822,45 @@ function PaintCalculator({
               </div>
 
               {/* Containers */}
-              {(cubetas19 !== null || galones4 !== null) && (
+              {litersNeeded && (fullCubetas !== null || cubetas19 !== null) && (
                 <div>
                   <p className="text-xs text-gray-500 font-medium mb-2">Envases sugeridos:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {cubetas19 !== null && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Combined: cubetas + galones remainder */}
+                    {hasGalonPrice && fullCubetas !== null && (
+                      <>
+                        {fullCubetas > 0 && (
+                          <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3">
+                            <svg className="w-5 h-5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            <div>
+                              <p className="text-lg font-black text-gray-800 leading-none">{fullCubetas}</p>
+                              <p className="text-[10px] text-gray-500 leading-none">cubeta{fullCubetas !== 1 ? "s" : ""} de 19 L</p>
+                            </div>
+                          </div>
+                        )}
+                        {galonsForRemainder > 0 && (
+                          <>
+                            {fullCubetas > 0 && <span className="text-gray-400 font-bold text-lg">+</span>}
+                            <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3">
+                              <svg className="w-5 h-5 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+                              </svg>
+                              <div>
+                                <p className="text-lg font-black text-gray-800 leading-none">{galonsForRemainder}</p>
+                                <p className="text-[10px] text-gray-500 leading-none">galón{galonsForRemainder !== 1 ? "es" : ""} de 4 L</p>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        {fullCubetas === 0 && galonsForRemainder === 0 && (
+                          <p className="text-xs text-teal-600">Menos de 1 galón necesario</p>
+                        )}
+                      </>
+                    )}
+                    {/* Fallback fractional cubetas when no galón price */}
+                    {!hasGalonPrice && cubetas19 !== null && (
                       <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3">
                         <svg className="w-5 h-5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -829,18 +868,6 @@ function PaintCalculator({
                         <div>
                           <p className="text-lg font-black text-gray-800 leading-none">{cubetas19}</p>
                           <p className="text-[10px] text-gray-500 leading-none">cubeta{cubetas19 !== 1 ? "s" : ""} de 19 L</p>
-                        </div>
-                      </div>
-                    )}
-                    {galones4 !== null && hasGalonPrice && (
-                      <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3">
-                        <svg className="w-5 h-5 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V8l-5-5H9z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 3v5h5" />
-                        </svg>
-                        <div>
-                          <p className="text-lg font-black text-gray-800 leading-none">{galones4}</p>
-                          <p className="text-[10px] text-gray-500 leading-none">galón{galones4 !== 1 ? "es" : ""} de 4 L</p>
                         </div>
                       </div>
                     )}
