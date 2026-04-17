@@ -1851,7 +1851,7 @@ export default function Home() {
                       : -1;
                     return (
                       <React.Fragment key={rowIndex}>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-3">
+                        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
                           {rowColors.map((color) => (
                             <ColorSwatch
                               key={color.id ?? color.code}
