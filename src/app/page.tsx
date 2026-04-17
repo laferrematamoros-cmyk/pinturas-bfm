@@ -673,6 +673,7 @@ function PaintCalculator({
                     <span className={`font-extrabold text-base leading-tight ${active ? "text-white" : onSale ? "text-orange-500" : "text-teal-600"}`}>
                       {durabilityPrices[String(opt.years)]}
                     </span>
+                    <span className={`text-[10px] ${active ? "text-white/70" : "text-gray-400"}`}>cubeta 19 L</span>
                     <span className={`text-[10px] ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
                   </button>
                 );
