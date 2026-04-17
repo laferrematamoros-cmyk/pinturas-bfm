@@ -92,7 +92,7 @@ export async function saveColorDurability(code: string, years: number[]): Promis
 
 // ── Site settings ───────────────────────────────────────────
 
-export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean }> {
+export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean; rendimientoLabel: string; cardHeight: number }> {
   const { data } = await supabaseAdmin.from("site_settings").select("*");
   const map: Record<string, string> = {};
   for (const row of data ?? []) map[row.key] = row.value;
@@ -101,7 +101,23 @@ export async function loadSiteSettings(): Promise<{ name: string; logoUrl: strin
     logoUrl: map["logo_url"] ?? null,
     logo2Url: map["logo2_url"] ?? null,
     roomPreviewEnabled: (map["room_preview_enabled"] ?? "true") === "true",
+    rendimientoLabel: map["rendimiento_label"] ?? "Rendimiento aproximado",
+    cardHeight: parseInt(map["card_height"] ?? "52"),
   };
+}
+
+export async function saveCardHeight(height: number): Promise<void> {
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "card_height", value: String(height) }, { onConflict: "key" });
+}
+
+export async function saveRendimientoLabel(label: string): Promise<void> {
+  const clean = sanitizeText(label, 60);
+  if (!clean) throw new Error("El texto no puede estar vacío");
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "rendimiento_label", value: clean }, { onConflict: "key" });
 }
 
 export async function saveRoomPreviewEnabled(enabled: boolean): Promise<void> {

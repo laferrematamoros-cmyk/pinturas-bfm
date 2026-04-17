@@ -14,6 +14,8 @@ import {
   saveDurabilityOnSale,
   loadSiteSettings,
   saveRoomPreviewEnabled,
+  saveRendimientoLabel,
+  saveCardHeight,
   saveSiteName,
   saveSiteLogoUrl,
   saveSiteLogo2Url,
@@ -469,7 +471,7 @@ const colorFamilies: ColorFamily[] = [
   },
 ];
 
-function ColorSwatch({ color, onClick, selected, onDelete }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void }) {
+function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52 }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number }) {
   return (
     <div
       onClick={onClick}
@@ -477,7 +479,7 @@ function ColorSwatch({ color, onClick, selected, onDelete }: { color: Color; onC
     >
       <div
         className="w-full transition-all duration-150 relative"
-        style={{ backgroundColor: color.hex, height: "52px" }}
+        style={{ backgroundColor: color.hex, height: `${cardHeight}px` }}
       >
         {selected && (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -612,13 +614,25 @@ function RoomPreviewModal({ color, hex, onClose }: {
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
         </div>
         {/* Tabs */}
-        <div className="flex border-b border-gray-100 flex-shrink-0">
+        <div className="flex bg-gray-900 gap-1 p-1.5 flex-shrink-0">
           {ROOM_TABS.map(rt => (
             <button key={rt.id} onClick={() => setTab(rt.id)}
-              className={`flex-1 py-2.5 text-xs font-semibold transition-colors flex flex-col items-center gap-0.5 ${
-                tab === rt.id ? "text-teal-600 border-b-2 border-teal-500 bg-teal-50" : "text-gray-500 hover:bg-gray-50"
-              }`}>
-              <span className="text-base">{rt.emoji}</span>
+              className={`flex-1 py-2 text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1 select-none rounded-lg border ${
+                tab === rt.id
+                  ? "bg-teal-500/20 text-teal-300 border-teal-400 scale-105"
+                  : "bg-transparent text-gray-400 border-transparent hover:text-teal-300 hover:bg-teal-500/10 hover:border-teal-400 hover:scale-110 active:scale-95"
+              }`}
+              style={tab === rt.id ? {
+                boxShadow: "0 0 8px #2dd4bf, 0 0 20px #0d9488, inset 0 0 8px #0d948820"
+              } : undefined}
+              onMouseEnter={e => {
+                if (tab !== rt.id) (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #2dd4bf, 0 0 20px #0d9488, inset 0 0 8px #0d948820";
+              }}
+              onMouseLeave={e => {
+                if (tab !== rt.id) (e.currentTarget as HTMLButtonElement).style.boxShadow = "";
+              }}
+            >
+              <span className={`transition-all duration-200 ${tab === rt.id ? "text-xl" : "text-base"}`}>{rt.emoji}</span>
               <span>{rt.label}</span>
             </button>
           ))}
@@ -875,6 +889,10 @@ export default function Home() {
   const [logoSaveError, setLogoSaveError] = useState("");
   const [roomPreviewEnabled, setRoomPreviewEnabled] = useState(true);
   const [editRoomPreviewEnabled, setEditRoomPreviewEnabled] = useState(true);
+  const [rendimientoLabel, setRendimientoLabel] = useState("Rendimiento aproximado");
+  const [editRendimientoLabel, setEditRendimientoLabel] = useState("Rendimiento aproximado");
+  const [cardHeight, setCardHeight] = useState(52);
+  const [editCardHeight, setEditCardHeight] = useState(52);
 
   // Load data from Supabase on mount; restore admin session
   React.useEffect(() => {
@@ -896,12 +914,16 @@ export default function Home() {
     if (cachedLogo) setLogoUrl(cachedLogo);
     if (cachedLogo2) setLogo2Url(cachedLogo2);
     // Load site branding from Supabase
-    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe }) => {
+    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, cardHeight: ch }) => {
       setSiteName(name);
       if (logo) { setLogoUrl(logo); localStorage.setItem("pinturas_logoUrl", logo); }
       if (logo2) { setLogo2Url(logo2); localStorage.setItem("pinturas_logo2Url", logo2); }
       setRoomPreviewEnabled(rpe);
       setEditRoomPreviewEnabled(rpe);
+      setRendimientoLabel(rl);
+      setEditRendimientoLabel(rl);
+      setCardHeight(ch);
+      setEditCardHeight(ch);
     });
     // Load global durability prices and on-sale flags
     loadDurabilityPrices().then((p) => setDurabilityPrices(p));
@@ -1044,6 +1066,8 @@ export default function Home() {
       await saveDurabilityPrices(editDurabilityPrices);
       await saveDurabilityOnSale(editDurabilityOnSale);
       await saveRoomPreviewEnabled(editRoomPreviewEnabled);
+      await saveRendimientoLabel(editRendimientoLabel);
+      await saveCardHeight(editCardHeight);
 
       // Logo 1
       if (editLogoUrl && editLogoUrl.startsWith("data:")) {
@@ -1077,6 +1101,8 @@ export default function Home() {
     setDurabilityPrices(editDurabilityPrices);
     setDurabilityOnSale(editDurabilityOnSale);
     setRoomPreviewEnabled(editRoomPreviewEnabled);
+    setRendimientoLabel(editRendimientoLabel);
+    setCardHeight(editCardHeight);
     setShowSiteSettings(false);
   }
 
@@ -1361,10 +1387,15 @@ export default function Home() {
 
       {/* Site settings modal */}
       {showSiteSettings && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-1">Configuración del sitio</h2>
-            <p className="text-xs text-gray-400 mb-6">Los cambios se verán en la página pública</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-3">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto flex flex-col" style={{ maxHeight: "92vh" }}>
+            {/* Fixed header */}
+            <div className="px-6 pt-6 pb-3 flex-shrink-0">
+              <h2 className="text-lg font-semibold text-gray-800 mb-0.5">Configuración del sitio</h2>
+              <p className="text-xs text-gray-400">Los cambios se verán en la página pública</p>
+            </div>
+            {/* Scrollable body */}
+            <div className="overflow-y-auto flex-1 px-6 pb-2">
 
             {/* Logo upload */}
             <p className="text-xs font-semibold text-gray-600 mb-2">Logo</p>
@@ -1470,6 +1501,36 @@ export default function Home() {
               })}
             </div>
 
+            {/* Card height */}
+            <div className="py-3 border-t border-gray-100 mt-2">
+              <p className="text-sm font-medium text-gray-700 mb-1">Altura de las tarjetas de color</p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={36} max={120} step={4}
+                  value={editCardHeight}
+                  onChange={e => setEditCardHeight(Number(e.target.value))}
+                  className="flex-1 accent-teal-500"
+                />
+                <span className="text-sm font-bold text-teal-600 w-14 text-right">{editCardHeight}px</span>
+              </div>
+              <div className="mt-2 rounded-lg overflow-hidden border border-gray-200" style={{ height: `${editCardHeight}px`, backgroundColor: "#c4849a" }} />
+            </div>
+
+            {/* Rendimiento label */}
+            <div className="py-3 border-t border-gray-100 mt-2">
+              <p className="text-sm font-medium text-gray-700 mb-1">Texto "Rendimiento aproximado"</p>
+              <p className="text-xs text-gray-400 mb-2">Etiqueta que aparece en el panel de detalle del color</p>
+              <input
+                type="text"
+                value={editRendimientoLabel}
+                onChange={e => setEditRendimientoLabel(e.target.value)}
+                maxLength={60}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                placeholder="Rendimiento aproximado"
+              />
+            </div>
+
             {/* Room preview toggle */}
             <div className="flex items-center justify-between py-3 border-t border-gray-100 mt-2">
               <div>
@@ -1484,23 +1545,27 @@ export default function Home() {
               </button>
             </div>
 
-            {logoSaveError && (
-              <p className="text-[11px] text-red-400 mb-3">{logoSaveError}</p>
-            )}
+            </div>{/* end scrollable body */}
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowSiteSettings(false)}
-                className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={saveSiteSettings}
-                className="flex-1 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold transition-colors"
-              >
-                Guardar
-              </button>
+            {/* Fixed footer */}
+            <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
+              {logoSaveError && (
+                <p className="text-[11px] text-red-400 mb-2">{logoSaveError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowSiteSettings(false)}
+                  className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveSiteSettings}
+                  className="flex-1 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold transition-colors"
+                >
+                  Guardar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1608,11 +1673,14 @@ export default function Home() {
                   {/* "Todos" chip */}
                   <button
                     onClick={() => { setSelectedQuality(null); setSelectedColor(null); }}
-                    className={`px-5 py-2 rounded-full text-sm font-medium border transition-all ${
+                    className={`px-5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
                       selectedQuality === null
-                        ? "bg-gray-800 text-white border-gray-800 shadow"
-                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                        ? "bg-gray-800 text-white border-gray-800 shadow-lg scale-105"
+                        : "bg-white text-gray-500 border-gray-200 hover:scale-110 hover:border-gray-600 hover:text-gray-800"
                     }`}
+                    style={selectedQuality !== null ? undefined : { boxShadow: "0 0 8px #6b7280, 0 0 18px #4b556380" }}
+                    onMouseEnter={e => { if (selectedQuality !== null) (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #6b7280, 0 0 18px #4b556380"; }}
+                    onMouseLeave={e => { if (selectedQuality !== null) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
                   >
                     Todos los colores
                   </button>
@@ -1621,17 +1689,22 @@ export default function Home() {
                     const price = durabilityPrices[String(opt.years)];
                     const active = selectedQuality === opt.years;
                     const onSale = durabilityOnSale.includes(opt.years);
+                    const neonColor = onSale ? "#f97316" : "#2dd4bf";
+                    const neonShadow = `0 0 8px ${neonColor}, 0 0 20px ${neonColor}80`;
                     return (
                       <button
                         key={opt.years}
                         onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
-                        className={`relative flex flex-col items-center px-5 py-2.5 rounded-2xl border transition-all shadow-sm ${
+                        className={`relative flex flex-col items-center px-5 py-2.5 rounded-2xl border transition-all duration-200 shadow-sm ${
                           active
-                            ? "bg-teal-500 border-teal-500 text-white shadow-md scale-105"
+                            ? "bg-teal-500 border-teal-400 text-white shadow-md scale-110"
                             : onSale
-                            ? "bg-orange-50 border-orange-400 text-gray-700 hover:shadow"
-                            : "bg-white text-gray-700 border-gray-200 hover:border-teal-300 hover:shadow"
+                            ? "bg-orange-50 border-orange-400 text-gray-700 hover:scale-110"
+                            : "bg-white text-gray-700 border-gray-200 hover:scale-110 hover:border-teal-400"
                         }`}
+                        style={active ? { boxShadow: neonShadow } : undefined}
+                        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
+                        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
                       >
                         {onSale && (
                           <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
@@ -1679,7 +1752,9 @@ export default function Home() {
                 <div className="mt-4 flex justify-center">
                   <button
                     onClick={() => setCalcOpen(true)}
-                    className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all active:scale-95 text-sm"
+                    className="flex items-center gap-2 bg-teal-500 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-teal-400"
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 10px #2dd4bf, 0 0 25px #0d948880"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1704,7 +1779,7 @@ export default function Home() {
                     </p>
                     <div className="grid grid-cols-4 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-12 gap-0">
                       {allSearchResults.map((color) => (
-                        <ColorSwatch key={color.code} color={color} onClick={() => setSelectedColor(color)} selected={selectedColor?.code === color.code} />
+                        <ColorSwatch key={color.code} color={color} onClick={() => setSelectedColor(color)} selected={selectedColor?.code === color.code} cardHeight={cardHeight} />
                       ))}
                     </div>
                   </>
@@ -1783,6 +1858,7 @@ export default function Home() {
                               color={{ ...color, hex: getEffectiveHex(color) }}
                               onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setRoomPreviewOpen(false); }}
                               selected={selectedColor?.code === color.code}
+                              cardHeight={cardHeight}
                               onDelete={isAdmin ? () => {
                                 if (window.confirm(`¿Eliminar "${color.name}"? Esta acción no se puede deshacer.`)) {
                                   handleDeleteColor(color);
@@ -1914,7 +1990,7 @@ export default function Home() {
                                   <hr className="w-full border-gray-100" />
 
                                   <div>
-                                    <p className="text-[11px] font-semibold text-gray-700 mb-1">Rendimiento aproximado</p>
+                                    <p className="text-base font-extrabold text-gray-800 mb-1">{rendimientoLabel}</p>
                                     <div className="flex flex-col gap-1.5">
                                       {DURABILITY_OPTIONS.map((opt) => {
                                         const checked = (durability[origCode(selectedColor)] ?? []).includes(opt.years);
@@ -1944,8 +2020,8 @@ export default function Home() {
                                 /* ── PÚBLICO: solo lectura ── */
                                 <>
                                   <div>
-                                    <p className="text-sm font-semibold text-gray-800 leading-tight">{selectedColor.name}</p>
-                                    <p className="text-xs text-gray-400 mt-0.5 font-mono">{selectedColor.code}</p>
+                                    <p className="text-xl font-extrabold text-gray-800 leading-tight">{selectedColor.name}</p>
+                                    <p className="text-sm text-gray-400 mt-0.5 font-mono">{selectedColor.code}</p>
                                   </div>
 
                                   {/* Color circle + room preview button */}
@@ -1954,7 +2030,9 @@ export default function Home() {
                                     {roomPreviewEnabled && (
                                       <button
                                         onClick={() => setRoomPreviewOpen(true)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold hover:bg-teal-100 transition-all"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
+                                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #2dd4bf, 0 0 20px #0d948880"; }}
+                                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
                                       >
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -1970,7 +2048,7 @@ export default function Home() {
                                     );
                                     return selected.length > 0 ? (
                                       <div>
-                                        <p className="text-[11px] font-semibold text-gray-500 mb-1.5">Rendimiento aproximado</p>
+                                        <p className="text-base font-extrabold text-gray-800 mb-1.5">{rendimientoLabel}</p>
                                         <div className="flex flex-col gap-1.5">
                                           {selected.map((opt) => {
                                             const price = durabilityPrices[String(opt.years)];
