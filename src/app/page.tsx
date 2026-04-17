@@ -696,15 +696,17 @@ function PaintCalculator({
   const litersNeeded = yieldPerLiter && totalArea > 0 ? Math.ceil(totalArea / yieldPerLiter) : null;
   const hasGalonPrice = quality ? !!galonPrices[String(quality)] : false;
 
-  // Combined using 0.055 factor: 1 liter = 0.055 container-units
-  // 0.055 × 19 ≈ 1 cubeta; 0.055 × 4 ≈ 1 galón (scaled)
+  // 0.055 factor: 1 liter = 0.055 container-units (0.055×19≈1 cubeta, 0.055×4≈1 galón scaled)
   const FACTOR = 0.055;
   const totalUnits = litersNeeded ? litersNeeded * FACTOR : null;
+  // Only cubetas
+  const onlyCubetas = totalUnits !== null ? Math.ceil(totalUnits) : null;
+  // Only galones
+  const onlyGalones = litersNeeded ? Math.ceil(litersNeeded * FACTOR / (4 * FACTOR)) : null; // = ceil(liters/4)
+  // Combined: full cubetas + galones for remainder
   const fullCubetas = totalUnits !== null ? Math.floor(totalUnits) : null;
   const remainingUnits = (totalUnits !== null && fullCubetas !== null) ? totalUnits - fullCubetas : 0;
-  const galonsForRemainder = (hasGalonPrice && remainingUnits > 0) ? Math.ceil(remainingUnits / (4 * FACTOR)) : 0;
-  // Fallback: fractional cubetas when no galón option
-  const cubetas19 = (!hasGalonPrice && litersNeeded) ? calcCubetas19(litersNeeded) : null;
+  const galonsForRemainder = remainingUnits > 0 ? Math.ceil(remainingUnits / (4 * FACTOR)) : 0;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -824,59 +826,63 @@ function PaintCalculator({
                 <span className="text-xs text-teal-500 ml-1">(rendimiento mínimo {yieldPerLiter} m²/L)</span>
               </div>
 
-              {/* Containers */}
-              {litersNeeded && (fullCubetas !== null || cubetas19 !== null) && (
-                <div>
-                  <p className="text-xs text-gray-500 font-medium mb-2">Envases sugeridos:</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Combined: cubetas + galones remainder */}
-                    {hasGalonPrice && fullCubetas !== null && (
-                      <>
-                        {fullCubetas > 0 && (
-                          <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3">
-                            <svg className="w-5 h-5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                            <div>
-                              <p className="text-lg font-black text-gray-800 leading-none">{fullCubetas}</p>
-                              <p className="text-[10px] text-gray-500 leading-none">cubeta{fullCubetas !== 1 ? "s" : ""} de 19 L</p>
-                            </div>
-                          </div>
-                        )}
-                        {galonsForRemainder > 0 && (
-                          <>
-                            {fullCubetas > 0 && <span className="text-gray-400 font-bold text-lg">+</span>}
-                            <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3">
-                              <svg className="w-5 h-5 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
-                              </svg>
-                              <div>
-                                <p className="text-lg font-black text-gray-800 leading-none">{galonsForRemainder}</p>
-                                <p className="text-[10px] text-gray-500 leading-none">galón{galonsForRemainder !== 1 ? "es" : ""} de 4 L</p>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                        {fullCubetas === 0 && galonsForRemainder === 0 && (
-                          <p className="text-xs text-teal-600">Menos de 1 galón necesario</p>
-                        )}
-                      </>
-                    )}
-                    {/* Fallback fractional cubetas when no galón price */}
-                    {!hasGalonPrice && cubetas19 !== null && (
-                      <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3">
-                        <svg className="w-5 h-5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                        <div>
-                          <p className="text-lg font-black text-gray-800 leading-none">{cubetas19}</p>
-                          <p className="text-[10px] text-gray-500 leading-none">cubeta{cubetas19 !== 1 ? "s" : ""} de 19 L</p>
-                        </div>
-                      </div>
-                    )}
+              {/* Rows: litros / cubetas / galones / combinado */}
+              <div className="flex flex-col gap-2">
+                {/* Solo cubetas */}
+                {onlyCubetas !== null && (
+                  <div className="flex items-center justify-between bg-white border border-teal-200 rounded-xl px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      <span className="text-xs text-gray-500">Solo cubetas</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-base font-black text-gray-800">{onlyCubetas}</span>
+                      <span className="text-[10px] text-gray-400 ml-1">cubeta{onlyCubetas !== 1 ? "s" : ""} de 19 L</span>
+                      <span className="text-[10px] text-teal-400 ml-1">({onlyCubetas * 19} L)</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Solo galones */}
+                {hasGalonPrice && onlyGalones !== null && (
+                  <div className="flex items-center justify-between bg-white border border-teal-200 rounded-xl px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+                      </svg>
+                      <span className="text-xs text-gray-500">Solo galones</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-base font-black text-gray-800">{onlyGalones}</span>
+                      <span className="text-[10px] text-gray-400 ml-1">galón{onlyGalones !== 1 ? "es" : ""} de 4 L</span>
+                      <span className="text-[10px] text-teal-400 ml-1">({onlyGalones * 4} L)</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Combinado */}
+                {hasGalonPrice && fullCubetas !== null && (fullCubetas > 0 || galonsForRemainder > 0) && (
+                  <div className="flex items-center justify-between bg-teal-100 border border-teal-300 rounded-xl px-4 py-2.5">
+                    <span className="text-xs text-teal-700 font-semibold">Combinado</span>
+                    <div className="flex items-center gap-1.5 text-right">
+                      {fullCubetas > 0 && (
+                        <span className="text-sm font-black text-gray-800">
+                          {fullCubetas} <span className="text-[10px] font-normal text-gray-500">cubeta{fullCubetas !== 1 ? "s" : ""} 19L</span>
+                        </span>
+                      )}
+                      {fullCubetas > 0 && galonsForRemainder > 0 && <span className="text-teal-500 font-bold">+</span>}
+                      {galonsForRemainder > 0 && (
+                        <span className="text-sm font-black text-gray-800">
+                          {galonsForRemainder} <span className="text-[10px] font-normal text-gray-500">galón{galonsForRemainder !== 1 ? "es" : ""} 4L</span>
+                        </span>
+                      )}
+                      <span className="text-[10px] text-teal-500 ml-1">({fullCubetas * 19 + galonsForRemainder * 4} L)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
             </div>
           )}
