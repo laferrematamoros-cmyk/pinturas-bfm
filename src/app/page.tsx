@@ -2074,37 +2074,40 @@ export default function Home() {
                                     return selected.length > 0 ? (
                                       <div>
                                         <p className="text-base font-extrabold text-gray-800 mb-1.5">{rendimientoLabel}</p>
+                                        {/* Column headers */}
+                                        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 mb-0.5">
+                                          <span />
+                                          <span className="text-[10px] font-semibold text-gray-400 text-center">Cubeta 19L</span>
+                                          <span className="text-[10px] font-semibold text-gray-400 text-center">Galón 4L</span>
+                                          <span className="text-[10px] font-semibold text-gray-400 text-right">Rend.</span>
+                                        </div>
                                         <div className="flex flex-col gap-1.5">
                                           {selected.map((opt) => {
                                             const price = durabilityPrices[String(opt.years)];
+                                            const galon = galonPrices[String(opt.years)];
+                                            const onSale = durabilityOnSale.includes(opt.years);
                                             return (
                                               <div
                                                 key={opt.years}
-                                                className={`relative flex items-center justify-between px-3 py-1.5 rounded-lg text-[11px] ${
-                                                  durabilityOnSale.includes(opt.years)
+                                                className={`relative grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-3 py-1.5 rounded-lg text-[11px] ${
+                                                  onSale
                                                     ? "bg-orange-50 border border-orange-400"
                                                     : "bg-teal-50 border border-teal-200"
                                                 }`}
                                               >
-                                                {durabilityOnSale.includes(opt.years) && (
+                                                {onSale && (
                                                   <span className="absolute -top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap leading-none">
                                                     EN OFERTA
                                                   </span>
                                                 )}
-                                                <span className={`font-semibold ${durabilityOnSale.includes(opt.years) ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
-                                                <div className="flex items-center gap-2 flex-wrap justify-end">
-                                                  {price && (
-                                                    <span className={`font-bold text-xs ${durabilityOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-700"}`}>
-                                                      {price} <span className="font-normal opacity-70">/ 19L</span>
-                                                    </span>
-                                                  )}
-                                                  {galonPrices[String(opt.years)] && (
-                                                    <span className={`font-bold text-xs ${durabilityOnSale.includes(opt.years) ? "text-orange-400" : "text-teal-600"}`}>
-                                                      {galonPrices[String(opt.years)]} <span className="font-normal opacity-70">/ 4L</span>
-                                                    </span>
-                                                  )}
-                                                  <span className={`text-xs ${durabilityOnSale.includes(opt.years) ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
-                                                </div>
+                                                <span className={`font-semibold ${onSale ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
+                                                <span className={`font-bold text-xs text-center ${onSale ? "text-orange-500" : "text-teal-700"}`}>
+                                                  {price || <span className="text-gray-300">—</span>}
+                                                </span>
+                                                <span className={`font-bold text-xs text-center ${onSale ? "text-orange-400" : "text-teal-600"}`}>
+                                                  {galon || <span className="text-gray-300">—</span>}
+                                                </span>
+                                                <span className={`text-xs text-right ${onSale ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
                                               </div>
                                             );
                                           })}
