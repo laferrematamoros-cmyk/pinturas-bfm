@@ -1735,11 +1735,14 @@ export default function Home() {
                     Todos los colores
                   </button>
 
-                  {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)]).map((opt) => {
+                  {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]).map((opt) => {
                     const price = durabilityPrices[String(opt.years)];
+                    const galon = galonPrices[String(opt.years)];
                     const active = selectedQuality === opt.years;
                     const onSale = durabilityOnSale.includes(opt.years);
-                    const neonColor = onSale ? "#f97316" : "#2dd4bf";
+                    const galonSale = galonOnSale.includes(opt.years);
+                    const anyOnSale = onSale || galonSale;
+                    const neonColor = anyOnSale ? "#f97316" : "#2dd4bf";
                     const neonShadow = `0 0 8px ${neonColor}, 0 0 20px ${neonColor}80`;
                     return (
                       <button
@@ -1748,7 +1751,7 @@ export default function Home() {
                         className={`relative flex flex-col items-center px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl border transition-all duration-200 shadow-sm ${
                           active
                             ? "bg-teal-500 border-teal-400 text-white shadow-md scale-110"
-                            : onSale
+                            : anyOnSale
                             ? "bg-orange-50 border-orange-400 text-gray-700 hover:scale-110"
                             : "bg-white text-gray-700 border-gray-200 hover:scale-110 hover:border-teal-400"
                         }`}
@@ -1756,7 +1759,7 @@ export default function Home() {
                         onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
                         onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
                       >
-                        {onSale && (
+                        {anyOnSale && (
                           <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
                             active ? "bg-white text-orange-500" : "bg-orange-500 text-white"
                           }`}>
@@ -1764,13 +1767,27 @@ export default function Home() {
                           </span>
                         )}
                         <span className="font-bold text-sm">{opt.years} años</span>
-                        <span className={`text-base font-extrabold leading-tight ${active ? "text-white" : onSale ? "text-orange-500" : "text-teal-600"}`}>
-                          {price}
-                        </span>
-                        <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/90" : "text-gray-500"}`}>
-                          cubeta 19 L
-                        </span>
-                        <span className={`text-[10px] leading-tight ${active ? "text-white/70" : "text-gray-400"}`}>
+                        {price && (
+                          <>
+                            <span className={`text-base font-extrabold leading-tight ${active ? "text-white" : onSale ? "text-orange-500" : "text-teal-600"}`}>
+                              {price}
+                            </span>
+                            <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/90" : "text-gray-500"}`}>
+                              cubeta 19 L
+                            </span>
+                          </>
+                        )}
+                        {galon && (
+                          <>
+                            <span className={`text-sm font-extrabold leading-tight mt-0.5 ${active ? "text-white/90" : galonSale ? "text-orange-500" : "text-teal-500"}`}>
+                              {galon}
+                            </span>
+                            <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/80" : "text-gray-400"}`}>
+                              galón 4 L
+                            </span>
+                          </>
+                        )}
+                        <span className={`text-[10px] leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>
                           {opt.yield}
                         </span>
                       </button>
@@ -1780,7 +1797,7 @@ export default function Home() {
 
                 {/* Price clarification note */}
                 <p className="mt-2 text-center text-[11px] text-gray-400">
-                  * Precios por cubeta de 19 litros
+                  * Precios por cubeta de 19 L y galón de 4 L
                 </p>
 
                 {/* Active filter banner */}
