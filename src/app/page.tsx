@@ -529,9 +529,9 @@ const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
 // ── Paint yield (conservative lower bound per durability tier) ──
 const YIELD_MAP: Record<number, number> = { 2: 4, 3: 6, 4: 7, 7: 7 };
 
-// Round up to 1 decimal place (e.g. 19L = 1.0, 20L = 1.1, 28.5L = 1.5)
+// 1 litro = 0.055 cubetas de 19L, redondeado a 1 decimal
 function calcCubetas19(liters: number): number {
-  return Math.ceil((liters / 19) * 10) / 10;
+  return Math.round(liters * 0.055 * 10) / 10;
 }
 
 function parsePrice(priceStr: string): number | null {
