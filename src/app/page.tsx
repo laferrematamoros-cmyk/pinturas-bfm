@@ -529,23 +529,9 @@ const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
 // ── Paint yield (conservative lower bound per durability tier) ──
 const YIELD_MAP: Record<number, number> = { 2: 4, 3: 6, 4: 7, 7: 7 };
 
-// ── Bucket sizes available (liters) ──
-const BUCKET_SIZES = [19, 4, 1];
-
-function calcBuckets(liters: number): { size: number; qty: number }[] {
-  let rem = liters;
-  const result: { size: number; qty: number }[] = [];
-  for (const size of BUCKET_SIZES) {
-    if (rem <= 0) break;
-    const qty = Math.floor(rem / size);
-    if (qty > 0) { result.push({ size, qty }); rem -= qty * size; }
-  }
-  if (rem > 0) {
-    const last = result[result.length - 1];
-    if (last?.size === 1) last.qty += Math.ceil(rem);
-    else result.push({ size: 1, qty: Math.ceil(rem) });
-  }
-  return result;
+// Round up to nearest 0.5
+function calcCubetas19(liters: number): number {
+  return Math.ceil((liters / 19) * 2) / 2;
 }
 
 function parsePrice(priceStr: string): number | null {
@@ -575,7 +561,7 @@ function PaintCalculator({
   const totalArea = validArea ? areaNum * coats : 0;
   const yieldPerLiter = quality ? YIELD_MAP[quality] : null;
   const litersNeeded = yieldPerLiter && totalArea > 0 ? Math.ceil(totalArea / yieldPerLiter) : null;
-  const buckets = litersNeeded ? calcBuckets(litersNeeded) : [];
+  const cubetas19 = litersNeeded ? calcCubetas19(litersNeeded) : null;
 
   const pricePer19L = quality ? parsePrice(durabilityPrices[String(quality)] ?? "") : null;
   const totalCost = pricePer19L && litersNeeded ? (pricePer19L / 19) * litersNeeded : null;
@@ -699,22 +685,20 @@ function PaintCalculator({
               </div>
 
               {/* Buckets */}
-              <div>
-                <p className="text-xs text-gray-500 font-medium mb-2">Cubetas sugeridas:</p>
-                <div className="flex flex-wrap gap-2">
-                  {buckets.map(({ size, qty }) => (
-                    <div key={size} className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-3 py-2">
-                      <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
-                      <div>
-                        <p className="text-sm font-black text-gray-800 leading-none">{qty}×</p>
-                        <p className="text-[10px] text-gray-500 leading-none">{size} litro{size !== 1 ? "s" : ""}</p>
-                      </div>
+              {cubetas19 !== null && (
+                <div>
+                  <p className="text-xs text-gray-500 font-medium mb-2">Cubetas sugeridas:</p>
+                  <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3 w-fit">
+                    <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <div>
+                      <p className="text-lg font-black text-gray-800 leading-none">{cubetas19}</p>
+                      <p className="text-[10px] text-gray-500 leading-none">cubeta{cubetas19 !== 1 ? "s" : ""} de 19 L</p>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Cost estimate */}
               {totalCost !== null && (
