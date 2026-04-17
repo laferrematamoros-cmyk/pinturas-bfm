@@ -18,6 +18,8 @@ import {
   saveCardHeight,
   loadGalonPrices,
   saveGalonPrices,
+  loadGalonOnSale,
+  saveGalonOnSale,
   saveSiteName,
   saveSiteLogoUrl,
   saveSiteLogo2Url,
@@ -854,6 +856,8 @@ export default function Home() {
   const [editDurabilityPrices, setEditDurabilityPrices] = useState<Record<string, string>>({});
   const [galonPrices, setGalonPrices] = useState<Record<string, string>>({});
   const [editGalonPrices, setEditGalonPrices] = useState<Record<string, string>>({});
+  const [galonOnSale, setGalonOnSale] = useState<number[]>([]);
+  const [editGalonOnSale, setEditGalonOnSale] = useState<number[]>([]);
   const [durabilityOnSale, setDurabilityOnSale] = useState<number[]>([]);
   const [editDurabilityOnSale, setEditDurabilityOnSale] = useState<number[]>([]);
   const [customColors, setCustomColors] = useState<Record<string, Color[]>>({});
@@ -933,6 +937,7 @@ export default function Home() {
     loadDurabilityPrices().then((p) => setDurabilityPrices(p));
     loadGalonPrices().then((p) => { setGalonPrices(p); setEditGalonPrices(p); });
     loadDurabilityOnSale().then((s) => setDurabilityOnSale(s));
+    loadGalonOnSale().then((s) => { setGalonOnSale(s); setEditGalonOnSale(s); });
     // Load custom colors
     loadCustomColors().then((data) => {
       const mapped: Record<string, Color[]> = {};
@@ -1074,6 +1079,7 @@ export default function Home() {
       await saveRendimientoLabel(editRendimientoLabel);
       await saveCardHeight(editCardHeight);
       await saveGalonPrices(editGalonPrices);
+      await saveGalonOnSale(editGalonOnSale);
 
       // Logo 1
       if (editLogoUrl && editLogoUrl.startsWith("data:")) {
@@ -1110,6 +1116,7 @@ export default function Home() {
     setRendimientoLabel(editRendimientoLabel);
     setCardHeight(editCardHeight);
     setGalonPrices(editGalonPrices);
+    setGalonOnSale(editGalonOnSale);
     setShowSiteSettings(false);
   }
 
@@ -1511,18 +1518,37 @@ export default function Home() {
             {/* Precios por galón 4L */}
             <p className="text-xs font-semibold text-gray-600 mb-2">Precios por galón (4 L)</p>
             <div className="flex flex-col gap-2 mb-4">
-              {DURABILITY_OPTIONS.map((opt) => (
-                <div key={opt.years} className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 w-16 flex-shrink-0">{opt.years} años</span>
-                  <input
-                    type="text"
-                    value={editGalonPrices[String(opt.years)] ?? ""}
-                    onChange={(e) => setEditGalonPrices((prev) => ({ ...prev, [String(opt.years)]: e.target.value }))}
-                    placeholder="ej: $120"
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
-                  />
-                </div>
-              ))}
+              {DURABILITY_OPTIONS.map((opt) => {
+                const isOnSale = editGalonOnSale.includes(opt.years);
+                return (
+                  <div key={opt.years} className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-16 flex-shrink-0">{opt.years} años</span>
+                    <input
+                      type="text"
+                      value={editGalonPrices[String(opt.years)] ?? ""}
+                      onChange={(e) => setEditGalonPrices((prev) => ({ ...prev, [String(opt.years)]: e.target.value }))}
+                      placeholder="ej: $120"
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+                    />
+                    <label className={`flex items-center gap-1.5 cursor-pointer px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors flex-shrink-0 ${
+                      isOnSale ? "bg-orange-50 border-orange-400 text-orange-600" : "bg-white border-gray-200 text-gray-400 hover:border-orange-300"
+                    }`}>
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={isOnSale}
+                        onChange={() => setEditGalonOnSale((prev) =>
+                          prev.includes(opt.years) ? prev.filter((y) => y !== opt.years) : [...prev, opt.years]
+                        )}
+                      />
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      Oferta
+                    </label>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Card height */}
@@ -2086,28 +2112,30 @@ export default function Home() {
                                             const price = durabilityPrices[String(opt.years)];
                                             const galon = galonPrices[String(opt.years)];
                                             const onSale = durabilityOnSale.includes(opt.years);
+                                            const galonSale = galonOnSale.includes(opt.years);
+                                            const rowOnSale = onSale || galonSale;
                                             return (
                                               <div
                                                 key={opt.years}
                                                 className={`relative grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-3 py-1.5 rounded-lg text-[11px] ${
-                                                  onSale
+                                                  rowOnSale
                                                     ? "bg-orange-50 border border-orange-400"
                                                     : "bg-teal-50 border border-teal-200"
                                                 }`}
                                               >
-                                                {onSale && (
+                                                {rowOnSale && (
                                                   <span className="absolute -top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap leading-none">
                                                     EN OFERTA
                                                   </span>
                                                 )}
-                                                <span className={`font-semibold ${onSale ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
+                                                <span className={`font-semibold ${rowOnSale ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
                                                 <span className={`font-bold text-xs text-center ${onSale ? "text-orange-500" : "text-teal-700"}`}>
                                                   {price || <span className="text-gray-300">—</span>}
                                                 </span>
-                                                <span className={`font-bold text-xs text-center ${onSale ? "text-orange-400" : "text-teal-600"}`}>
+                                                <span className={`font-bold text-xs text-center ${galonSale ? "text-orange-500" : "text-teal-600"}`}>
                                                   {galon || <span className="text-gray-300">—</span>}
                                                 </span>
-                                                <span className={`text-xs text-right ${onSale ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
+                                                <span className={`text-xs text-right ${rowOnSale ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
                                               </div>
                                             );
                                           })}

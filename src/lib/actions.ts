@@ -95,6 +95,26 @@ export async function saveDurabilityOnSale(years: number[]): Promise<void> {
     .upsert({ key: "durability_on_sale", value: JSON.stringify(years) }, { onConflict: "key" });
 }
 
+export async function loadGalonOnSale(): Promise<number[]> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "galon_on_sale")
+    .single();
+  if (!data?.value) return [];
+  try {
+    return JSON.parse(data.value) as number[];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveGalonOnSale(years: number[]): Promise<void> {
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "galon_on_sale", value: JSON.stringify(years) }, { onConflict: "key" });
+}
+
 export async function saveColorHex(code: string, hex: string): Promise<void> {
   if (!isValidHex(hex)) throw new Error("Formato de color inválido");
   await supabaseAdmin
