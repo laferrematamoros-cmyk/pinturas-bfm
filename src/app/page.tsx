@@ -2118,11 +2118,11 @@ export default function Home() {
                                       <div>
                                         <p className="text-base font-extrabold text-gray-800 mb-1.5">{rendimientoLabel}</p>
                                         {/* Column headers */}
-                                        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 mb-0.5">
+                                        <div className="grid grid-cols-[1fr_100px_100px_80px] gap-x-2 px-3 mb-0.5">
                                           <span />
                                           <span className="text-[10px] font-semibold text-gray-400 text-center">Cubeta 19L</span>
                                           <span className="text-[10px] font-semibold text-gray-400 text-center">Galón 4L</span>
-                                          <span className="text-[10px] font-semibold text-gray-400 text-right">Rend.</span>
+                                          <span className="text-[10px] font-semibold text-gray-400 text-right">Rendimiento</span>
                                         </div>
                                         <div className="flex flex-col gap-1.5">
                                           {selected.map((opt) => {
@@ -2134,7 +2134,7 @@ export default function Home() {
                                             return (
                                               <div
                                                 key={opt.years}
-                                                className={`relative grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-3 py-1.5 rounded-lg text-[11px] ${
+                                                className={`relative grid grid-cols-[1fr_100px_100px_80px] items-center gap-x-2 px-3 py-1.5 rounded-lg text-[11px] ${
                                                   rowOnSale
                                                     ? "bg-orange-50 border border-orange-400"
                                                     : "bg-teal-50 border border-teal-200"
