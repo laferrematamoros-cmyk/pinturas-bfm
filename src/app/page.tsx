@@ -675,10 +675,12 @@ function parsePrice(priceStr: string): number | null {
 function PaintCalculator({
   durabilityPrices,
   durabilityOnSale,
+  galonPrices,
   onClose,
 }: {
   durabilityPrices: Record<string, string>;
   durabilityOnSale: number[];
+  galonPrices: Record<string, string>;
   onClose: () => void;
 }) {
   const [area, setArea] = useState("");
@@ -693,9 +695,8 @@ function PaintCalculator({
   const yieldPerLiter = quality ? YIELD_MAP[quality] : null;
   const litersNeeded = yieldPerLiter && totalArea > 0 ? Math.ceil(totalArea / yieldPerLiter) : null;
   const cubetas19 = litersNeeded ? calcCubetas19(litersNeeded) : null;
-
-  const pricePer19L = quality ? parsePrice(durabilityPrices[String(quality)] ?? "") : null;
-  const totalCost = pricePer19L && litersNeeded ? (pricePer19L / 19) * litersNeeded : null;
+  const galones4 = litersNeeded ? Math.ceil(litersNeeded / 4) : null;
+  const hasGalonPrice = quality ? !!galonPrices[String(quality)] : false;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -815,18 +816,34 @@ function PaintCalculator({
                 <span className="text-xs text-teal-500 ml-1">(rendimiento mínimo {yieldPerLiter} m²/L)</span>
               </div>
 
-              {/* Buckets */}
-              {cubetas19 !== null && (
+              {/* Containers */}
+              {(cubetas19 !== null || galones4 !== null) && (
                 <div>
-                  <p className="text-xs text-gray-500 font-medium mb-2">Cubetas sugeridas:</p>
-                  <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3 w-fit">
-                    <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    <div>
-                      <p className="text-lg font-black text-gray-800 leading-none">{cubetas19}</p>
-                      <p className="text-[10px] text-gray-500 leading-none">cubeta{cubetas19 !== 1 ? "s" : ""} de 19 L</p>
-                    </div>
+                  <p className="text-xs text-gray-500 font-medium mb-2">Envases sugeridos:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {cubetas19 !== null && (
+                      <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3">
+                        <svg className="w-5 h-5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        <div>
+                          <p className="text-lg font-black text-gray-800 leading-none">{cubetas19}</p>
+                          <p className="text-[10px] text-gray-500 leading-none">cubeta{cubetas19 !== 1 ? "s" : ""} de 19 L</p>
+                        </div>
+                      </div>
+                    )}
+                    {galones4 !== null && hasGalonPrice && (
+                      <div className="flex items-center gap-1.5 bg-white border border-teal-200 rounded-xl px-4 py-3">
+                        <svg className="w-5 h-5 text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V8l-5-5H9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 3v5h5" />
+                        </svg>
+                        <div>
+                          <p className="text-lg font-black text-gray-800 leading-none">{galones4}</p>
+                          <p className="text-[10px] text-gray-500 leading-none">galón{galones4 !== 1 ? "es" : ""} de 4 L</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1294,6 +1311,7 @@ export default function Home() {
         <PaintCalculator
           durabilityPrices={durabilityPrices}
           durabilityOnSale={durabilityOnSale}
+          galonPrices={galonPrices}
           onClose={() => setCalcOpen(false)}
         />
       )}
