@@ -530,7 +530,7 @@ const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
 const YIELD_MAP: Record<number, number> = { 2: 4, 3: 6, 4: 7, 7: 7 };
 
 // ── Bucket sizes available (liters) ──
-const BUCKET_SIZES = [19, 4];
+const BUCKET_SIZES = [19, 4, 1];
 
 function calcBuckets(liters: number): { size: number; qty: number }[] {
   let rem = liters;
@@ -540,11 +540,10 @@ function calcBuckets(liters: number): { size: number; qty: number }[] {
     const qty = Math.floor(rem / size);
     if (qty > 0) { result.push({ size, qty }); rem -= qty * size; }
   }
-  // Round up remaining liters to the next 4L bucket
   if (rem > 0) {
     const last = result[result.length - 1];
-    if (last?.size === 4) last.qty += 1;
-    else result.push({ size: 4, qty: 1 });
+    if (last?.size === 1) last.qty += Math.ceil(rem);
+    else result.push({ size: 1, qty: Math.ceil(rem) });
   }
   return result;
 }
