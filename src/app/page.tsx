@@ -2265,13 +2265,13 @@ export default function Home() {
                                                   <span className="font-semibold text-teal-700">{opt.years} años</span>
                                                   {/* Cubeta price */}
                                                   <div className="flex flex-col items-end w-24">
-                                                    {cubSale && <span className="text-[8px] font-bold bg-orange-500 text-white px-1 py-0.5 rounded-full leading-none mb-0.5 whitespace-nowrap">↓ OFERTA</span>}
-                                                    <span className={`font-bold text-xs ${price ? (cubSale ? "text-orange-500" : "text-teal-700") : "text-gray-300"}`}>{price ?? "—"}</span>
+                                                    {cubSale && <span className="oferta-pulse text-[10px] font-extrabold bg-orange-500 text-white px-2 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                    <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
                                                   </div>
                                                   {/* Galón price */}
                                                   <div className="flex flex-col items-end w-24">
-                                                    {galSale && <span className="text-[8px] font-bold bg-orange-500 text-white px-1 py-0.5 rounded-full leading-none mb-0.5 whitespace-nowrap">↓ OFERTA</span>}
-                                                    <span className={`font-bold text-xs ${galon ? (galSale ? "text-orange-500" : "text-teal-700") : "text-gray-300"}`}>{galon ?? "—"}</span>
+                                                    {galSale && <span className="oferta-pulse text-[10px] font-extrabold bg-orange-500 text-white px-2 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                    <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
                                                   </div>
                                                   <span className="text-xs text-right w-20 text-teal-500">{opt.yield}</span>
                                                 </div>
