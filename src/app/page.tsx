@@ -554,28 +554,36 @@ const ROOM_TABS = [
 ] as const;
 type RoomTab = typeof ROOM_TABS[number]["id"];
 
-function RoomImage({ src, alt, hex }: { src: string; alt: string; hex: string }) {
+function SalaRoom({ hex }: { hex: string }) {
   return (
-    <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: hex }}>
-      <img src={src} alt={alt} className="max-w-full max-h-full object-contain block" />
+    <div className="w-full relative" style={{ backgroundColor: hex }}>
+      <img src="/sala-sofa.png" alt="Sala" className="w-full block" />
     </div>
   );
 }
 
-function SalaRoom({ hex }: { hex: string }) {
-  return <RoomImage src="/sala-sofa.png" alt="Sala" hex={hex} />;
-}
-
 function RecamaraRoom({ hex }: { hex: string }) {
-  return <RoomImage src="/recamara.png" alt="Recámara" hex={hex} />;
+  return (
+    <div className="w-full relative" style={{ backgroundColor: hex }}>
+      <img src="/recamara.png" alt="Recámara" className="w-full block" />
+    </div>
+  );
 }
 
 function CocinaRoom({ hex }: { hex: string }) {
-  return <RoomImage src="/cocina.png" alt="Cocina" hex={hex} />;
+  return (
+    <div className="w-full relative" style={{ backgroundColor: hex }}>
+      <img src="/cocina.png" alt="Cocina" className="w-full block" />
+    </div>
+  );
 }
 
 function FachadaRoom({ hex }: { hex: string }) {
-  return <RoomImage src="/fachada.png" alt="Fachada" hex={hex} />;
+  return (
+    <div className="w-full relative" style={{ backgroundColor: hex }}>
+      <img src="/fachada.png" alt="Fachada" className="w-full block" />
+    </div>
+  );
 }
 
 function RoomPreviewModal({ color, hex, onClose }: {
@@ -628,7 +636,7 @@ function RoomPreviewModal({ color, hex, onClose }: {
           ))}
         </div>
         {/* Room image */}
-        <div className="flex-1 overflow-hidden relative" style={{ minHeight: 0 }}>
+        <div className="overflow-y-auto flex-shrink-0">
           {tab === "sala"     && <SalaRoom     hex={hex}/>}
           {tab === "recamara" && <RecamaraRoom hex={hex}/>}
           {tab === "cocina"   && <CocinaRoom   hex={hex}/>}
