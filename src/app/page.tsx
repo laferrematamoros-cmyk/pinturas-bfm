@@ -1978,7 +1978,7 @@ export default function Home() {
                                   <p className="text-xl font-extrabold text-gray-800 leading-tight">{selectedColor.name}</p>
                                   <p className="text-sm text-gray-400 mt-0.5 font-mono">{selectedColor.code}</p>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 flex-wrap">
                                   <div className="w-12 h-12 rounded-full border-4 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: editHex }} />
                                   {roomPreviewEnabled && (
                                     <button onClick={() => setRoomPreviewOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
@@ -1988,6 +1988,19 @@ export default function Home() {
                                       Ver en habitación
                                     </button>
                                   )}
+                                  <button
+                                    onClick={() => toggleFavorite(origCode(selectedColor))}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all duration-200 hover:scale-110 active:scale-95 ${
+                                      favorites.includes(origCode(selectedColor))
+                                        ? "bg-red-50 border-red-300 text-red-500"
+                                        : "bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-400"
+                                    }`}
+                                  >
+                                    <svg className={`w-3.5 h-3.5 ${favorites.includes(origCode(selectedColor)) ? "fill-red-500 text-red-500 heart-beat" : "fill-none text-gray-400"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                    </svg>
+                                    Favorito
+                                  </button>
                                 </div>
                                 {(() => {
                                   const sel = DURABILITY_OPTIONS.filter((opt) => (durability[origCode(selectedColor)] ?? []).includes(opt.years));
@@ -2007,15 +2020,21 @@ export default function Home() {
                                           {sel.map((opt) => {
                                             const price = durabilityPrices[String(opt.years)];
                                             const galon = galonPrices[String(opt.years)];
-                                            const onSale = durabilityOnSale.includes(opt.years) || galonOnSale.includes(opt.years);
+                                            const cubSale = durabilityOnSale.includes(opt.years);
+                                            const galSale = galonOnSale.includes(opt.years);
                                             if (!price && !galon) return null;
                                             return (
-                                              <div key={opt.years} className={`relative grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-3 py-2 rounded-lg text-[11px] ${onSale ? "bg-orange-50 border border-orange-400" : "bg-teal-50 border border-teal-200"}`}>
-                                                {onSale && <span className="absolute -top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap leading-none">EN OFERTA</span>}
-                                                <span className={`font-semibold ${onSale ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
-                                                <span className={`font-bold text-xs text-right w-24 ${price ? (durabilityOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-700") : "text-gray-300"}`}>{price ?? "—"}</span>
-                                                <span className={`font-bold text-xs text-right w-24 ${galon ? (galonOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-700") : "text-gray-300"}`}>{galon ?? "—"}</span>
-                                                <span className={`text-xs text-right w-20 ${onSale ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
+                                              <div key={opt.years} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2 rounded-lg text-[11px] bg-teal-50 border border-teal-200">
+                                                <span className="font-semibold text-teal-700">{opt.years} años</span>
+                                                <div className="flex flex-col items-end w-20 sm:w-24">
+                                                  {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                  <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
+                                                </div>
+                                                <div className="flex flex-col items-end w-20 sm:w-24">
+                                                  {galSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                  <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
+                                                </div>
+                                                <span className="text-xs text-right w-16 sm:w-20 text-teal-500">{opt.yield}</span>
                                               </div>
                                             );
                                           })}
