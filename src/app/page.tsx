@@ -475,7 +475,7 @@ const colorFamilies: ColorFamily[] = [
   },
 ];
 
-function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52 }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number }) {
+function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFavorite, onToggleFavorite }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number; isFavorite?: boolean; onToggleFavorite?: () => void }) {
   return (
     <div
       onClick={onClick}
@@ -493,6 +493,17 @@ function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52 }: { 
               </svg>
             </div>
           </div>
+        )}
+        {onToggleFavorite && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+            className="absolute top-1 left-1 w-5 h-5 flex items-center justify-center transition-transform hover:scale-125"
+            title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+          >
+            <svg className={`w-4 h-4 drop-shadow ${isFavorite ? "text-red-500 fill-red-500" : "text-white/80 fill-white/30"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </button>
         )}
         {onDelete && (
           <button
@@ -935,6 +946,17 @@ export default function Home() {
   const [addColorSaving, setAddColorSaving] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState<number | null>(null);
   const [nameOverrides, setNameOverrides] = useState<Record<string, { name: string; code: string }>>({});
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("pinturas-favorites") ?? "[]"); } catch { return []; }
+  });
+  const [showFavorites, setShowFavorites] = useState(false);
+  const toggleFavorite = (code: string) => {
+    setFavorites(prev => {
+      const next = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code];
+      localStorage.setItem("pinturas-favorites", JSON.stringify(next));
+      return next;
+    });
+  };;
   const [deletedColorCodes, setDeletedColorCodes] = useState<string[]>([]);
   const [editName, setEditName] = useState("");
   const [editCode, setEditCode] = useState("");
@@ -1302,12 +1324,15 @@ export default function Home() {
     if (selectedQuality !== null) {
       all = all.filter((c) => (durability[origCode(c)] ?? []).includes(selectedQuality));
     }
+    if (showFavorites) {
+      all = all.filter((c) => favorites.includes(origCode(c)));
+    }
     if (!search.trim()) return all;
     const q = search.toLowerCase();
     return all.filter(
       (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
     );
-  }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, selectedQuality, durability]);
+  }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, selectedQuality, durability, showFavorites, favorites]);
 
   const allSearchResults = useMemo(() => {
     if (!search.trim()) return [];
@@ -1788,20 +1813,32 @@ export default function Home() {
                   Filtrá por calidad y precio
                 </p>
 
-                {/* Todos los colores — centered above both grids */}
-                <div className="flex justify-center mb-4">
+                {/* Todos los colores + Mis favoritos */}
+                <div className="flex justify-center gap-3 mb-4 flex-wrap">
                   <button
-                    onClick={() => { setSelectedQuality(null); setSelectedColor(null); }}
+                    onClick={() => { setSelectedQuality(null); setSelectedColor(null); setShowFavorites(false); }}
                     className={`px-5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
-                      selectedQuality === null
+                      selectedQuality === null && !showFavorites
                         ? "bg-gray-800 text-white border-gray-800 shadow-lg scale-105"
                         : "bg-white text-gray-500 border-gray-200 hover:scale-110 hover:border-gray-600 hover:text-gray-800"
                     }`}
-                    style={selectedQuality !== null ? undefined : { boxShadow: "0 0 8px #6b7280, 0 0 18px #4b556380" }}
-                    onMouseEnter={e => { if (selectedQuality !== null) (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #6b7280, 0 0 18px #4b556380"; }}
-                    onMouseLeave={e => { if (selectedQuality !== null) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
+                    style={selectedQuality !== null || showFavorites ? undefined : { boxShadow: "0 0 8px #6b7280, 0 0 18px #4b556380" }}
                   >
                     Todos los colores
+                  </button>
+                  <button
+                    onClick={() => { setShowFavorites(!showFavorites); setSelectedQuality(null); setSelectedColor(null); }}
+                    className={`flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
+                      showFavorites
+                        ? "bg-red-500 text-white border-red-500 shadow-lg scale-105"
+                        : "bg-white text-gray-500 border-gray-200 hover:scale-110 hover:border-red-400 hover:text-red-500"
+                    }`}
+                    style={showFavorites ? { boxShadow: "0 0 8px #ef4444, 0 0 18px #ef444480" } : undefined}
+                  >
+                    <svg className={`w-4 h-4 ${showFavorites ? "fill-white text-white" : "fill-red-100 text-red-400"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    Mis favoritos {favorites.length > 0 && <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${showFavorites ? "bg-white/30" : "bg-red-100 text-red-500"}`}>{favorites.length}</span>}
                   </button>
                 </div>
 
@@ -1919,6 +1956,8 @@ export default function Home() {
                                 onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setRoomPreviewOpen(false); }}
                                 selected={selectedColor?.code === color.code}
                                 cardHeight={cardHeight}
+                                isFavorite={favorites.includes(color.code)}
+                                onToggleFavorite={() => toggleFavorite(color.code)}
                               />
                             ))}
                           </div>
@@ -2067,6 +2106,8 @@ export default function Home() {
                               onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setRoomPreviewOpen(false); }}
                               selected={selectedColor?.code === color.code}
                               cardHeight={cardHeight}
+                              isFavorite={favorites.includes(color.code)}
+                              onToggleFavorite={() => toggleFavorite(color.code)}
                               onDelete={isAdmin ? () => {
                                 if (window.confirm(`¿Eliminar "${color.name}"? Esta acción no se puede deshacer.`)) {
                                   handleDeleteColor(color);
@@ -2233,8 +2274,8 @@ export default function Home() {
                                     <p className="text-sm text-gray-400 mt-0.5 font-mono">{selectedColor.code}</p>
                                   </div>
 
-                                  {/* Color circle + room preview button */}
-                                  <div className="flex items-center gap-3">
+                                  {/* Color circle + room preview + favorite */}
+                                  <div className="flex items-center gap-3 flex-wrap">
                                     <div className="w-12 h-12 rounded-full border-4 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: editHex }} />
                                     {roomPreviewEnabled && (
                                       <button
@@ -2249,6 +2290,19 @@ export default function Home() {
                                         Ver en habitación
                                       </button>
                                     )}
+                                    <button
+                                      onClick={() => toggleFavorite(origCode(selectedColor))}
+                                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all duration-200 hover:scale-110 active:scale-95 ${
+                                        favorites.includes(origCode(selectedColor))
+                                          ? "bg-red-50 border-red-300 text-red-500"
+                                          : "bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-400"
+                                      }`}
+                                    >
+                                      <svg className={`w-3.5 h-3.5 ${favorites.includes(origCode(selectedColor)) ? "fill-red-500 text-red-500" : "fill-none text-gray-400"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                      </svg>
+                                      {favorites.includes(origCode(selectedColor)) ? "Favorito" : "Favorito"}
+                                    </button>
                                   </div>
 
                                   {(() => {
