@@ -1790,89 +1790,55 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* Cubeta 19L grid */}
-                {DURABILITY_OPTIONS.some((opt) => durabilityPrices[String(opt.years)]) && (
-                  <div className="mb-5">
-                    <p className="text-center text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Cubeta 19 L</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)]).map((opt) => {
-                        const price = durabilityPrices[String(opt.years)];
-                        const active = selectedQuality === opt.years;
-                        const onSale = durabilityOnSale.includes(opt.years);
-                        const neonColor = onSale ? "#f97316" : "#2dd4bf";
-                        const neonShadow = `0 0 8px ${neonColor}, 0 0 20px ${neonColor}80`;
-                        return (
-                          <button
-                            key={opt.years}
-                            onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
-                            className={`relative flex flex-col items-center py-2.5 rounded-2xl border transition-all duration-200 shadow-sm ${
-                              active
-                                ? "bg-teal-500 border-teal-400 text-white shadow-md scale-105"
-                                : onSale
-                                ? "bg-orange-50 border-orange-400 text-gray-700 hover:scale-105"
-                                : "bg-white text-gray-700 border-gray-200 hover:scale-105 hover:border-teal-400"
-                            }`}
-                            style={active ? { boxShadow: neonShadow } : undefined}
-                            onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
-                            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
-                          >
-                            {onSale && (
-                              <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                                active ? "bg-white text-orange-500" : "bg-orange-500 text-white"
-                              }`}>EN OFERTA</span>
-                            )}
-                            <span className="font-bold text-sm">{opt.years} años</span>
-                            <span className={`text-base font-extrabold leading-tight ${active ? "text-white" : onSale ? "text-orange-500" : "text-teal-600"}`}>{price}</span>
-                            <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/90" : "text-gray-500"}`}>cubeta 19 L</span>
-                            <span className={`text-[10px] leading-tight ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                {/* Combined quality grid */}
+                <div className="mb-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]).map((opt) => {
+                      const price = durabilityPrices[String(opt.years)];
+                      const galon = galonPrices[String(opt.years)];
+                      const active = selectedQuality === opt.years;
+                      const onSale = durabilityOnSale.includes(opt.years) || galonOnSale.includes(opt.years);
+                      const neonColor = onSale ? "#f97316" : "#2dd4bf";
+                      const neonShadow = `0 0 8px ${neonColor}, 0 0 20px ${neonColor}80`;
+                      return (
+                        <button
+                          key={opt.years}
+                          onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
+                          className={`relative flex flex-col items-center py-2.5 px-2 rounded-2xl border transition-all duration-200 shadow-sm ${
+                            active
+                              ? "bg-teal-500 border-teal-400 text-white shadow-md scale-105"
+                              : onSale
+                              ? "bg-orange-50 border-orange-400 text-gray-700 hover:scale-105"
+                              : "bg-white text-gray-700 border-gray-200 hover:scale-105 hover:border-teal-400"
+                          }`}
+                          style={active ? { boxShadow: neonShadow } : undefined}
+                          onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
+                          onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
+                        >
+                          {onSale && (
+                            <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                              active ? "bg-white text-orange-500" : "bg-orange-500 text-white"
+                            }`}>EN OFERTA</span>
+                          )}
+                          <span className="font-bold text-sm mb-1">{opt.years} años</span>
+                          {price && (
+                            <div className="flex items-baseline gap-1">
+                              <span className={`text-sm font-extrabold leading-tight ${active ? "text-white" : durabilityOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-600"}`}>{price}</span>
+                              <span className={`text-[9px] font-semibold ${active ? "text-white/80" : "text-gray-400"}`}>cub.</span>
+                            </div>
+                          )}
+                          {galon && (
+                            <div className="flex items-baseline gap-1">
+                              <span className={`text-sm font-extrabold leading-tight ${active ? "text-white" : galonOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-600"}`}>{galon}</span>
+                              <span className={`text-[9px] font-semibold ${active ? "text-white/80" : "text-gray-400"}`}>gal.</span>
+                            </div>
+                          )}
+                          <span className={`text-[10px] leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
-
-                {/* Galón 4L grid */}
-                {DURABILITY_OPTIONS.some((opt) => galonPrices[String(opt.years)]) && (
-                  <div className="mb-1">
-                    <p className="text-center text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Galón 4 L</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {DURABILITY_OPTIONS.filter((opt) => galonPrices[String(opt.years)]).map((opt) => {
-                        const galon = galonPrices[String(opt.years)];
-                        const active = selectedQuality === opt.years;
-                        const galonSale = galonOnSale.includes(opt.years);
-                        const neonColor = galonSale ? "#f97316" : "#2dd4bf";
-                        const neonShadow = `0 0 8px ${neonColor}, 0 0 20px ${neonColor}80`;
-                        return (
-                          <button
-                            key={opt.years}
-                            onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
-                            className={`relative flex flex-col items-center py-2.5 rounded-2xl border transition-all duration-200 shadow-sm ${
-                              active
-                                ? "bg-teal-500 border-teal-400 text-white shadow-md scale-105"
-                                : galonSale
-                                ? "bg-orange-50 border-orange-400 text-gray-700 hover:scale-105"
-                                : "bg-white text-gray-700 border-gray-200 hover:scale-105 hover:border-teal-400"
-                            }`}
-                            style={active ? { boxShadow: neonShadow } : undefined}
-                            onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
-                            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
-                          >
-                            {galonSale && (
-                              <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                                active ? "bg-white text-orange-500" : "bg-orange-500 text-white"
-                              }`}>EN OFERTA</span>
-                            )}
-                            <span className="font-bold text-sm">{opt.years} años</span>
-                            <span className={`text-base font-extrabold leading-tight ${active ? "text-white" : galonSale ? "text-orange-500" : "text-teal-600"}`}>{galon}</span>
-                            <span className={`text-[10px] font-semibold leading-tight ${active ? "text-white/90" : "text-gray-500"}`}>galón 4 L</span>
-                            <span className={`text-[10px] leading-tight ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                </div>
 
                 {/* Price clarification note */}
                 <p className="mt-2 text-center text-[11px] text-gray-400">
