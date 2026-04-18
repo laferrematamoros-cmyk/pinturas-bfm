@@ -1923,11 +1923,6 @@ export default function Home() {
                     <p className="text-sm text-gray-500 mb-4 text-center">
                       {allSearchResults.length} colores encontrados
                     </p>
-                    <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-0 mb-3">
-                      {allSearchResults.map((color) => (
-                        <ColorSwatch key={color.code} color={color} onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setRoomPreviewOpen(false); }} selected={selectedColor?.code === color.code} cardHeight={cardHeight} />
-                      ))}
-                    </div>
                     {selectedColor && (
                       <div className="flex flex-col sm:flex-row w-full mb-3 rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
                         <div className="relative w-full sm:w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex, minHeight: "80px" }}>
@@ -2004,6 +1999,11 @@ export default function Home() {
                         </div>
                       </div>
                     )}
+                    <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-0 mt-3">
+                      {allSearchResults.map((color) => (
+                        <ColorSwatch key={color.code} color={color} onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setRoomPreviewOpen(false); }} selected={selectedColor?.code === color.code} cardHeight={cardHeight} />
+                      ))}
+                    </div>
                   </>
                 )}
               </div>
