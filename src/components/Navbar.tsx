@@ -14,28 +14,28 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2U
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between h-16 sm:h-24">
+      <div className="max-w-7xl mx-auto px-3 sm:px-2 flex items-center justify-between h-16 sm:h-28">
         {/* Logo(s) */}
-        <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+        <Link href="/" className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0">
           {logoUrl ? (
             <img
               src={logoUrl}
               alt="logo"
-              className="h-10 sm:h-20 w-auto max-w-[120px] sm:max-w-[280px] object-contain"
+              className="h-10 sm:h-24 w-auto max-w-[120px] sm:max-w-[320px] object-contain"
             />
           ) : (
-            <div className="w-10 h-10 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-red-500 via-yellow-400 to-green-500 flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-sm sm:text-xl">BFM</span>
+            <div className="w-10 h-10 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-red-500 via-yellow-400 to-green-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm sm:text-2xl">BFM</span>
             </div>
           )}
           {logo2Url && (
             <img
               src={logo2Url}
               alt="logo2"
-              className="h-10 sm:h-20 w-auto max-w-[100px] sm:max-w-[260px] object-contain"
+              className="h-10 sm:h-24 w-auto max-w-[100px] sm:max-w-[300px] object-contain"
             />
           )}
-          <span className="font-bold text-sm sm:text-lg text-gray-900 hidden sm:block truncate max-w-[200px] lg:max-w-none">
+          <span className="font-bold text-sm sm:text-xl text-gray-900 hidden sm:block truncate max-w-[200px] lg:max-w-none">
             {siteName}
           </span>
         </Link>
