@@ -2266,12 +2266,12 @@ export default function Home() {
                                                   {/* Cubeta price */}
                                                   <div className="flex flex-col items-end w-24">
                                                     {cubSale && <span className="oferta-pulse text-[10px] font-extrabold bg-orange-500 text-white px-2 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                    <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse precio-oferta" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
+                                                    <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
                                                   </div>
                                                   {/* Galón price */}
                                                   <div className="flex flex-col items-end w-24">
                                                     {galSale && <span className="oferta-pulse text-[10px] font-extrabold bg-orange-500 text-white px-2 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                    <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse precio-oferta" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
+                                                    <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
                                                   </div>
                                                   <span className="text-xs text-right w-20 text-teal-500">{opt.yield}</span>
                                                 </div>
