@@ -556,8 +556,8 @@ type RoomTab = typeof ROOM_TABS[number]["id"];
 
 function RoomImage({ src, alt, hex }: { src: string; alt: string; hex: string }) {
   return (
-    <div className="absolute inset-0" style={{ backgroundColor: hex }}>
-      <img src={src} alt={alt} className="w-full h-full object-contain block" />
+    <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: hex }}>
+      <img src={src} alt={alt} className="max-w-full max-h-full object-contain block" />
     </div>
   );
 }
