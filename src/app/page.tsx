@@ -676,11 +676,13 @@ function PaintCalculator({
   durabilityPrices,
   durabilityOnSale,
   galonPrices,
+  galonOnSale,
   onClose,
 }: {
   durabilityPrices: Record<string, string>;
   durabilityOnSale: number[];
   galonPrices: Record<string, string>;
+  galonOnSale: number[];
   onClose: () => void;
 }) {
   const [area, setArea] = useState("");
@@ -778,8 +780,11 @@ function PaintCalculator({
             </label>
             <div className="flex flex-wrap gap-2">
               {availableOptions.map((opt) => {
-                const onSale = durabilityOnSale.includes(opt.years);
+                const cubSale = durabilityOnSale.includes(opt.years);
+                const galSale = galonOnSale.includes(opt.years);
                 const active = quality === opt.years;
+                const price = durabilityPrices[String(opt.years)];
+                const galon = galonPrices[String(opt.years)];
                 return (
                   <button
                     key={opt.years}
@@ -787,22 +792,31 @@ function PaintCalculator({
                     className={`relative flex-1 min-w-[calc(50%-4px)] flex flex-col items-center px-3 py-2.5 rounded-xl border transition-all ${
                       active
                         ? "bg-teal-500 border-teal-500 text-white shadow-md"
-                        : onSale
-                        ? "bg-orange-50 border-orange-300 text-gray-700 hover:shadow"
                         : "bg-white border-gray-200 text-gray-700 hover:border-teal-300"
                     }`}
                   >
-                    {onSale && (
-                      <span className={`absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>
-                        OFERTA
-                      </span>
+                    <span className="font-bold text-sm mb-1">{opt.years} años</span>
+                    {price && (
+                      <div className="flex items-center gap-1">
+                        <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
+                        <span className={`text-sm font-extrabold leading-tight ${active ? (cubSale ? "text-white oferta-pulse" : "text-white") : cubSale ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{price}</span>
+                        {cubSale
+                          ? <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>
+                          : <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
+                        }
+                      </div>
                     )}
-                    <span className="font-bold text-sm">{opt.years} años</span>
-                    <span className={`font-extrabold text-base leading-tight ${active ? "text-white" : onSale ? "text-orange-500" : "text-teal-600"}`}>
-                      {durabilityPrices[String(opt.years)]}
-                    </span>
-                    <span className={`text-[10px] ${active ? "text-white/70" : "text-gray-400"}`}>cubeta 19 L</span>
-                    <span className={`text-[10px] ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
+                    {galon && (
+                      <div className="flex items-center gap-1">
+                        <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
+                        <span className={`text-sm font-extrabold leading-tight ${active ? (galSale ? "text-white oferta-pulse" : "text-white") : galSale ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{galon}</span>
+                        {galSale
+                          ? <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>
+                          : <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
+                        }
+                      </div>
+                    )}
+                    <span className={`text-[10px] leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
                   </button>
                 );
               })}
@@ -1347,6 +1361,7 @@ export default function Home() {
           durabilityPrices={durabilityPrices}
           durabilityOnSale={durabilityOnSale}
           galonPrices={galonPrices}
+          galonOnSale={galonOnSale}
           onClose={() => setCalcOpen(false)}
         />
       )}
