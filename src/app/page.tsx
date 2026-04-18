@@ -728,10 +728,10 @@ function PaintCalculator({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90dvh]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -741,7 +741,7 @@ function PaintCalculator({
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
         </div>
 
-        <div className="p-5 flex flex-col gap-5">
+        <div className="p-4 sm:p-5 flex flex-col gap-4 sm:gap-5 overflow-y-auto">
           {/* Area input */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -800,7 +800,7 @@ function PaintCalculator({
                   <button
                     key={opt.years}
                     onClick={() => setQuality(active ? null : opt.years)}
-                    className={`relative flex-1 min-w-[calc(50%-4px)] flex flex-col items-center px-3 py-2.5 rounded-xl border transition-all ${
+                    className={`relative flex-1 min-w-[calc(50%-4px)] flex flex-col items-center px-2 py-2 rounded-xl border transition-all ${
                       active
                         ? "bg-teal-500 border-teal-500 text-white shadow-md"
                         : "bg-white border-gray-200 text-gray-700 hover:border-teal-300"
@@ -845,10 +845,10 @@ function PaintCalculator({
               </div>
 
               {/* Liters */}
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-teal-700">{litersNeeded}</span>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-3xl sm:text-4xl font-black text-teal-700">{litersNeeded}</span>
                 <span className="text-lg font-semibold text-teal-600">litros</span>
-                <span className="text-xs text-teal-500 ml-1">(rendimiento mínimo {yieldPerLiter} m²/L)</span>
+                <span className="text-xs text-teal-500">(rend. mín. {yieldPerLiter} m²/L)</span>
               </div>
 
               {/* Rows: litros / cubetas / galones / combinado */}
@@ -1338,7 +1338,6 @@ export default function Home() {
     if (!search.trim()) return [];
     const q = search.toLowerCase();
 
-    // Built-in colors with name/code overrides applied
     const builtInResults = colorFamilies.flatMap((f) =>
       f.colors
         .filter((c) => !deletedColorCodes.includes(c.code))
@@ -1352,7 +1351,6 @@ export default function Home() {
         })
     );
 
-    // Custom colors across all families
     const customResults = Object.values(customColors).flat().filter((c) => {
       if (selectedQuality !== null && !(durability[c.code] ?? []).includes(selectedQuality)) return false;
       return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
@@ -1360,6 +1358,21 @@ export default function Home() {
 
     return [...customResults, ...builtInResults];
   }, [search, selectedQuality, durability, deletedColorCodes, nameOverrides, customColors]);
+
+  const allFavoriteColors = useMemo(() => {
+    if (!showFavorites || favorites.length === 0) return [];
+    const builtIn = colorFamilies.flatMap((f) =>
+      f.colors
+        .filter((c) => !deletedColorCodes.includes(c.code))
+        .map((c) => {
+          const ov = nameOverrides[c.code];
+          return ov ? { ...c, name: ov.name, code: ov.code, originalCode: c.code } : c;
+        })
+        .filter((c) => favorites.includes(origCode(c)))
+    );
+    const custom = Object.values(customColors).flat().filter((c) => favorites.includes(c.code));
+    return [...custom, ...builtIn];
+  }, [showFavorites, favorites, colorFamilies, deletedColorCodes, nameOverrides, customColors]);
 
   // Banner gradient from first 5 colors of the family
   const bannerGradient = currentFamily.colors
@@ -1930,22 +1943,27 @@ export default function Home() {
               </div>
             )}
 
-            {search.trim() ? (
-              /* Search results - show all matching colors */
+            {(search.trim() || showFavorites) ? (
+              /* Search results or favorites - show all matching colors across families */
+              (() => {
+                const globalList = showFavorites && !search.trim() ? allFavoriteColors : allSearchResults;
+                const emptyMsg = showFavorites && !search.trim()
+                  ? "Aún no tienes favoritos. Toca el ❤️ en cualquier color para guardarlo."
+                  : `No se encontraron colores para "${search}"`;
+                const countMsg = showFavorites && !search.trim()
+                  ? `${globalList.length} color${globalList.length !== 1 ? "es" : ""} favorito${globalList.length !== 1 ? "s" : ""}`
+                  : `${globalList.length} colores encontrados`;
+                return (
               <div className="px-4 pb-10">
-                {allSearchResults.length === 0 ? (
-                  <p className="text-center text-gray-400 py-20">
-                    No se encontraron colores para &quot;{search}&quot;
-                  </p>
-                ) : (
+                {globalList.length === 0 ? (
+                    <p className="text-center text-gray-400 py-20">{emptyMsg}</p>
+                  ) : (
                   <>
-                    <p className="text-sm text-gray-500 mb-4 text-center">
-                      {allSearchResults.length} colores encontrados
-                    </p>
+                    <p className="text-sm text-gray-500 mb-4 text-center">{countMsg}</p>
                     {(() => {
                       const rows: Color[][] = [];
-                      for (let i = 0; i < allSearchResults.length; i += 3) rows.push(allSearchResults.slice(i, i + 3));
-                      const selectedRowIdx = selectedColor ? Math.floor(allSearchResults.findIndex(c => c.code === selectedColor.code) / 3) : -1;
+                      for (let i = 0; i < globalList.length; i += 3) rows.push(globalList.slice(i, i + 3));
+                      const selectedRowIdx = selectedColor ? Math.floor(globalList.findIndex(c => c.code === selectedColor.code) / 3) : -1;
                       return rows.map((rowColors, rowIndex) => (
                         <React.Fragment key={rowIndex}>
                           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
@@ -2030,8 +2048,10 @@ export default function Home() {
                       ));
                     })()}
                   </>
-                )}
+                  )}
               </div>
+                );
+              })()
             ) : (
               <>
                 {/* Family selector dots */}
