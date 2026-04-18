@@ -554,53 +554,28 @@ const ROOM_TABS = [
 ] as const;
 type RoomTab = typeof ROOM_TABS[number]["id"];
 
-function SalaRoom({ hex }: { hex: string }) {
+function RoomImage({ src, alt, hex }: { src: string; alt: string; hex: string }) {
   return (
-    <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img
-        src="/sala-sofa.png"
-        alt="Sala"
-        className="w-full block"
-      />
+    <div className="absolute inset-0" style={{ backgroundColor: hex }}>
+      <img src={src} alt={alt} className="w-full h-full object-contain block" />
     </div>
   );
 }
 
+function SalaRoom({ hex }: { hex: string }) {
+  return <RoomImage src="/sala-sofa.png" alt="Sala" hex={hex} />;
+}
 
 function RecamaraRoom({ hex }: { hex: string }) {
-  return (
-    <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img
-        src="/recamara.png"
-        alt="Recámara"
-        className="w-full block"
-      />
-    </div>
-  );
+  return <RoomImage src="/recamara.png" alt="Recámara" hex={hex} />;
 }
 
 function CocinaRoom({ hex }: { hex: string }) {
-  return (
-    <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img
-        src="/cocina.png"
-        alt="Cocina"
-        className="w-full block"
-      />
-    </div>
-  );
+  return <RoomImage src="/cocina.png" alt="Cocina" hex={hex} />;
 }
 
 function FachadaRoom({ hex }: { hex: string }) {
-  return (
-    <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img
-        src="/fachada.png"
-        alt="Fachada"
-        className="w-full block"
-      />
-    </div>
-  );
+  return <RoomImage src="/fachada.png" alt="Fachada" hex={hex} />;
 }
 
 function RoomPreviewModal({ color, hex, onClose }: {
@@ -653,7 +628,7 @@ function RoomPreviewModal({ color, hex, onClose }: {
           ))}
         </div>
         {/* Room image */}
-        <div className="overflow-y-auto flex-1">
+        <div className="flex-1 overflow-hidden relative" style={{ minHeight: 0 }}>
           {tab === "sala"     && <SalaRoom     hex={hex}/>}
           {tab === "recamara" && <RecamaraRoom hex={hex}/>}
           {tab === "cocina"   && <CocinaRoom   hex={hex}/>}
