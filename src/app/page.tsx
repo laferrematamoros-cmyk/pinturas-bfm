@@ -1824,13 +1824,13 @@ export default function Home() {
                           {price && (
                             <div className="flex items-baseline gap-1">
                               <span className={`text-sm font-extrabold leading-tight ${active ? "text-white" : durabilityOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-600"}`}>{price}</span>
-                              <span className={`text-[9px] font-semibold ${active ? "text-white/80" : "text-gray-400"}`}>cub.</span>
+                              <span className={`text-[11px] font-bold ${active ? "text-white/80" : "text-gray-400"}`}>cub.</span>
                             </div>
                           )}
                           {galon && (
                             <div className="flex items-baseline gap-1">
                               <span className={`text-sm font-extrabold leading-tight ${active ? "text-white" : galonOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-600"}`}>{galon}</span>
-                              <span className={`text-[9px] font-semibold ${active ? "text-white/80" : "text-gray-400"}`}>gal.</span>
+                              <span className={`text-[11px] font-bold ${active ? "text-white/80" : "text-gray-400"}`}>gal.</span>
                             </div>
                           )}
                           <span className={`text-[10px] leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
