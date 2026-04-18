@@ -797,7 +797,7 @@ function PaintCalculator({
                   >
                     <span className="font-bold text-sm mb-1">{opt.years} años</span>
                     {price && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                         <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
                         <span className={`text-sm font-extrabold leading-tight ${active ? (cubSale ? "text-white oferta-pulse" : "text-white") : cubSale ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{price}</span>
                         {cubSale
@@ -807,7 +807,7 @@ function PaintCalculator({
                       </div>
                     )}
                     {galon && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                         <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
                         <span className={`text-sm font-extrabold leading-tight ${active ? (galSale ? "text-white oferta-pulse" : "text-white") : galSale ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{galon}</span>
                         {galSale
@@ -1830,7 +1830,7 @@ export default function Home() {
                         >
                           <span className="font-bold text-sm mb-1">{opt.years} años</span>
                           {price && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                               <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
                               <span className={`text-sm font-extrabold leading-tight ${active ? (durabilityOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : durabilityOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{price}</span>
                               {durabilityOnSale.includes(opt.years)
@@ -1840,7 +1840,7 @@ export default function Home() {
                             </div>
                           )}
                           {galon && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                               <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
                               <span className={`text-sm font-extrabold leading-tight ${active ? (galonOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : galonOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{galon}</span>
                               {galonOnSale.includes(opt.years)
@@ -2260,11 +2260,11 @@ export default function Home() {
                                         <p className="text-base font-extrabold text-gray-800 mb-0">{rendimientoLabel}</p>
                                         <div>
                                           {/* Header */}
-                                          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 mb-1">
+                                          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 px-3 mb-1">
                                             <span />
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/galon.png" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-20 text-right">Rendimiento</span>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/galon.png" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-16 sm:w-20 text-right">Rend.</span>
                                           </div>
                                           {/* Rows */}
                                           <div className="flex flex-col gap-1.5">
@@ -2275,16 +2275,16 @@ export default function Home() {
                                               const galSale = galonOnSale.includes(opt.years);
                                               if (!price && !galon) return null;
                                               return (
-                                                <div key={opt.years} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-3 py-2 rounded-lg text-[11px] bg-teal-50 border border-teal-200">
+                                                <div key={opt.years} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2 rounded-lg text-[11px] bg-teal-50 border border-teal-200">
                                                   <span className="font-semibold text-teal-700">{opt.years} años</span>
                                                   {/* Cubeta price */}
-                                                  <div className="flex flex-col items-end w-24">
-                                                    {cubSale && <span className="oferta-pulse text-[10px] font-extrabold bg-orange-500 text-white px-2 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                  <div className="flex flex-col items-end w-20 sm:w-24">
+                                                    {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
                                                     <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
                                                   </div>
                                                   {/* Galón price */}
-                                                  <div className="flex flex-col items-end w-24">
-                                                    {galSale && <span className="oferta-pulse text-[10px] font-extrabold bg-orange-500 text-white px-2 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                  <div className="flex flex-col items-end w-20 sm:w-24">
+                                                    {galSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
                                                     <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
                                                   </div>
                                                   <span className="text-xs text-right w-20 text-teal-500">{opt.yield}</span>
