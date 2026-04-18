@@ -1940,44 +1940,33 @@ export default function Home() {
                                   return sel.length > 0 ? (
                                     <div className="flex flex-col gap-3">
                                       <p className="text-base font-extrabold text-gray-800 mb-0">{rendimientoLabel}</p>
-                                      {sel.some((opt) => durabilityPrices[String(opt.years)]) && (
-                                        <div>
-                                          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1 px-1">Cubeta 19 L</p>
-                                          <div className="flex flex-col gap-1.5">
-                                            {sel.filter((opt) => durabilityPrices[String(opt.years)]).map((opt) => {
-                                              const price = durabilityPrices[String(opt.years)];
-                                              const onSale = durabilityOnSale.includes(opt.years);
-                                              return (
-                                                <div key={opt.years} className={`relative grid grid-cols-[1fr_auto_auto] items-center gap-x-2 px-3 py-1.5 rounded-lg text-[11px] ${onSale ? "bg-orange-50 border border-orange-400" : "bg-teal-50 border border-teal-200"}`}>
-                                                  {onSale && <span className="absolute -top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap leading-none">EN OFERTA</span>}
-                                                  <span className={`font-semibold ${onSale ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
-                                                  <span className={`font-bold text-xs text-right w-20 ${onSale ? "text-orange-500" : "text-teal-700"}`}>{price}</span>
-                                                  <span className={`text-xs text-right w-20 ${onSale ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
+                                      <div>
+                                        {/* Header */}
+                                        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 mb-1">
+                                          <span />
+                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
+                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/galon.png" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
+                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-20 text-right">Rendimiento</span>
                                         </div>
-                                      )}
-                                      {sel.some((opt) => galonPrices[String(opt.years)]) && (
-                                        <div>
-                                          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1 px-1">Galón 4 L</p>
-                                          <div className="flex flex-col gap-1.5">
-                                            {sel.filter((opt) => galonPrices[String(opt.years)]).map((opt) => {
-                                              const galon = galonPrices[String(opt.years)];
-                                              const galonSale = galonOnSale.includes(opt.years);
-                                              return (
-                                                <div key={opt.years} className={`relative grid grid-cols-[1fr_auto_auto] items-center gap-x-2 px-3 py-1.5 rounded-lg text-[11px] ${galonSale ? "bg-orange-50 border border-orange-400" : "bg-teal-50 border border-teal-200"}`}>
-                                                  {galonSale && <span className="absolute -top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap leading-none">EN OFERTA</span>}
-                                                  <span className={`font-semibold ${galonSale ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
-                                                  <span className={`font-bold text-xs text-right w-20 ${galonSale ? "text-orange-500" : "text-teal-700"}`}>{galon}</span>
-                                                  <span className={`text-xs text-right w-20 ${galonSale ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
+                                        {/* Rows */}
+                                        <div className="flex flex-col gap-1.5">
+                                          {sel.map((opt) => {
+                                            const price = durabilityPrices[String(opt.years)];
+                                            const galon = galonPrices[String(opt.years)];
+                                            const onSale = durabilityOnSale.includes(opt.years) || galonOnSale.includes(opt.years);
+                                            if (!price && !galon) return null;
+                                            return (
+                                              <div key={opt.years} className={`relative grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-3 py-2 rounded-lg text-[11px] ${onSale ? "bg-orange-50 border border-orange-400" : "bg-teal-50 border border-teal-200"}`}>
+                                                {onSale && <span className="absolute -top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap leading-none">EN OFERTA</span>}
+                                                <span className={`font-semibold ${onSale ? "text-orange-700" : "text-teal-700"}`}>{opt.years} años</span>
+                                                <span className={`font-bold text-xs text-right w-24 ${price ? (durabilityOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-700") : "text-gray-300"}`}>{price ?? "—"}</span>
+                                                <span className={`font-bold text-xs text-right w-24 ${galon ? (galonOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-700") : "text-gray-300"}`}>{galon ?? "—"}</span>
+                                                <span className={`text-xs text-right w-20 ${onSale ? "text-orange-400" : "text-teal-500"}`}>{opt.yield}</span>
+                                              </div>
+                                            );
+                                          })}
                                         </div>
-                                      )}
+                                      </div>
                                     </div>
                                   ) : null;
                                 })()}
