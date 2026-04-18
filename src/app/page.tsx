@@ -652,8 +652,8 @@ function RoomPreviewModal({ color, hex, onClose }: {
             </button>
           ))}
         </div>
-        {/* Room SVG */}
-        <div className="overflow-y-auto flex-shrink-0">
+        {/* Room image */}
+        <div className="overflow-y-auto flex-1">
           {tab === "sala"     && <SalaRoom     hex={hex}/>}
           {tab === "recamara" && <RecamaraRoom hex={hex}/>}
           {tab === "cocina"   && <CocinaRoom   hex={hex}/>}
