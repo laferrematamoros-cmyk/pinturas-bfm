@@ -1825,14 +1825,14 @@ export default function Home() {
                             <div className="flex items-center gap-1">
                               <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
                               <span className={`text-sm font-extrabold leading-tight ${active ? "text-white" : durabilityOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-600"}`}>{price}</span>
-                              <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>cubeta 19L</span>
+                              <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
                             </div>
                           )}
                           {galon && (
                             <div className="flex items-center gap-1">
                               <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
                               <span className={`text-sm font-extrabold leading-tight ${active ? "text-white" : galonOnSale.includes(opt.years) ? "text-orange-500" : "text-teal-600"}`}>{galon}</span>
-                              <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>galón 4L</span>
+                              <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
                             </div>
                           )}
                           <span className={`text-[10px] leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
