@@ -798,6 +798,13 @@ function PaintCalculator({
                         : "bg-white border-gray-200 text-gray-700 hover:border-teal-300"
                     }`}
                   >
+                    {active && (
+                      <span className="absolute top-1.5 right-1.5 w-4 h-4 flex items-center justify-center rounded-full bg-white/30">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
+                    )}
                     <span className="font-bold text-sm mb-1">{opt.years} años</span>
                     {galon && (
                       <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
@@ -1983,6 +1990,13 @@ export default function Home() {
                           onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
                           onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
                         >
+                          {active && (
+                            <span className="absolute top-1.5 right-1.5 w-4 h-4 flex items-center justify-center rounded-full bg-white/30">
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </span>
+                          )}
                           <span className="font-bold text-sm mb-1">{opt.years} años</span>
                           {galon && (
                             <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
