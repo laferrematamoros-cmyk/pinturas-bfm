@@ -74,6 +74,18 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2U
             </svg>
             868 234 0531
           </a>
+          <a
+            href="https://maps.app.goo.gl/dWk2h9RFzFvwGF499"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-1.5 rounded-full transition-colors font-medium text-xs sm:text-sm flex-shrink-0"
+          >
+            <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            <span className="hidden sm:inline">Cómo llegar</span>
+            <span className="sm:hidden">Ubicación</span>
+          </a>
           {announcementText && (
             <span className="text-xs sm:text-sm text-gray-600 truncate">{announcementText}</span>
           )}
