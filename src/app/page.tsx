@@ -526,9 +526,12 @@ function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFa
         <p className="text-[8px] font-semibold text-gray-800 leading-tight line-clamp-2">
           {color.name}
         </p>
-        <p className="text-[7px] text-gray-400 leading-tight mt-0.5">
-          {color.code}
-        </p>
+        <div className="flex items-center justify-between mt-0.5">
+          <p className="text-[7px] text-gray-400 leading-tight">{color.code}</p>
+          {color.pageNumber != null && (
+            <span className="text-[7px] font-semibold text-teal-500 leading-tight">p.{color.pageNumber}</span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2069,7 +2072,12 @@ export default function Home() {
                                 </button>
                                 <div>
                                   <p className="text-xl font-extrabold text-gray-800 leading-tight">{selectedColor.name}</p>
-                                  <p className="text-sm text-gray-400 mt-0.5 font-mono">{selectedColor.code}</p>
+                                  <p className="text-sm text-gray-400 mt-0.5 font-mono">
+                                    {selectedColor.code}
+                                    {selectedColor.pageNumber != null && (
+                                      <span className="ml-2 text-xs font-semibold text-teal-500">p.{selectedColor.pageNumber}</span>
+                                    )}
+                                  </p>
                                 </div>
                                 <div className="flex items-center gap-3 flex-wrap">
                                   <div className="w-12 h-12 rounded-full border-4 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: editHex }} />
@@ -2394,7 +2402,12 @@ export default function Home() {
                                 <>
                                   <div>
                                     <p className="text-xl font-extrabold text-gray-800 leading-tight">{selectedColor.name}</p>
-                                    <p className="text-sm text-gray-400 mt-0.5 font-mono">{selectedColor.code}</p>
+                                    <p className="text-sm text-gray-400 mt-0.5 font-mono">
+                                      {selectedColor.code}
+                                      {selectedColor.pageNumber != null && (
+                                        <span className="ml-2 text-xs font-semibold text-teal-500">p.{selectedColor.pageNumber}</span>
+                                      )}
+                                    </p>
                                   </div>
 
                                   {/* Color circle + room preview + favorite */}
