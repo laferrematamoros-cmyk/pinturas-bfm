@@ -1,9 +1,14 @@
 import type { MetadataRoute } from "next";
+import { loadSiteSettings } from "@/lib/actions";
 
-export default function manifest(): MetadataRoute.Manifest {
+export const dynamic = "force-dynamic";
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const { name } = await loadSiteSettings();
+
   return {
-    name: "Pinturas BFM",
-    short_name: "Pinturas BFM",
+    name,
+    short_name: name,
     description: "Catálogo de pinturas y paleta de colores",
     start_url: "/",
     display: "standalone",

@@ -14,6 +14,8 @@ import {
   saveDurabilityOnSale,
   loadSiteSettings,
   saveRoomPreviewEnabled,
+  saveCalcButtonEnabled,
+  savePwaIconUrl,
   saveRendimientoLabel,
   saveCardHeight,
   loadGalonPrices,
@@ -790,24 +792,20 @@ function PaintCalculator({
                     }`}
                   >
                     <span className="font-bold text-sm mb-1">{opt.years} años</span>
-                    {price && (
-                      <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
-                        <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
-                        <span className={`text-sm font-extrabold leading-tight ${active ? (cubSale ? "text-white oferta-pulse" : "text-white") : cubSale ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{price}</span>
-                        {cubSale
-                          ? <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>
-                          : <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
-                        }
-                      </div>
-                    )}
                     {galon && (
                       <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                         <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
                         <span className={`text-sm font-extrabold leading-tight ${active ? (galSale ? "text-white oferta-pulse" : "text-white") : galSale ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{galon}</span>
-                        {galSale
-                          ? <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>
-                          : <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
-                        }
+                        <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
+                        {galSale && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
+                      </div>
+                    )}
+                    {price && (
+                      <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
+                        <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
+                        <span className={`text-sm font-extrabold leading-tight ${active ? (cubSale ? "text-white oferta-pulse" : "text-white") : cubSale ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{price}</span>
+                        <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
+                        {cubSale && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                       </div>
                     )}
                     <span className={`text-[10px] leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
@@ -968,6 +966,10 @@ export default function Home() {
   const [logoSaveError, setLogoSaveError] = useState("");
   const [roomPreviewEnabled, setRoomPreviewEnabled] = useState(true);
   const [editRoomPreviewEnabled, setEditRoomPreviewEnabled] = useState(true);
+  const [calcButtonEnabled, setCalcButtonEnabled] = useState(true);
+  const [editCalcButtonEnabled, setEditCalcButtonEnabled] = useState(true);
+  const [pwaIconUrl, setPwaIconUrl] = useState<string | null>(null);
+  const [editPwaIconUrl, setEditPwaIconUrl] = useState<string | null>(null);
   const [rendimientoLabel, setRendimientoLabel] = useState("Rendimiento aproximado");
   const [editRendimientoLabel, setEditRendimientoLabel] = useState("Rendimiento aproximado");
   const [cardHeight, setCardHeight] = useState(52);
@@ -993,12 +995,16 @@ export default function Home() {
     if (cachedLogo) setLogoUrl(cachedLogo);
     if (cachedLogo2) setLogo2Url(cachedLogo2);
     // Load site branding from Supabase
-    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, cardHeight: ch }) => {
+    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, cardHeight: ch, calcButtonEnabled: cbe, pwaIconUrl: piUrl }) => {
       setSiteName(name);
       if (logo) { setLogoUrl(logo); localStorage.setItem("pinturas_logoUrl", logo); }
       if (logo2) { setLogo2Url(logo2); localStorage.setItem("pinturas_logo2Url", logo2); }
       setRoomPreviewEnabled(rpe);
       setEditRoomPreviewEnabled(rpe);
+      setCalcButtonEnabled(cbe);
+      setEditCalcButtonEnabled(cbe);
+      setPwaIconUrl(piUrl);
+      setEditPwaIconUrl(piUrl);
       setRendimientoLabel(rl);
       setEditRendimientoLabel(rl);
       setCardHeight(ch);
@@ -1111,6 +1117,8 @@ export default function Home() {
     setEditLogo2Url(logo2Url);
     setEditDurabilityPrices({ ...durabilityPrices });
     setEditDurabilityOnSale([...durabilityOnSale]);
+    setEditCalcButtonEnabled(calcButtonEnabled);
+    setEditPwaIconUrl(pwaIconUrl);
     setShowSiteSettings(true);
     setShowAdminMenu(false);
   }
@@ -1147,6 +1155,15 @@ export default function Home() {
       await saveDurabilityPrices(editDurabilityPrices);
       await saveDurabilityOnSale(editDurabilityOnSale);
       await saveRoomPreviewEnabled(editRoomPreviewEnabled);
+      await saveCalcButtonEnabled(editCalcButtonEnabled);
+      if (editPwaIconUrl && editPwaIconUrl.startsWith("data:")) {
+        const publicUrl = await uploadLogoData(editPwaIconUrl);
+        await savePwaIconUrl(publicUrl);
+        setEditPwaIconUrl(publicUrl);
+        setPwaIconUrl(publicUrl);
+      } else {
+        await savePwaIconUrl(editPwaIconUrl);
+      }
       await saveRendimientoLabel(editRendimientoLabel);
       await saveCardHeight(editCardHeight);
       await saveGalonPrices(editGalonPrices);
@@ -1184,6 +1201,8 @@ export default function Home() {
     setDurabilityPrices(editDurabilityPrices);
     setDurabilityOnSale(editDurabilityOnSale);
     setRoomPreviewEnabled(editRoomPreviewEnabled);
+    setCalcButtonEnabled(editCalcButtonEnabled);
+    setPwaIconUrl(editPwaIconUrl);
     setRendimientoLabel(editRendimientoLabel);
     setCardHeight(editCardHeight);
     setGalonPrices(editGalonPrices);
@@ -1684,6 +1703,54 @@ export default function Home() {
               </button>
             </div>
 
+            {/* PWA icon upload */}
+            <div className="py-3 border-t border-gray-100 mt-2">
+              <p className="text-sm font-medium text-gray-700 mb-0.5">Ícono de pantalla de inicio</p>
+              <p className="text-xs text-gray-400 mb-2">Imagen que aparece al agregar a inicio en celulares/tabletas. Usa imagen cuadrada.</p>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-14 h-14 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {editPwaIconUrl ? (
+                    <img src={editPwaIconUrl} alt="pwa icon" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-500 via-yellow-400 to-green-500 rounded-xl">
+                      <span className="text-white font-bold text-xs">BFM</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="cursor-pointer px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors text-center">
+                    Cargar imagen
+                    <input type="file" accept="image/*" className="sr-only" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev) => setEditPwaIconUrl(ev.target?.result as string);
+                      reader.readAsDataURL(file);
+                    }} />
+                  </label>
+                  {editPwaIconUrl && (
+                    <button onClick={() => setEditPwaIconUrl(null)} className="text-[11px] text-red-400 hover:text-red-500 transition-colors text-left">
+                      Quitar ícono
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Calc button toggle */}
+            <div className="flex items-center justify-between py-3 border-t border-gray-100 mt-2">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Botón "Calcular pintura"</p>
+                <p className="text-xs text-gray-400">Muestra u oculta el botón de calculadora</p>
+              </div>
+              <button
+                onClick={() => setEditCalcButtonEnabled((v) => !v)}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${editCalcButtonEnabled ? "bg-teal-500" : "bg-gray-300"}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${editCalcButtonEnabled ? "translate-x-5" : ""}`} />
+              </button>
+            </div>
+
             </div>{/* end scrollable body */}
 
             {/* Fixed footer */}
@@ -1862,24 +1929,20 @@ export default function Home() {
                           onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
                         >
                           <span className="font-bold text-sm mb-1">{opt.years} años</span>
-                          {price && (
-                            <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
-                              <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
-                              <span className={`text-sm font-extrabold leading-tight ${active ? (durabilityOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : durabilityOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{price}</span>
-                              {durabilityOnSale.includes(opt.years)
-                                ? <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>
-                                : <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
-                              }
-                            </div>
-                          )}
                           {galon && (
                             <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                               <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
                               <span className={`text-sm font-extrabold leading-tight ${active ? (galonOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : galonOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{galon}</span>
-                              {galonOnSale.includes(opt.years)
-                                ? <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>
-                                : <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
-                              }
+                              <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
+                              {galonOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
+                            </div>
+                          )}
+                          {price && (
+                            <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
+                              <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
+                              <span className={`text-sm font-extrabold leading-tight ${active ? (durabilityOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : durabilityOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{price}</span>
+                              <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
+                              {durabilityOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                             </div>
                           )}
                           <span className={`text-[10px] leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
@@ -1910,7 +1973,7 @@ export default function Home() {
                 )}
 
                 {/* Calculator button */}
-                <div className="mt-4 flex justify-center">
+                {calcButtonEnabled && <div className="mt-4 flex justify-center">
                   <button
                     onClick={() => setCalcOpen(true)}
                     className="flex items-center gap-2 bg-teal-500 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-teal-400"
@@ -1922,7 +1985,7 @@ export default function Home() {
                     </svg>
                     Calcular cuánta pintura necesito
                   </button>
-                </div>
+                </div>}
               </div>
             )}
 
@@ -2011,8 +2074,8 @@ export default function Home() {
                                         {/* Header */}
                                         <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 mb-1">
                                           <span />
-                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
                                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/galon.png" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
+                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
                                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-20 text-right">Rendimiento</span>
                                         </div>
                                         {/* Rows */}
@@ -2027,12 +2090,12 @@ export default function Home() {
                                               <div key={opt.years} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2 rounded-lg text-[11px] bg-teal-50 border border-teal-200">
                                                 <span className="font-semibold text-teal-700">{opt.years} años</span>
                                                 <div className="flex flex-col items-end w-20 sm:w-24">
-                                                  {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                  <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
-                                                </div>
-                                                <div className="flex flex-col items-end w-20 sm:w-24">
                                                   {galSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
                                                   <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
+                                                </div>
+                                                <div className="flex flex-col items-end w-20 sm:w-24">
+                                                  {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                  <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
                                                 </div>
                                                 <span className="text-xs text-right w-16 sm:w-20 text-teal-500">{opt.yield}</span>
                                               </div>
@@ -2338,8 +2401,8 @@ export default function Home() {
                                           {/* Header */}
                                           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 px-3 mb-1">
                                             <span />
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
                                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/galon.png" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
                                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-16 sm:w-20 text-right">Rend.</span>
                                           </div>
                                           {/* Rows */}
@@ -2353,15 +2416,15 @@ export default function Home() {
                                               return (
                                                 <div key={opt.years} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2 rounded-lg text-[11px] bg-teal-50 border border-teal-200">
                                                   <span className="font-semibold text-teal-700">{opt.years} años</span>
-                                                  {/* Cubeta price */}
-                                                  <div className="flex flex-col items-end w-20 sm:w-24">
-                                                    {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                    <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
-                                                  </div>
                                                   {/* Galón price */}
                                                   <div className="flex flex-col items-end w-20 sm:w-24">
                                                     {galSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
                                                     <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
+                                                  </div>
+                                                  {/* Cubeta price */}
+                                                  <div className="flex flex-col items-end w-20 sm:w-24">
+                                                    {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                    <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
                                                   </div>
                                                   <span className="text-xs text-right w-20 text-teal-500">{opt.yield}</span>
                                                 </div>

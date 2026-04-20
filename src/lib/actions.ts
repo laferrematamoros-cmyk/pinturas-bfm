@@ -137,7 +137,7 @@ export async function saveColorDurability(code: string, years: number[]): Promis
 
 // ── Site settings ───────────────────────────────────────────
 
-export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean; rendimientoLabel: string; cardHeight: number }> {
+export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean; rendimientoLabel: string; cardHeight: number; calcButtonEnabled: boolean; pwaIconUrl: string | null }> {
   const { data } = await supabaseAdmin.from("site_settings").select("*");
   const map: Record<string, string> = {};
   for (const row of data ?? []) map[row.key] = row.value;
@@ -148,7 +148,25 @@ export async function loadSiteSettings(): Promise<{ name: string; logoUrl: strin
     roomPreviewEnabled: (map["room_preview_enabled"] ?? "true") === "true",
     rendimientoLabel: map["rendimiento_label"] ?? "Rendimiento aproximado",
     cardHeight: parseInt(map["card_height"] ?? "52"),
+    calcButtonEnabled: (map["calc_button_enabled"] ?? "true") === "true",
+    pwaIconUrl: map["pwa_icon_url"] ?? null,
   };
+}
+
+export async function savePwaIconUrl(url: string | null): Promise<void> {
+  if (url) {
+    await supabaseAdmin
+      .from("site_settings")
+      .upsert({ key: "pwa_icon_url", value: url }, { onConflict: "key" });
+  } else {
+    await supabaseAdmin.from("site_settings").delete().eq("key", "pwa_icon_url");
+  }
+}
+
+export async function saveCalcButtonEnabled(enabled: boolean): Promise<void> {
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "calc_button_enabled", value: String(enabled) }, { onConflict: "key" });
 }
 
 export async function saveCardHeight(height: number): Promise<void> {

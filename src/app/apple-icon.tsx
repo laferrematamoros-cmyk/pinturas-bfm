@@ -1,9 +1,13 @@
 import { ImageResponse } from "next/og";
+import { loadSiteSettings } from "@/lib/actions";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
+export const dynamic = "force-dynamic";
 
-export default function AppleIcon() {
+export default async function AppleIcon() {
+  const { pwaIconUrl } = await loadSiteSettings();
+
   return new ImageResponse(
     (
       <div
@@ -17,17 +21,26 @@ export default function AppleIcon() {
           borderRadius: 40,
         }}
       >
-        <span
-          style={{
-            color: "white",
-            fontWeight: 900,
-            fontSize: 64,
-            letterSpacing: "-2px",
-            fontFamily: "sans-serif",
-          }}
-        >
-          BFM
-        </span>
+        {pwaIconUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={pwaIconUrl}
+            alt="icon"
+            style={{ width: "80%", height: "80%", objectFit: "contain" }}
+          />
+        ) : (
+          <span
+            style={{
+              color: "white",
+              fontWeight: 900,
+              fontSize: 64,
+              letterSpacing: "-2px",
+              fontFamily: "sans-serif",
+            }}
+          >
+            BFM
+          </span>
+        )}
       </div>
     ),
     { ...size }
