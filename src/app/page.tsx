@@ -2034,7 +2034,7 @@ export default function Home() {
 
                 {/* Price clarification note */}
                 <p className="mt-2 text-center text-[11px] text-gray-400">
-                  * Precios por cubeta de 19 L y galón de 4 L
+                  * Precios por galón de 4 L y cubeta de 19 L
                 </p>
 
                 {/* Active filter banner */}
