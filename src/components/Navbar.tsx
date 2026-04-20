@@ -60,6 +60,19 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2U
         </div>
       </div>
 
+      {/* Horario */}
+      <div className="bg-white border-b border-gray-100 px-3 sm:px-4 py-1">
+        <div className="max-w-7xl mx-auto flex items-center gap-1.5 text-gray-500 text-xs">
+          <svg className="w-3.5 h-3.5 flex-shrink-0 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
+          </svg>
+          <span className="hidden sm:inline">Lun – Vie: 9:00 a.m. – 6:00 p.m.</span>
+          <span className="hidden sm:inline text-gray-300">·</span>
+          <span className="hidden sm:inline">Sáb: 8:00 a.m. – 5:00 p.m.</span>
+          <span className="sm:hidden">Lun–Vie 9–6 · Sáb 8–5</span>
+        </div>
+      </div>
+
       {/* WhatsApp + announcement bar */}
       <div className="bg-gray-50 border-b border-gray-100 px-3 sm:px-4 py-1.5">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
