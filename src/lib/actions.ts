@@ -284,7 +284,7 @@ export async function addCustomColor(
   name: string,
   hex: string,
   code: string,
-  pageNumber?: number | null
+  pageNumber?: string | null
 ): Promise<CustomColor> {
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(code, LIMITS.COLOR_CODE);
@@ -292,26 +292,28 @@ export async function addCustomColor(
   if (!isValidHex(hex)) throw new Error("Formato de color inválido");
   const { data, error } = await supabaseAdmin
     .from("custom_colors")
-    .insert({ family_name: familyName, name: cleanName, hex, code: cleanCode, page_number: pageNumber ?? null })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert({ family_name: familyName, name: cleanName, hex, code: cleanCode, page_number: (pageNumber ?? null) as any })
     .select()
     .single();
   if (error) throw new Error(error.message);
   return data;
 }
 
-export async function updateCustomColor(id: string, name: string, hex: string, code: string, pageNumber?: number | null): Promise<void> {
+export async function updateCustomColor(id: string, name: string, hex: string, code: string, pageNumber?: string | null): Promise<void> {
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(code, LIMITS.COLOR_CODE);
   if (!cleanName) throw new Error("El nombre del color no puede estar vacío");
   if (!isValidHex(hex)) throw new Error("Formato de color inválido");
   const { error } = await supabaseAdmin
     .from("custom_colors")
-    .update({ name: cleanName, hex, code: cleanCode, page_number: pageNumber ?? null })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update({ name: cleanName, hex, code: cleanCode, page_number: (pageNumber ?? null) as any })
     .eq("id", id);
   if (error) throw new Error(error.message);
 }
 
-export async function loadColorPageNumbers(): Promise<Record<string, number>> {
+export async function loadColorPageNumbers(): Promise<Record<string, string>> {
   const { data } = await supabaseAdmin
     .from("site_settings")
     .select("value")
@@ -321,13 +323,13 @@ export async function loadColorPageNumbers(): Promise<Record<string, number>> {
   try { return JSON.parse(data.value); } catch { return {}; }
 }
 
-export async function saveColorPageNumber(originalCode: string, pageNumber: number | null): Promise<void> {
+export async function saveColorPageNumber(originalCode: string, pageNumber: string | null): Promise<void> {
   const { data } = await supabaseAdmin
     .from("site_settings")
     .select("value")
     .eq("key", "color_page_numbers")
     .single();
-  const current = data?.value ? (JSON.parse(data.value) as Record<string, number>) : {};
+  const current = data?.value ? (JSON.parse(data.value) as Record<string, string>) : {};
   if (pageNumber === null) {
     delete current[originalCode];
   } else {

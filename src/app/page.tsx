@@ -47,7 +47,7 @@ interface Color {
   code: string;
   id?: string;
   originalCode?: string; // built-in colors with overridden code
-  pageNumber?: number | null;
+  pageNumber?: string | null;
 }
 
 interface ColorFamily {
@@ -531,7 +531,7 @@ function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFa
         <div className="flex items-center justify-between mt-0.5">
           <p className="text-[7px] text-gray-400 leading-tight">{color.code}</p>
           {color.pageNumber != null && (
-            <span className="text-[7px] font-semibold text-teal-500 leading-tight">p.{color.pageNumber}</span>
+            <span className="text-[7px] font-semibold text-teal-500 leading-tight">{color.pageNumber}</span>
           )}
         </div>
       </div>
@@ -942,7 +942,7 @@ export default function Home() {
   const [addColorSaving, setAddColorSaving] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState<number | null>(null);
   const [nameOverrides, setNameOverrides] = useState<Record<string, { name: string; code: string }>>({});
-  const [pageNumbers, setPageNumbers] = useState<Record<string, number>>({});
+  const [pageNumbers, setPageNumbers] = useState<Record<string, string>>({});
   const [favorites, setFavorites] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("pinturas-favorites") ?? "[]"); } catch { return []; }
   });
@@ -1044,7 +1044,7 @@ export default function Home() {
     loadCustomColors().then((data) => {
       const mapped: Record<string, Color[]> = {};
       for (const [family, colors] of Object.entries(data)) {
-        mapped[family] = colors.map((c) => ({ name: c.name, hex: c.hex, code: c.code, id: c.id, pageNumber: c.page_number ?? null }));
+        mapped[family] = colors.map((c) => ({ name: c.name, hex: c.hex, code: c.code, id: c.id, pageNumber: c.page_number != null ? String(c.page_number) : null }));
       }
       setCustomColors(mapped);
     });
@@ -1096,10 +1096,10 @@ export default function Home() {
     if (!isValidHex(newColorHex)) { setSaveError("El color debe tener formato #RRGGBB (ej: #FF0000)."); return; }
     setAddColorSaving(true);
     setSaveError("");
-    const newPageNum = newColorPageNumber.trim() !== "" ? parseInt(newColorPageNumber) : null;
+    const newPageNum = newColorPageNumber.trim() !== "" ? newColorPageNumber.trim() : null;
     try {
       const saved = await addCustomColor(addColorFamily, cleanName, newColorHex, cleanCode, newPageNum);
-      const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id, pageNumber: saved.page_number ?? null };
+      const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id, pageNumber: saved.page_number != null ? String(saved.page_number) : null };
       setCustomColors((prev) => ({
         ...prev,
         [addColorFamily]: [newColor, ...(prev[addColorFamily] ?? [])],
@@ -1273,7 +1273,7 @@ export default function Home() {
     if (!isValidHex(normalized)) { setSaveError("El color debe tener formato #RRGGBB (ej: #FF0000)."); return; }
     setSaveError("");
 
-    const pageNum = editPageNumber.trim() !== "" ? parseInt(editPageNumber) : null;
+    const pageNum = editPageNumber.trim() !== "" ? editPageNumber.trim() : null;
 
     try {
       // Save to DB first — UI updates only after DB confirms
@@ -2139,7 +2139,7 @@ export default function Home() {
                                   <p className="text-sm text-gray-400 mt-0.5 font-mono">
                                     {selectedColor.code}
                                     {selectedColor.pageNumber != null && (
-                                      <span className="ml-2 text-xs font-semibold text-teal-500">p.{selectedColor.pageNumber}</span>
+                                      <span className="ml-2 text-xs font-semibold bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded">{selectedColor.pageNumber}</span>
                                     )}
                                   </p>
                                 </div>
@@ -2476,7 +2476,7 @@ export default function Home() {
                                     <p className="text-sm text-gray-400 mt-0.5 font-mono">
                                       {selectedColor.code}
                                       {selectedColor.pageNumber != null && (
-                                        <span className="ml-2 text-xs font-semibold text-teal-500">p.{selectedColor.pageNumber}</span>
+                                        <span className="ml-2 text-xs font-semibold bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded">{selectedColor.pageNumber}</span>
                                       )}
                                     </p>
                                   </div>
