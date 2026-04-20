@@ -137,7 +137,7 @@ export async function saveColorDurability(code: string, years: number[]): Promis
 
 // ── Site settings ───────────────────────────────────────────
 
-export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean; rendimientoLabel: string; cardHeight: number; calcButtonEnabled: boolean; pwaIconUrl: string | null }> {
+export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean; rendimientoLabel: string; roomButtonLabel: string; cardHeight: number; calcButtonEnabled: boolean; pwaIconUrl: string | null }> {
   const { data } = await supabaseAdmin.from("site_settings").select("*");
   const map: Record<string, string> = {};
   for (const row of data ?? []) map[row.key] = row.value;
@@ -147,6 +147,7 @@ export async function loadSiteSettings(): Promise<{ name: string; logoUrl: strin
     logo2Url: map["logo2_url"] ?? null,
     roomPreviewEnabled: (map["room_preview_enabled"] ?? "true") === "true",
     rendimientoLabel: map["rendimiento_label"] ?? "Rendimiento aproximado",
+    roomButtonLabel: map["room_button_label"] ?? "Ver en habitación",
     cardHeight: parseInt(map["card_height"] ?? "52"),
     calcButtonEnabled: (map["calc_button_enabled"] ?? "true") === "true",
     pwaIconUrl: map["pwa_icon_url"] ?? null,
@@ -181,6 +182,14 @@ export async function saveRendimientoLabel(label: string): Promise<void> {
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "rendimiento_label", value: clean }, { onConflict: "key" });
+}
+
+export async function saveRoomButtonLabel(label: string): Promise<void> {
+  const clean = sanitizeText(label, 40);
+  if (!clean) throw new Error("El texto no puede estar vacío");
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "room_button_label", value: clean }, { onConflict: "key" });
 }
 
 export async function saveRoomPreviewEnabled(enabled: boolean): Promise<void> {

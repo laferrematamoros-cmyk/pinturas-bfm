@@ -18,6 +18,7 @@ import {
   savePwaIconUrl,
   loadColorPageNumbers,
   saveColorPageNumber,
+  saveRoomButtonLabel,
   saveRendimientoLabel,
   saveCardHeight,
   loadGalonPrices,
@@ -981,6 +982,8 @@ export default function Home() {
   const [editPwaIconUrl, setEditPwaIconUrl] = useState<string | null>(null);
   const [rendimientoLabel, setRendimientoLabel] = useState("Rendimiento aproximado");
   const [editRendimientoLabel, setEditRendimientoLabel] = useState("Rendimiento aproximado");
+  const [roomButtonLabel, setRoomButtonLabel] = useState("Ver en habitación");
+  const [editRoomButtonLabel, setEditRoomButtonLabel] = useState("Ver en habitación");
   const [cardHeight, setCardHeight] = useState(52);
   const [editCardHeight, setEditCardHeight] = useState(52);
 
@@ -1004,7 +1007,7 @@ export default function Home() {
     if (cachedLogo) setLogoUrl(cachedLogo);
     if (cachedLogo2) setLogo2Url(cachedLogo2);
     // Load site branding from Supabase
-    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, cardHeight: ch, calcButtonEnabled: cbe, pwaIconUrl: piUrl }) => {
+    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, roomButtonLabel: rbl, cardHeight: ch, calcButtonEnabled: cbe, pwaIconUrl: piUrl }) => {
       setSiteName(name);
       if (logo) { setLogoUrl(logo); localStorage.setItem("pinturas_logoUrl", logo); }
       if (logo2) { setLogo2Url(logo2); localStorage.setItem("pinturas_logo2Url", logo2); }
@@ -1016,6 +1019,8 @@ export default function Home() {
       setEditPwaIconUrl(piUrl);
       setRendimientoLabel(rl);
       setEditRendimientoLabel(rl);
+      setRoomButtonLabel(rbl);
+      setEditRoomButtonLabel(rbl);
       setCardHeight(ch);
       setEditCardHeight(ch);
     });
@@ -1130,6 +1135,7 @@ export default function Home() {
     setEditDurabilityPrices({ ...durabilityPrices });
     setEditDurabilityOnSale([...durabilityOnSale]);
     setEditCalcButtonEnabled(calcButtonEnabled);
+    setEditRoomButtonLabel(roomButtonLabel);
     setEditPwaIconUrl(pwaIconUrl);
     setShowSiteSettings(true);
     setShowAdminMenu(false);
@@ -1177,6 +1183,7 @@ export default function Home() {
         await savePwaIconUrl(editPwaIconUrl);
       }
       await saveRendimientoLabel(editRendimientoLabel);
+      await saveRoomButtonLabel(editRoomButtonLabel);
       await saveCardHeight(editCardHeight);
       await saveGalonPrices(editGalonPrices);
       await saveGalonOnSale(editGalonOnSale);
@@ -1216,6 +1223,7 @@ export default function Home() {
     setCalcButtonEnabled(editCalcButtonEnabled);
     setPwaIconUrl(editPwaIconUrl);
     setRendimientoLabel(editRendimientoLabel);
+    setRoomButtonLabel(editRoomButtonLabel);
     setCardHeight(editCardHeight);
     setGalonPrices(editGalonPrices);
     setGalonOnSale(editGalonOnSale);
@@ -1714,6 +1722,20 @@ export default function Home() {
               />
             </div>
 
+            {/* Room button label */}
+            <div className="py-3 border-t border-gray-100 mt-2">
+              <p className="text-sm font-medium text-gray-700 mb-1">Texto del botón "Ver en habitación"</p>
+              <p className="text-xs text-gray-400 mb-2">Texto que aparece en el botón de vista previa de habitación</p>
+              <input
+                type="text"
+                value={editRoomButtonLabel}
+                onChange={e => setEditRoomButtonLabel(e.target.value)}
+                maxLength={40}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                placeholder="Ver en habitación"
+              />
+            </div>
+
             {/* Room preview toggle */}
             <div className="flex items-center justify-between py-3 border-t border-gray-100 mt-2">
               <div>
@@ -2086,7 +2108,7 @@ export default function Home() {
                                       onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #2dd4bf, 0 0 20px #0d948880"; }}
                                       onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}>
                                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                                      Ver en habitación
+                                      {roomButtonLabel}
                                     </button>
                                   )}
                                   <button
@@ -2423,7 +2445,7 @@ export default function Home() {
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                                         </svg>
-                                        Ver en habitación
+                                        {roomButtonLabel}
                                       </button>
                                     )}
                                     <button
