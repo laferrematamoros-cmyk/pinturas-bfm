@@ -137,7 +137,7 @@ export async function saveColorDurability(code: string, years: number[]): Promis
 
 // ── Site settings ───────────────────────────────────────────
 
-export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean; rendimientoLabel: string; roomButtonLabel: string; cardHeight: number; calcButtonEnabled: boolean; pwaIconUrl: string | null }> {
+export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean; rendimientoLabel: string; roomButtonLabel: string; cardHeight: number; calcButtonEnabled: boolean; pwaIconUrl: string | null; announcementText: string }> {
   const { data } = await supabaseAdmin.from("site_settings").select("*");
   const map: Record<string, string> = {};
   for (const row of data ?? []) map[row.key] = row.value;
@@ -151,7 +151,18 @@ export async function loadSiteSettings(): Promise<{ name: string; logoUrl: strin
     cardHeight: parseInt(map["card_height"] ?? "52"),
     calcButtonEnabled: (map["calc_button_enabled"] ?? "true") === "true",
     pwaIconUrl: map["pwa_icon_url"] ?? null,
+    announcementText: map["announcement_text"] ?? "",
   };
+}
+
+export async function saveAnnouncementText(text: string): Promise<void> {
+  if (text.trim()) {
+    await supabaseAdmin
+      .from("site_settings")
+      .upsert({ key: "announcement_text", value: text.trim() }, { onConflict: "key" });
+  } else {
+    await supabaseAdmin.from("site_settings").delete().eq("key", "announcement_text");
+  }
 }
 
 export async function savePwaIconUrl(url: string | null): Promise<void> {

@@ -28,6 +28,7 @@ import {
   saveSiteName,
   saveSiteLogoUrl,
   saveSiteLogo2Url,
+  saveAnnouncementText,
   createLogoUploadUrl,
   loadCustomColors,
   addCustomColor,
@@ -980,6 +981,8 @@ export default function Home() {
   const [editSiteName, setEditSiteName] = useState("Pinturas BFM");
   const [editLogoUrl, setEditLogoUrl] = useState<string | null>(null);
   const [editLogo2Url, setEditLogo2Url] = useState<string | null>(null);
+  const [announcementText, setAnnouncementText] = useState("");
+  const [editAnnouncementText, setEditAnnouncementText] = useState("");
   const [logoSaveError, setLogoSaveError] = useState("");
   const [roomPreviewEnabled, setRoomPreviewEnabled] = useState(true);
   const [editRoomPreviewEnabled, setEditRoomPreviewEnabled] = useState(true);
@@ -1014,10 +1017,11 @@ export default function Home() {
     if (cachedLogo) setLogoUrl(cachedLogo);
     if (cachedLogo2) setLogo2Url(cachedLogo2);
     // Load site branding from Supabase
-    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, roomButtonLabel: rbl, cardHeight: ch, calcButtonEnabled: cbe, pwaIconUrl: piUrl }) => {
+    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, roomButtonLabel: rbl, cardHeight: ch, calcButtonEnabled: cbe, pwaIconUrl: piUrl, announcementText: at }) => {
       setSiteName(name);
       if (logo) { setLogoUrl(logo); localStorage.setItem("pinturas_logoUrl", logo); }
       if (logo2) { setLogo2Url(logo2); localStorage.setItem("pinturas_logo2Url", logo2); }
+      setAnnouncementText(at);
       setRoomPreviewEnabled(rpe);
       setEditRoomPreviewEnabled(rpe);
       setCalcButtonEnabled(cbe);
@@ -1139,6 +1143,7 @@ export default function Home() {
     setEditSiteName(siteName);
     setEditLogoUrl(logoUrl);
     setEditLogo2Url(logo2Url);
+    setEditAnnouncementText(announcementText);
     setEditDurabilityPrices({ ...durabilityPrices });
     setEditDurabilityOnSale([...durabilityOnSale]);
     setEditCalcButtonEnabled(calcButtonEnabled);
@@ -1177,6 +1182,7 @@ export default function Home() {
     setLogoSaveError("");
     try {
       await saveSiteName(cleanSiteName);
+      await saveAnnouncementText(editAnnouncementText);
       await saveDurabilityPrices(editDurabilityPrices);
       await saveDurabilityOnSale(editDurabilityOnSale);
       await saveRoomPreviewEnabled(editRoomPreviewEnabled);
@@ -1224,6 +1230,7 @@ export default function Home() {
       return;
     }
     setSiteName(editSiteName);
+    setAnnouncementText(editAnnouncementText);
     setDurabilityPrices(editDurabilityPrices);
     setDurabilityOnSale(editDurabilityOnSale);
     setRoomPreviewEnabled(editRoomPreviewEnabled);
@@ -1424,7 +1431,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} />
+      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} />
 
       {/* Room preview modal */}
       {roomPreviewOpen && selectedColor && (
@@ -1623,8 +1630,19 @@ export default function Home() {
               type="text"
               value={editSiteName}
               onChange={(e) => setEditSiteName(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-400 mb-6"
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-400 mb-4"
               placeholder="Pinturas BFM"
+            />
+
+            {/* Announcement text */}
+            <p className="text-xs font-semibold text-gray-600 mb-2">Texto de anuncio (barra inferior del navbar)</p>
+            <input
+              type="text"
+              value={editAnnouncementText}
+              onChange={(e) => setEditAnnouncementText(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-teal-400 mb-6"
+              placeholder="Ej: ¡Nuevos colores disponibles! Visítanos en tienda."
+              maxLength={120}
             />
 
             {/* Precios por durabilidad */}
@@ -1873,11 +1891,10 @@ export default function Home() {
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-teal-400"
             />
             <input
-              type="number"
+              type="text"
               value={newColorPageNumber}
               onChange={(e) => setNewColorPageNumber(e.target.value)}
               placeholder="Número de página (opcional)"
-              min={1}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-5 focus:outline-none focus:border-teal-400"
             />
 
@@ -2338,12 +2355,11 @@ export default function Home() {
                                       placeholder="Código"
                                     />
                                     <input
-                                      type="number"
+                                      type="text"
                                       value={editPageNumber}
                                       onChange={(e) => setEditPageNumber(e.target.value)}
                                       className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs text-gray-500 focus:outline-none focus:border-teal-400"
-                                      placeholder="Número de página (opcional)"
-                                      min={1}
+                                      placeholder="Página (opcional)"
                                     />
                                   </div>
 
