@@ -243,6 +243,7 @@ export interface CustomColor {
   name: string;
   hex: string;
   code: string;
+  page_number?: number | null;
 }
 
 export async function loadCustomColors(): Promise<Record<string, CustomColor[]>> {
@@ -262,7 +263,8 @@ export async function addCustomColor(
   familyName: string,
   name: string,
   hex: string,
-  code: string
+  code: string,
+  pageNumber?: number | null
 ): Promise<CustomColor> {
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(code, LIMITS.COLOR_CODE);
@@ -270,23 +272,50 @@ export async function addCustomColor(
   if (!isValidHex(hex)) throw new Error("Formato de color inválido");
   const { data, error } = await supabaseAdmin
     .from("custom_colors")
-    .insert({ family_name: familyName, name: cleanName, hex, code: cleanCode })
+    .insert({ family_name: familyName, name: cleanName, hex, code: cleanCode, page_number: pageNumber ?? null })
     .select()
     .single();
   if (error) throw new Error(error.message);
   return data;
 }
 
-export async function updateCustomColor(id: string, name: string, hex: string, code: string): Promise<void> {
+export async function updateCustomColor(id: string, name: string, hex: string, code: string, pageNumber?: number | null): Promise<void> {
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(code, LIMITS.COLOR_CODE);
   if (!cleanName) throw new Error("El nombre del color no puede estar vacío");
   if (!isValidHex(hex)) throw new Error("Formato de color inválido");
   const { error } = await supabaseAdmin
     .from("custom_colors")
-    .update({ name: cleanName, hex, code: cleanCode })
+    .update({ name: cleanName, hex, code: cleanCode, page_number: pageNumber ?? null })
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+export async function loadColorPageNumbers(): Promise<Record<string, number>> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "color_page_numbers")
+    .single();
+  if (!data?.value) return {};
+  try { return JSON.parse(data.value); } catch { return {}; }
+}
+
+export async function saveColorPageNumber(originalCode: string, pageNumber: number | null): Promise<void> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "color_page_numbers")
+    .single();
+  const current = data?.value ? (JSON.parse(data.value) as Record<string, number>) : {};
+  if (pageNumber === null) {
+    delete current[originalCode];
+  } else {
+    current[originalCode] = pageNumber;
+  }
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "color_page_numbers", value: JSON.stringify(current) }, { onConflict: "key" });
 }
 
 export async function deleteCustomColor(id: string): Promise<void> {

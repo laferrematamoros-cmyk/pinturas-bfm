@@ -16,6 +16,8 @@ import {
   saveRoomPreviewEnabled,
   saveCalcButtonEnabled,
   savePwaIconUrl,
+  loadColorPageNumbers,
+  saveColorPageNumber,
   saveRendimientoLabel,
   saveCardHeight,
   loadGalonPrices,
@@ -43,6 +45,7 @@ interface Color {
   code: string;
   id?: string;
   originalCode?: string; // built-in colors with overridden code
+  pageNumber?: number | null;
 }
 
 interface ColorFamily {
@@ -927,6 +930,7 @@ export default function Home() {
   const [addColorSaving, setAddColorSaving] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState<number | null>(null);
   const [nameOverrides, setNameOverrides] = useState<Record<string, { name: string; code: string }>>({});
+  const [pageNumbers, setPageNumbers] = useState<Record<string, number>>({});
   const [favorites, setFavorites] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("pinturas-favorites") ?? "[]"); } catch { return []; }
   });
@@ -942,6 +946,8 @@ export default function Home() {
   const [editName, setEditName] = useState("");
   const [editCode, setEditCode] = useState("");
   const [editHex, setEditHex] = useState("");
+  const [editPageNumber, setEditPageNumber] = useState<string>("");
+  const [newColorPageNumber, setNewColorPageNumber] = useState<string>("");
   const [savedFlash, setSavedFlash] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [eyedropperSupported] = useState(() => typeof window !== "undefined" && "EyeDropper" in window);
@@ -1019,12 +1025,13 @@ export default function Home() {
     loadCustomColors().then((data) => {
       const mapped: Record<string, Color[]> = {};
       for (const [family, colors] of Object.entries(data)) {
-        mapped[family] = colors.map((c) => ({ name: c.name, hex: c.hex, code: c.code, id: c.id }));
+        mapped[family] = colors.map((c) => ({ name: c.name, hex: c.hex, code: c.code, id: c.id, pageNumber: c.page_number ?? null }));
       }
       setCustomColors(mapped);
     });
     // Load built-in color overrides and deleted list
     loadColorNameOverrides().then(setNameOverrides);
+    loadColorPageNumbers().then(setPageNumbers);
     loadDeletedColors().then(setDeletedColorCodes);
   }, []);
 
@@ -1070,13 +1077,15 @@ export default function Home() {
     if (!isValidHex(newColorHex)) { setSaveError("El color debe tener formato #RRGGBB (ej: #FF0000)."); return; }
     setAddColorSaving(true);
     setSaveError("");
+    const newPageNum = newColorPageNumber.trim() !== "" ? parseInt(newColorPageNumber) : null;
     try {
-      const saved = await addCustomColor(addColorFamily, cleanName, newColorHex, cleanCode);
-      const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id };
+      const saved = await addCustomColor(addColorFamily, cleanName, newColorHex, cleanCode, newPageNum);
+      const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id, pageNumber: saved.page_number ?? null };
       setCustomColors((prev) => ({
         ...prev,
         [addColorFamily]: [newColor, ...(prev[addColorFamily] ?? [])],
       }));
+      setNewColorPageNumber("");
       setShowAddColorModal(false);
     } catch {
       setSaveError("No se pudo guardar el color. Verificá tu conexión e intentá de nuevo.");
@@ -1215,12 +1224,13 @@ export default function Home() {
     return color.originalCode ?? color.code;
   }
 
-  // Sync editHex/editName/editCode when selected color changes
+  // Sync editHex/editName/editCode/editPageNumber when selected color changes
   React.useEffect(() => {
     if (selectedColor) {
       setEditHex(overrides[origCode(selectedColor)] ?? selectedColor.hex);
       setEditName(selectedColor.name);
       setEditCode(selectedColor.code);
+      setEditPageNumber(selectedColor.pageNumber != null ? String(selectedColor.pageNumber) : "");
     }
   }, [selectedColor?.code]);
 
@@ -1238,18 +1248,21 @@ export default function Home() {
     if (!isValidHex(normalized)) { setSaveError("El color debe tener formato #RRGGBB (ej: #FF0000)."); return; }
     setSaveError("");
 
+    const pageNum = editPageNumber.trim() !== "" ? parseInt(editPageNumber) : null;
+
     try {
       // Save to DB first — UI updates only after DB confirms
       const nameChanged = cleanName !== selectedColor.name || cleanCode !== selectedColor.code;
       if (selectedColor.id) {
         // Custom color: single table update (custom_colors)
-        await updateCustomColor(selectedColor.id, cleanName, normalized, cleanCode);
+        await updateCustomColor(selectedColor.id, cleanName, normalized, cleanCode, pageNum);
       } else {
         // Built-in color: save hex override + optional name/code override
         await saveColorHex(oc, normalized);
         if (nameChanged) {
           await saveColorNameOverride(oc, cleanName, cleanCode);
         }
+        await saveColorPageNumber(oc, pageNum);
       }
 
       // DB saves confirmed — now update UI state
@@ -1261,7 +1274,7 @@ export default function Home() {
           return {
             ...prev,
             [family]: prev[family].map((c) =>
-              c.id === selectedColor.id ? { ...c, name: cleanName, hex: normalized, code: cleanCode } : c
+              c.id === selectedColor.id ? { ...c, name: cleanName, hex: normalized, code: cleanCode, pageNumber: pageNum } : c
             ),
           };
         });
@@ -1271,8 +1284,13 @@ export default function Home() {
         if (nameChanged) {
           setNameOverrides((prev) => ({ ...prev, [oc]: { name: cleanName, code: cleanCode } }));
         }
+        setPageNumbers((prev) => {
+          const next = { ...prev };
+          if (pageNum === null) { delete next[oc]; } else { next[oc] = pageNum; }
+          return next;
+        });
       }
-      setSelectedColor({ ...selectedColor, name: cleanName, code: cleanCode, hex: normalized });
+      setSelectedColor({ ...selectedColor, name: cleanName, code: cleanCode, hex: normalized, pageNumber: pageNum });
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1500);
     } catch {
@@ -1319,8 +1337,12 @@ export default function Home() {
     const builtIn = currentFamily.colors.filter((c) => !deletedColorCodes.includes(c.code));
     const builtInWithOverrides: Color[] = builtIn.map((c) => {
       const ov = nameOverrides[c.code];
-      if (!ov) return c;
-      return { ...c, name: ov.name, code: ov.code, originalCode: c.code };
+      const pg = pageNumbers[c.code];
+      return {
+        ...c,
+        ...(ov ? { name: ov.name, code: ov.code, originalCode: c.code } : {}),
+        ...(pg != null ? { pageNumber: pg } : {}),
+      };
     });
     let all = [...custom, ...builtInWithOverrides];
     if (selectedQuality !== null) {
@@ -1334,7 +1356,7 @@ export default function Home() {
     return all.filter(
       (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
     );
-  }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, selectedQuality, durability, showFavorites, favorites]);
+  }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, pageNumbers, selectedQuality, durability, showFavorites, favorites]);
 
   const allSearchResults = useMemo(() => {
     if (!search.trim()) return [];
@@ -1816,6 +1838,14 @@ export default function Home() {
               value={newColorCode}
               onChange={(e) => setNewColorCode(e.target.value)}
               placeholder="Código (opcional, ej: 14RR 12/349)"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-teal-400"
+            />
+            <input
+              type="number"
+              value={newColorPageNumber}
+              onChange={(e) => setNewColorPageNumber(e.target.value)}
+              placeholder="Número de página (opcional)"
+              min={1}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-5 focus:outline-none focus:border-teal-400"
             />
 
@@ -2228,7 +2258,7 @@ export default function Home() {
                                 <>
                                   <p className="text-[11px] font-semibold text-gray-700">Editar color</p>
 
-                                  {/* Name + code */}
+                                  {/* Name + code + page */}
                                   <div className="flex flex-col gap-1.5">
                                     <input
                                       type="text"
@@ -2243,6 +2273,14 @@ export default function Home() {
                                       onChange={(e) => setEditCode(e.target.value)}
                                       className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs font-mono text-gray-500 focus:outline-none focus:border-teal-400"
                                       placeholder="Código"
+                                    />
+                                    <input
+                                      type="number"
+                                      value={editPageNumber}
+                                      onChange={(e) => setEditPageNumber(e.target.value)}
+                                      className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs text-gray-500 focus:outline-none focus:border-teal-400"
+                                      placeholder="Número de página (opcional)"
+                                      min={1}
                                     />
                                   </div>
 
