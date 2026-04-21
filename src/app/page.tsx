@@ -38,6 +38,9 @@ import {
   saveColorNameOverride,
   loadDeletedColors,
   saveDeletedColors,
+  loadFamilySettings,
+  saveFamilyColors,
+  saveFamilyNames,
   type CustomColor,
 } from "@/lib/actions";
 
@@ -539,8 +542,8 @@ function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFa
   );
 }
 
-// Representative color for each family (used in selector dots)
-const familyMainColors = [
+// Representative color for each family (defaults — can be overridden from admin)
+const DEFAULT_FAMILY_COLORS = [
   "#C9464F", "#D07040", "#DAA520", "#4CAF50",
   "#00A898", "#1878D8", "#C4B4A4", "#666666",
 ];
@@ -996,6 +999,10 @@ export default function Home() {
   const [editRoomButtonLabel, setEditRoomButtonLabel] = useState("Ver en habitación");
   const [cardHeight, setCardHeight] = useState(52);
   const [editCardHeight, setEditCardHeight] = useState(52);
+  const [familyColors, setFamilyColors] = useState<string[]>(DEFAULT_FAMILY_COLORS);
+  const [familyDisplayNames, setFamilyDisplayNames] = useState<string[]>(colorFamilies.map(f => f.name));
+  const [editFamilyColors, setEditFamilyColors] = useState<string[]>(DEFAULT_FAMILY_COLORS);
+  const [editFamilyNames, setEditFamilyNames] = useState<string[]>(colorFamilies.map(f => f.name));
 
   // Load data from Supabase on mount; restore admin session
   React.useEffect(() => {
@@ -1052,6 +1059,11 @@ export default function Home() {
     loadColorNameOverrides().then(setNameOverrides);
     loadColorPageNumbers().then(setPageNumbers);
     loadDeletedColors().then(setDeletedColorCodes);
+    // Load family colors and display names
+    loadFamilySettings().then(({ colors, names }) => {
+      if (colors.length === 8) { setFamilyColors(colors); setEditFamilyColors(colors); }
+      if (names.length === 8) { setFamilyDisplayNames(names); setEditFamilyNames(names); }
+    });
   }, []);
 
   function handleUserClick() {
@@ -1149,6 +1161,8 @@ export default function Home() {
     setEditCalcButtonEnabled(calcButtonEnabled);
     setEditRoomButtonLabel(roomButtonLabel);
     setEditPwaIconUrl(pwaIconUrl);
+    setEditFamilyColors([...familyColors]);
+    setEditFamilyNames([...familyDisplayNames]);
     setShowSiteSettings(true);
     setShowAdminMenu(false);
   }
@@ -1200,6 +1214,8 @@ export default function Home() {
       await saveCardHeight(editCardHeight);
       await saveGalonPrices(editGalonPrices);
       await saveGalonOnSale(editGalonOnSale);
+      await saveFamilyColors(editFamilyColors);
+      await saveFamilyNames(editFamilyNames);
 
       // Logo 1
       if (editLogoUrl && editLogoUrl.startsWith("data:")) {
@@ -1241,6 +1257,8 @@ export default function Home() {
     setCardHeight(editCardHeight);
     setGalonPrices(editGalonPrices);
     setGalonOnSale(editGalonOnSale);
+    setFamilyColors(editFamilyColors);
+    setFamilyDisplayNames(editFamilyNames);
     setShowSiteSettings(false);
   }
 
@@ -1823,6 +1841,36 @@ export default function Home() {
               </button>
             </div>
 
+            {/* Family colors & names */}
+            <div className="py-3 border-t border-gray-100 mt-2">
+              <p className="text-sm font-medium text-gray-700 mb-0.5">Familias de colores</p>
+              <p className="text-xs text-gray-400 mb-3">Color del botón selector y nombre de cada familia</p>
+              <div className="flex flex-col gap-2">
+                {colorFamilies.map((fam, i) => (
+                  <div key={fam.name} className="flex items-center gap-2">
+                    {/* Color picker */}
+                    <label className="cursor-pointer relative flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg border-2 border-gray-200 shadow-sm" style={{ backgroundColor: editFamilyColors[i] }} />
+                      <input
+                        type="color"
+                        value={editFamilyColors[i] ?? "#000000"}
+                        onChange={(e) => setEditFamilyColors(prev => prev.map((c, j) => j === i ? e.target.value : c))}
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                      />
+                    </label>
+                    {/* Name */}
+                    <input
+                      type="text"
+                      value={editFamilyNames[i] ?? ""}
+                      onChange={(e) => setEditFamilyNames(prev => prev.map((n, j) => j === i ? e.target.value : n))}
+                      maxLength={40}
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-teal-400"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
             </div>{/* end scrollable body */}
 
             {/* Fixed footer */}
@@ -2227,13 +2275,13 @@ export default function Home() {
                     <button
                       key={family.name}
                       onClick={() => { setSelectedFamily(i); setSelectedColor(null); }}
-                      title={family.name}
+                      title={familyDisplayNames[i] ?? family.name}
                       className={`relative w-8 h-8 rounded-md transition-all ${
                         selectedFamily === i
                           ? "ring-2 ring-offset-1 ring-gray-400 scale-110"
                           : "hover:scale-110"
                       }`}
-                      style={{ backgroundColor: familyMainColors[i] }}
+                      style={{ backgroundColor: familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] }}
                     >
                       {selectedFamily === i && (
                         <span className="absolute inset-0 flex items-center justify-center">
@@ -2266,7 +2314,7 @@ export default function Home() {
 
                 {/* Family name */}
                 <p className="text-center text-sm font-medium text-gray-600 mb-4">
-                  {currentFamily.name}
+                  {familyDisplayNames[selectedFamily] ?? currentFamily.name}
                 </p>
 
                 {/* Add color button — admin only */}

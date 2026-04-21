@@ -155,6 +155,28 @@ export async function loadSiteSettings(): Promise<{ name: string; logoUrl: strin
   };
 }
 
+export async function loadFamilySettings(): Promise<{ colors: string[]; names: string[] }> {
+  const { data } = await supabaseAdmin.from("site_settings").select("*");
+  const map: Record<string, string> = {};
+  for (const row of data ?? []) map[row.key] = row.value;
+  return {
+    colors: map["family_colors"] ? JSON.parse(map["family_colors"]) : [],
+    names: map["family_names"] ? JSON.parse(map["family_names"]) : [],
+  };
+}
+
+export async function saveFamilyColors(colors: string[]): Promise<void> {
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "family_colors", value: JSON.stringify(colors) }, { onConflict: "key" });
+}
+
+export async function saveFamilyNames(names: string[]): Promise<void> {
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "family_names", value: JSON.stringify(names) }, { onConflict: "key" });
+}
+
 export async function saveAnnouncementText(text: string): Promise<void> {
   if (text.trim()) {
     await supabaseAdmin
