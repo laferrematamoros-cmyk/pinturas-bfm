@@ -1118,7 +1118,8 @@ export default function Home() {
       }));
       setNewColorPageNumber("");
       setShowAddColorModal(false);
-    } catch {
+    } catch (err) {
+      console.error("[handleAddColor] error:", err);
       setSaveError("No se pudo guardar el color. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setAddColorSaving(false);

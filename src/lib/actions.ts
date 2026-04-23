@@ -289,12 +289,22 @@ export interface CustomColor {
 }
 
 export async function loadCustomColors(): Promise<Record<string, CustomColor[]>> {
-  const { data } = await supabaseAdmin
-    .from("custom_colors")
-    .select("*")
-    .order("created_at", { ascending: true });
+  const PAGE = 1000;
+  let all: CustomColor[] = [];
+  let page = 0;
+  while (true) {
+    const { data } = await supabaseAdmin
+      .from("custom_colors")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .range(page * PAGE, (page + 1) * PAGE - 1);
+    if (!data || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < PAGE) break;
+    page++;
+  }
   const result: Record<string, CustomColor[]> = {};
-  for (const row of data ?? []) {
+  for (const row of all) {
     if (!result[row.family_name]) result[row.family_name] = [];
     result[row.family_name].push(row);
   }
@@ -318,7 +328,11 @@ export async function addCustomColor(
     .insert({ family_name: familyName, name: cleanName, hex, code: cleanCode, page_number: (pageNumber ?? null) as any })
     .select()
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("[addCustomColor] Supabase error:", error);
+    throw new Error(error.message);
+  }
+  console.log("[addCustomColor] Insert OK:", data);
   return data;
 }
 
