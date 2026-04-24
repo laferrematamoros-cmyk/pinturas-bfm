@@ -19,13 +19,25 @@ const supabaseAdmin = createClient(
 export async function loadColorSettings(): Promise<
   Record<string, { hex: string; durability_years: number[]; prices?: Record<string, string> }>
 > {
-  const { data } = await supabaseAdmin.from("color_settings").select("*");
+  const PAGE = 1000;
+  let allRows: Record<string, unknown>[] = [];
+  let page = 0;
+  while (true) {
+    const { data } = await supabaseAdmin
+      .from("color_settings")
+      .select("*")
+      .range(page * PAGE, (page + 1) * PAGE - 1);
+    if (!data || data.length === 0) break;
+    allRows = allRows.concat(data);
+    if (data.length < PAGE) break;
+    page++;
+  }
   const result: Record<string, { hex: string; durability_years: number[]; prices?: Record<string, string> }> = {};
-  for (const row of data ?? []) {
-    result[row.code] = {
-      hex: row.hex,
-      durability_years: row.durability_years ?? [],
-      prices: row.prices ?? undefined,
+  for (const row of allRows) {
+    result[row.code as string] = {
+      hex: row.hex as string,
+      durability_years: (row.durability_years as number[]) ?? [],
+      prices: (row.prices as Record<string, string>) ?? undefined,
     };
   }
   return result;
