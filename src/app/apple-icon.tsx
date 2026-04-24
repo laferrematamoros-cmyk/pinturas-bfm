@@ -9,7 +9,14 @@ export default async function AppleIcon() {
   const { pwaIconUrl } = await loadSiteSettings();
 
   return new ImageResponse(
-    (
+    pwaIconUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={pwaIconUrl}
+        alt="icon"
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      />
+    ) : (
       <div
         style={{
           width: "100%",
@@ -21,26 +28,17 @@ export default async function AppleIcon() {
           borderRadius: 40,
         }}
       >
-        {pwaIconUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={pwaIconUrl}
-            alt="icon"
-            style={{ width: "80%", height: "80%", objectFit: "contain" }}
-          />
-        ) : (
-          <span
-            style={{
-              color: "white",
-              fontWeight: 900,
-              fontSize: 64,
-              letterSpacing: "-2px",
-              fontFamily: "sans-serif",
-            }}
-          >
-            BFM
-          </span>
-        )}
+        <span
+          style={{
+            color: "white",
+            fontWeight: 900,
+            fontSize: 64,
+            letterSpacing: "-2px",
+            fontFamily: "sans-serif",
+          }}
+        >
+          BFM
+        </span>
       </div>
     ),
     { ...size }

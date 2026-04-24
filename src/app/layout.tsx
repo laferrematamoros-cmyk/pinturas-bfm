@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
+import { loadSiteSettings } from "@/lib/actions";
 
 const geist = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Pinturas BFM",
-  description: "Catálogo de pinturas, paleta de colores y calculadora",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await loadSiteSettings();
+  return {
+    title: name,
+    description: "Catálogo de pinturas, paleta de colores y calculadora",
+    viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  };
+}
 
 export default function RootLayout({
   children,
