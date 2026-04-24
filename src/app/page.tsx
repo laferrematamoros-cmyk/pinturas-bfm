@@ -2303,7 +2303,7 @@ export default function Home() {
                       key={i}
                       onClick={() => { setSelectedFamily(i); setSelectedColor(null); }}
                       title={name}
-                      className={`relative w-8 h-8 rounded-md transition-all ${
+                      className={`relative w-8 h-8 rounded-md transition-all border border-black/15 shadow-sm ${
                         selectedFamily === i
                           ? "ring-2 ring-offset-1 ring-gray-400 scale-110"
                           : "hover:scale-110"
