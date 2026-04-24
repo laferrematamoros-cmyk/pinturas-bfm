@@ -1015,7 +1015,6 @@ export default function Home() {
         if (val.hex) hexMap[code] = val.hex;
         if (val.durability_years?.length) durMap[code] = val.durability_years;
       }
-      console.log("[pinturas] durabilidad leída de DB:", durMap);
       setOverrides(hexMap);
       setDurability(durMap);
     });
@@ -1362,10 +1361,8 @@ export default function Home() {
     setDurability((prev) => ({ ...prev, [code]: next }));
     setSaveError("");
     try {
-      const confirmed = await saveColorDurability(code, next);
-      console.log("[pinturas] durabilidad guardada →", code, "→", confirmed);
+      await saveColorDurability(code, next);
     } catch (err) {
-      console.error("[pinturas] error guardando durabilidad:", err);
       setDurability((prev) => ({ ...prev, [code]: current }));
       setSaveError(String(err instanceof Error ? err.message : err));
     }
