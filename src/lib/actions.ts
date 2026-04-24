@@ -5,7 +5,13 @@ import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "./validation";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    global: {
+      fetch: (url: RequestInfo | URL, options?: RequestInit) =>
+        fetch(url, { ...options, cache: "no-store" }),
+    },
+  }
 );
 
 // ── Color settings ──────────────────────────────────────────
