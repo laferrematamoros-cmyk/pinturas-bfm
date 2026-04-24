@@ -1015,6 +1015,7 @@ export default function Home() {
         if (val.hex) hexMap[code] = val.hex;
         if (val.durability_years?.length) durMap[code] = val.durability_years;
       }
+      console.log("[pinturas] durabilidad leída de DB:", durMap);
       setOverrides(hexMap);
       setDurability(durMap);
     });

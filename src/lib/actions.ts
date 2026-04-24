@@ -136,10 +136,19 @@ export async function deleteColorHex(code: string): Promise<void> {
 }
 
 export async function saveColorDurability(code: string, years: number[]): Promise<void> {
-  const { error } = await supabaseAdmin
+  const { data: updated, error: updateError } = await supabaseAdmin
     .from("color_settings")
-    .upsert({ code, durability_years: years, updated_at: new Date().toISOString() }, { onConflict: "code" });
-  if (error) throw new Error(error.message);
+    .update({ durability_years: years, updated_at: new Date().toISOString() })
+    .eq("code", code)
+    .select("code");
+  if (updateError) throw new Error(updateError.message);
+
+  if (!updated || updated.length === 0) {
+    const { error: insertError } = await supabaseAdmin
+      .from("color_settings")
+      .insert({ code, durability_years: years });
+    if (insertError) throw new Error(insertError.message);
+  }
 }
 
 // ── Site settings ───────────────────────────────────────────
