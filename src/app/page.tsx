@@ -1362,11 +1362,12 @@ export default function Home() {
     setDurability((prev) => ({ ...prev, [code]: next }));
     setSaveError("");
     try {
-      await saveColorDurability(code, next);
-    } catch {
-      // Revert state if save fails
+      const confirmed = await saveColorDurability(code, next);
+      console.log("[pinturas] durabilidad guardada →", code, "→", confirmed);
+    } catch (err) {
+      console.error("[pinturas] error guardando durabilidad:", err);
       setDurability((prev) => ({ ...prev, [code]: current }));
-      setSaveError("No se pudo guardar la durabilidad. Verificá tu conexión e intentá de nuevo.");
+      setSaveError(String(err instanceof Error ? err.message : err));
     }
   }
 
