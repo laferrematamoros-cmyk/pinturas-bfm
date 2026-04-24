@@ -1061,8 +1061,8 @@ export default function Home() {
     loadDeletedColors().then(setDeletedColorCodes);
     // Load family colors and display names
     loadFamilySettings().then(({ colors, names }) => {
-      if (colors.length === 8) { setFamilyColors(colors); setEditFamilyColors(colors); }
-      if (names.length === 8) { setFamilyDisplayNames(names); setEditFamilyNames(names); }
+      if (colors.length > 0) { setFamilyColors(colors); setEditFamilyColors(colors); }
+      if (names.length > 0) { setFamilyDisplayNames(names); setEditFamilyNames(names); }
     });
   }, []);
 
@@ -1118,8 +1118,7 @@ export default function Home() {
       }));
       setNewColorPageNumber("");
       setShowAddColorModal(false);
-    } catch (err) {
-      console.error("[handleAddColor] error:", err);
+    } catch {
       setSaveError("No se pudo guardar el color. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setAddColorSaving(false);
@@ -1374,7 +1373,7 @@ export default function Home() {
     return overrides[origCode(color)] ?? color.hex;
   }
 
-  const currentFamily = colorFamilies[selectedFamily];
+  const currentFamily = colorFamilies[selectedFamily] ?? { name: familyDisplayNames[selectedFamily] ?? `Familia ${selectedFamily + 1}`, colors: [] };
 
   const displayedColors = useMemo(() => {
     const custom = customColors[currentFamily.name] ?? [];
@@ -1443,10 +1442,9 @@ export default function Home() {
   }, [showFavorites, favorites, colorFamilies, deletedColorCodes, nameOverrides, customColors]);
 
   // Banner gradient from first 5 colors of the family
-  const bannerGradient = currentFamily.colors
-    .slice(0, 5)
-    .map((c) => c.hex)
-    .join(", ");
+  const bannerGradient = currentFamily.colors.length > 0
+    ? currentFamily.colors.slice(0, 5).map((c) => c.hex).join(", ")
+    : (familyColors[selectedFamily] ?? "#888888");
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
@@ -1847,14 +1845,14 @@ export default function Home() {
               <p className="text-sm font-medium text-gray-700 mb-0.5">Familias de colores</p>
               <p className="text-xs text-gray-400 mb-3">Color del botón selector y nombre de cada familia</p>
               <div className="flex flex-col gap-2">
-                {colorFamilies.map((fam, i) => (
-                  <div key={fam.name} className="flex items-center gap-2">
+                {editFamilyNames.map((name, i) => (
+                  <div key={i} className="flex items-center gap-2">
                     {/* Color picker */}
                     <label className="cursor-pointer relative flex-shrink-0">
-                      <div className="w-8 h-8 rounded-lg border-2 border-gray-200 shadow-sm" style={{ backgroundColor: editFamilyColors[i] }} />
+                      <div className="w-8 h-8 rounded-lg border-2 border-gray-200 shadow-sm" style={{ backgroundColor: editFamilyColors[i] ?? "#888888" }} />
                       <input
                         type="color"
-                        value={editFamilyColors[i] ?? "#000000"}
+                        value={editFamilyColors[i] ?? "#888888"}
                         onChange={(e) => setEditFamilyColors(prev => prev.map((c, j) => j === i ? e.target.value : c))}
                         className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
                       />
@@ -1862,13 +1860,41 @@ export default function Home() {
                     {/* Name */}
                     <input
                       type="text"
-                      value={editFamilyNames[i] ?? ""}
+                      value={name}
                       onChange={(e) => setEditFamilyNames(prev => prev.map((n, j) => j === i ? e.target.value : n))}
                       maxLength={40}
                       className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-teal-400"
                     />
+                    {/* Delete — only for extra families beyond original 8 */}
+                    {i >= colorFamilies.length && (
+                      <button
+                        onClick={() => {
+                          setEditFamilyNames(prev => prev.filter((_, j) => j !== i));
+                          setEditFamilyColors(prev => prev.filter((_, j) => j !== i));
+                        }}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 transition-colors flex-shrink-0"
+                        title="Eliminar familia"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 ))}
+                {/* Add new family button */}
+                <button
+                  onClick={() => {
+                    setEditFamilyNames(prev => [...prev, "Nueva familia"]);
+                    setEditFamilyColors(prev => [...prev, "#888888"]);
+                  }}
+                  className="flex items-center justify-center gap-1.5 mt-1 py-2 rounded-lg border border-dashed border-teal-300 text-teal-500 text-xs font-semibold hover:bg-teal-50 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Nueva familia
+                </button>
               </div>
             </div>
 
@@ -2271,18 +2297,18 @@ export default function Home() {
             ) : (
               <>
                 {/* Family selector dots */}
-                <div className="flex justify-center gap-1.5 mb-4">
-                  {colorFamilies.map((family, i) => (
+                <div className="flex justify-center gap-1.5 mb-4 flex-wrap">
+                  {familyDisplayNames.map((name, i) => (
                     <button
-                      key={family.name}
+                      key={i}
                       onClick={() => { setSelectedFamily(i); setSelectedColor(null); }}
-                      title={familyDisplayNames[i] ?? family.name}
+                      title={name}
                       className={`relative w-8 h-8 rounded-md transition-all ${
                         selectedFamily === i
                           ? "ring-2 ring-offset-1 ring-gray-400 scale-110"
                           : "hover:scale-110"
                       }`}
-                      style={{ backgroundColor: familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] }}
+                      style={{ backgroundColor: familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888" }}
                     >
                       {selectedFamily === i && (
                         <span className="absolute inset-0 flex items-center justify-center">

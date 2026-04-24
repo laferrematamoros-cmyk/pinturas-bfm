@@ -328,11 +328,7 @@ export async function addCustomColor(
     .insert({ family_name: familyName, name: cleanName, hex, code: cleanCode, page_number: (pageNumber ?? null) as any })
     .select()
     .single();
-  if (error) {
-    console.error("[addCustomColor] Supabase error:", error);
-    throw new Error(error.message);
-  }
-  console.log("[addCustomColor] Insert OK:", data);
+  if (error) throw new Error(error.message);
   return data;
 }
 
