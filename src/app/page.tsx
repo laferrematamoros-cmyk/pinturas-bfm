@@ -2046,9 +2046,34 @@ export default function Home() {
       <main className="flex-1 pt-6">
         <>
             {/* Title */}
-            <h1 className="text-center text-2xl sm:text-3xl font-light text-gray-800 mb-5 px-4">
+            <h1 className="text-center text-2xl sm:text-3xl font-light text-gray-800 mb-4 px-4">
               Elige tu color favorito
             </h1>
+
+            {/* Family selector dots */}
+            <div className="flex justify-center gap-1.5 mb-5 flex-wrap px-4">
+              {familyDisplayNames.map((name, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setSelectedFamily(i); setSelectedColor(null); setSearch(""); }}
+                  title={name}
+                  className={`relative w-8 h-8 rounded-md transition-all border border-black/15 shadow-sm ${
+                    selectedFamily === i
+                      ? "ring-2 ring-offset-1 ring-gray-400 scale-110"
+                      : "hover:scale-110"
+                  }`}
+                  style={{ backgroundColor: familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888" }}
+                >
+                  {selectedFamily === i && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
 
             {/* Search */}
             <div className="flex justify-center mb-6 px-4">
@@ -2119,7 +2144,7 @@ export default function Home() {
 
                 {/* Combined quality grid */}
                 <div className="mb-1">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]).map((opt) => {
                       const price = durabilityPrices[String(opt.years)];
                       const galon = galonPrices[String(opt.years)];
@@ -2343,31 +2368,6 @@ export default function Home() {
               })()
             ) : (
               <>
-                {/* Family selector dots */}
-                <div className="flex justify-center gap-1.5 mb-4 flex-wrap">
-                  {familyDisplayNames.map((name, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setSelectedFamily(i); setSelectedColor(null); }}
-                      title={name}
-                      className={`relative w-8 h-8 rounded-md transition-all border border-black/15 shadow-sm ${
-                        selectedFamily === i
-                          ? "ring-2 ring-offset-1 ring-gray-400 scale-110"
-                          : "hover:scale-110"
-                      }`}
-                      style={{ backgroundColor: familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888" }}
-                    >
-                      {selectedFamily === i && (
-                        <span className="absolute inset-0 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-
                 {/* Disclaimer */}
                 <div className="mx-auto max-w-xl px-4 mb-5 text-center">
                   <p className="text-xs text-gray-500 leading-relaxed">
