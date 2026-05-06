@@ -962,6 +962,8 @@ export default function Home() {
   const [editCode, setEditCode] = useState("");
   const [editHex, setEditHex] = useState("");
   const [editPageNumber, setEditPageNumber] = useState<string>("");
+  const [editTargetFamily, setEditTargetFamily] = useState<number>(0);
+  const [movingColor, setMovingColor] = useState(false);
   const [newColorPageNumber, setNewColorPageNumber] = useState<string>("");
   const [savedFlash, setSavedFlash] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -1353,6 +1355,46 @@ export default function Home() {
       applyHex(result.sRGBHex);
     } catch {
       // user cancelled
+    }
+  }
+
+  async function handleMoveColor() {
+    if (!selectedColor) return;
+    const targetFamilyName = familyDisplayNames[editTargetFamily];
+    if (editTargetFamily === selectedFamily) return;
+    setMovingColor(true);
+    setSaveError("");
+    try {
+      const pageNum = editPageNumber.trim() !== "" ? editPageNumber.trim() : null;
+      const normalized = editHex.startsWith("#") ? editHex : "#" + editHex;
+      // Add to target family
+      const saved = await addCustomColor(targetFamilyName, editName, normalized, editCode, pageNum);
+      const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id, pageNumber: saved.page_number != null ? String(saved.page_number) : null };
+      setCustomColors((prev) => ({ ...prev, [targetFamilyName]: [...(prev[targetFamilyName] ?? []), newColor] }));
+
+      // Remove from source family
+      if (selectedColor.id) {
+        // Custom color: just delete it
+        await deleteCustomColor(selectedColor.id);
+        setCustomColors((prev) => {
+          const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === selectedColor.id));
+          if (!family) return prev;
+          return { ...prev, [family]: prev[family].filter((c) => c.id !== selectedColor.id) };
+        });
+      } else {
+        // Built-in color: add to deleted list
+        const oc = origCode(selectedColor);
+        const next = [...deletedColorCodes, oc];
+        setDeletedColorCodes(next);
+        await saveDeletedColors(next);
+      }
+
+      setSelectedColor(null);
+      setSelectedFamily(editTargetFamily);
+    } catch (err) {
+      setSaveError(String(err instanceof Error ? err.message : err));
+    } finally {
+      setMovingColor(false);
     }
   }
 
@@ -2484,6 +2526,29 @@ export default function Home() {
                                   >
                                     {savedFlash ? "Guardado" : "Guardar color"}
                                   </button>
+
+                                  {/* Mover a otra familia */}
+                                  <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
+                                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Mover a otra familia</p>
+                                    <select
+                                      value={editTargetFamily}
+                                      onChange={(e) => setEditTargetFamily(Number(e.target.value))}
+                                      className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-teal-400"
+                                    >
+                                      {familyDisplayNames.map((name, idx) => (
+                                        <option key={idx} value={idx} disabled={idx === selectedFamily}>
+                                          {name}{idx === selectedFamily ? " (actual)" : ""}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      onClick={handleMoveColor}
+                                      disabled={movingColor || editTargetFamily === selectedFamily}
+                                      className="w-full py-1.5 rounded text-xs font-semibold bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white transition-colors"
+                                    >
+                                      {movingColor ? "Moviendo…" : "Mover a esta familia"}
+                                    </button>
+                                  </div>
 
                                   {overrides[origCode(selectedColor)] && (
                                     <button
