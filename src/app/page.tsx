@@ -928,13 +928,13 @@ export default function Home() {
   const [selectedColor, setSelectedColor] = useState<Color | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [durability, setDurability] = useState<Record<string, number[]>>({});
-  const [durabilityPrices, setDurabilityPrices] = useState<Record<string, string>>({});
+  const [durabilityPrices, setDurabilityPrices] = useState<Record<string, string>>(() => { try { return JSON.parse(localStorage.getItem("pinturas_durabilityPrices") ?? "{}"); } catch { return {}; } });
   const [editDurabilityPrices, setEditDurabilityPrices] = useState<Record<string, string>>({});
-  const [galonPrices, setGalonPrices] = useState<Record<string, string>>({});
+  const [galonPrices, setGalonPrices] = useState<Record<string, string>>(() => { try { return JSON.parse(localStorage.getItem("pinturas_galonPrices") ?? "{}"); } catch { return {}; } });
   const [editGalonPrices, setEditGalonPrices] = useState<Record<string, string>>({});
-  const [galonOnSale, setGalonOnSale] = useState<number[]>([]);
+  const [galonOnSale, setGalonOnSale] = useState<number[]>(() => { try { return JSON.parse(localStorage.getItem("pinturas_galonOnSale") ?? "[]"); } catch { return []; } });
   const [editGalonOnSale, setEditGalonOnSale] = useState<number[]>([]);
-  const [durabilityOnSale, setDurabilityOnSale] = useState<number[]>([]);
+  const [durabilityOnSale, setDurabilityOnSale] = useState<number[]>(() => { try { return JSON.parse(localStorage.getItem("pinturas_durabilityOnSale") ?? "[]"); } catch { return []; } });
   const [editDurabilityOnSale, setEditDurabilityOnSale] = useState<number[]>([]);
   const [customColors, setCustomColors] = useState<Record<string, Color[]>>({});
   const [showAddColorModal, setShowAddColorModal] = useState(false);
@@ -978,29 +978,29 @@ export default function Home() {
   const [showSiteSettings, setShowSiteSettings] = useState(false);
 
   // Site branding (editable by admin, persisted in localStorage)
-  const [siteName, setSiteName] = useState("Pinturas BFM");
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [logo2Url, setLogo2Url] = useState<string | null>(null);
+  const [siteName, setSiteName] = useState(() => { try { return localStorage.getItem("pinturas_siteName") ?? "Pinturas BFM"; } catch { return "Pinturas BFM"; } });
+  const [logoUrl, setLogoUrl] = useState<string | null>(() => { try { return localStorage.getItem("pinturas_logoUrl"); } catch { return null; } });
+  const [logo2Url, setLogo2Url] = useState<string | null>(() => { try { return localStorage.getItem("pinturas_logo2Url"); } catch { return null; } });
   const [editSiteName, setEditSiteName] = useState("Pinturas BFM");
   const [editLogoUrl, setEditLogoUrl] = useState<string | null>(null);
   const [editLogo2Url, setEditLogo2Url] = useState<string | null>(null);
-  const [announcementText, setAnnouncementText] = useState("");
+  const [announcementText, setAnnouncementText] = useState(() => { try { return localStorage.getItem("pinturas_announcementText") ?? ""; } catch { return ""; } });
   const [editAnnouncementText, setEditAnnouncementText] = useState("");
   const [logoSaveError, setLogoSaveError] = useState("");
-  const [roomPreviewEnabled, setRoomPreviewEnabled] = useState(true);
+  const [roomPreviewEnabled, setRoomPreviewEnabled] = useState(() => { try { const v = localStorage.getItem("pinturas_roomPreviewEnabled"); return v === null ? true : v === "true"; } catch { return true; } });
   const [editRoomPreviewEnabled, setEditRoomPreviewEnabled] = useState(true);
-  const [calcButtonEnabled, setCalcButtonEnabled] = useState(true);
+  const [calcButtonEnabled, setCalcButtonEnabled] = useState(() => { try { const v = localStorage.getItem("pinturas_calcButtonEnabled"); return v === null ? true : v === "true"; } catch { return true; } });
   const [editCalcButtonEnabled, setEditCalcButtonEnabled] = useState(true);
-  const [pwaIconUrl, setPwaIconUrl] = useState<string | null>(null);
+  const [pwaIconUrl, setPwaIconUrl] = useState<string | null>(() => { try { return localStorage.getItem("pinturas_pwaIconUrl"); } catch { return null; } });
   const [editPwaIconUrl, setEditPwaIconUrl] = useState<string | null>(null);
-  const [rendimientoLabel, setRendimientoLabel] = useState("Rendimiento aproximado");
+  const [rendimientoLabel, setRendimientoLabel] = useState(() => { try { return localStorage.getItem("pinturas_rendimientoLabel") ?? "Rendimiento aproximado"; } catch { return "Rendimiento aproximado"; } });
   const [editRendimientoLabel, setEditRendimientoLabel] = useState("Rendimiento aproximado");
-  const [roomButtonLabel, setRoomButtonLabel] = useState("Ver en habitación");
+  const [roomButtonLabel, setRoomButtonLabel] = useState(() => { try { return localStorage.getItem("pinturas_roomButtonLabel") ?? "Ver en habitación"; } catch { return "Ver en habitación"; } });
   const [editRoomButtonLabel, setEditRoomButtonLabel] = useState("Ver en habitación");
-  const [cardHeight, setCardHeight] = useState(52);
+  const [cardHeight, setCardHeight] = useState(() => { try { const v = localStorage.getItem("pinturas_cardHeight"); return v ? Number(v) : 52; } catch { return 52; } });
   const [editCardHeight, setEditCardHeight] = useState(52);
-  const [familyColors, setFamilyColors] = useState<string[]>(DEFAULT_FAMILY_COLORS);
-  const [familyDisplayNames, setFamilyDisplayNames] = useState<string[]>(colorFamilies.map(f => f.name));
+  const [familyColors, setFamilyColors] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("pinturas_familyColors") ?? "null") ?? DEFAULT_FAMILY_COLORS; } catch { return DEFAULT_FAMILY_COLORS; } });
+  const [familyDisplayNames, setFamilyDisplayNames] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("pinturas_familyDisplayNames") ?? "null") ?? colorFamilies.map(f => f.name); } catch { return colorFamilies.map(f => f.name); } });
   const [editFamilyColors, setEditFamilyColors] = useState<string[]>(DEFAULT_FAMILY_COLORS);
   const [editFamilyNames, setEditFamilyNames] = useState<string[]>(colorFamilies.map(f => f.name));
 
@@ -1018,35 +1018,30 @@ export default function Home() {
       setOverrides(hexMap);
       setDurability(durMap);
     });
-    // Restore logos from cache immediately (before Supabase responds)
-    const cachedLogo = localStorage.getItem("pinturas_logoUrl");
-    const cachedLogo2 = localStorage.getItem("pinturas_logo2Url");
-    if (cachedLogo) setLogoUrl(cachedLogo);
-    if (cachedLogo2) setLogo2Url(cachedLogo2);
     // Load site branding from Supabase
     loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, roomButtonLabel: rbl, cardHeight: ch, calcButtonEnabled: cbe, pwaIconUrl: piUrl, announcementText: at }) => {
-      setSiteName(name);
+      setSiteName(name); localStorage.setItem("pinturas_siteName", name);
       if (logo) { setLogoUrl(logo); localStorage.setItem("pinturas_logoUrl", logo); }
       if (logo2) { setLogo2Url(logo2); localStorage.setItem("pinturas_logo2Url", logo2); }
-      setAnnouncementText(at);
-      setRoomPreviewEnabled(rpe);
+      setAnnouncementText(at); localStorage.setItem("pinturas_announcementText", at);
+      setRoomPreviewEnabled(rpe); localStorage.setItem("pinturas_roomPreviewEnabled", String(rpe));
       setEditRoomPreviewEnabled(rpe);
-      setCalcButtonEnabled(cbe);
+      setCalcButtonEnabled(cbe); localStorage.setItem("pinturas_calcButtonEnabled", String(cbe));
       setEditCalcButtonEnabled(cbe);
-      setPwaIconUrl(piUrl);
+      if (piUrl) { setPwaIconUrl(piUrl); localStorage.setItem("pinturas_pwaIconUrl", piUrl); }
       setEditPwaIconUrl(piUrl);
-      setRendimientoLabel(rl);
+      setRendimientoLabel(rl); localStorage.setItem("pinturas_rendimientoLabel", rl);
       setEditRendimientoLabel(rl);
-      setRoomButtonLabel(rbl);
+      setRoomButtonLabel(rbl); localStorage.setItem("pinturas_roomButtonLabel", rbl);
       setEditRoomButtonLabel(rbl);
-      setCardHeight(ch);
+      setCardHeight(ch); localStorage.setItem("pinturas_cardHeight", String(ch));
       setEditCardHeight(ch);
     });
     // Load global durability prices and on-sale flags
-    loadDurabilityPrices().then((p) => setDurabilityPrices(p));
-    loadGalonPrices().then((p) => { setGalonPrices(p); setEditGalonPrices(p); });
-    loadDurabilityOnSale().then((s) => setDurabilityOnSale(s));
-    loadGalonOnSale().then((s) => { setGalonOnSale(s); setEditGalonOnSale(s); });
+    loadDurabilityPrices().then((p) => { setDurabilityPrices(p); localStorage.setItem("pinturas_durabilityPrices", JSON.stringify(p)); });
+    loadGalonPrices().then((p) => { setGalonPrices(p); setEditGalonPrices(p); localStorage.setItem("pinturas_galonPrices", JSON.stringify(p)); });
+    loadDurabilityOnSale().then((s) => { setDurabilityOnSale(s); localStorage.setItem("pinturas_durabilityOnSale", JSON.stringify(s)); });
+    loadGalonOnSale().then((s) => { setGalonOnSale(s); setEditGalonOnSale(s); localStorage.setItem("pinturas_galonOnSale", JSON.stringify(s)); });
     // Load custom colors
     loadCustomColors().then((data) => {
       const mapped: Record<string, Color[]> = {};
@@ -1061,8 +1056,8 @@ export default function Home() {
     loadDeletedColors().then(setDeletedColorCodes);
     // Load family colors and display names
     loadFamilySettings().then(({ colors, names }) => {
-      if (colors.length > 0) { setFamilyColors(colors); setEditFamilyColors(colors); }
-      if (names.length > 0) { setFamilyDisplayNames(names); setEditFamilyNames(names); }
+      if (colors.length > 0) { setFamilyColors(colors); setEditFamilyColors(colors); localStorage.setItem("pinturas_familyColors", JSON.stringify(colors)); }
+      if (names.length > 0) { setFamilyDisplayNames(names); setEditFamilyNames(names); localStorage.setItem("pinturas_familyDisplayNames", JSON.stringify(names)); }
     });
   }, []);
 
@@ -1267,6 +1262,14 @@ export default function Home() {
     return color.originalCode ?? color.code;
   }
 
+  function hexLuminance(hex: string): number {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0, 2), 16) / 255;
+    const g = parseInt(h.substring(2, 4), 16) / 255;
+    const b = parseInt(h.substring(4, 6), 16) / 255;
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
   // Sync editHex/editName/editCode/editPageNumber when selected color changes
   React.useEffect(() => {
     if (selectedColor) {
@@ -1387,6 +1390,7 @@ export default function Home() {
       };
     });
     let all = [...custom, ...builtInWithOverrides];
+    all.sort((a, b) => hexLuminance(b.hex) - hexLuminance(a.hex));
     if (selectedQuality !== null) {
       all = all.filter((c) => (durability[origCode(c)] ?? []).includes(selectedQuality));
     }
@@ -1394,15 +1398,17 @@ export default function Home() {
       all = all.filter((c) => favorites.includes(origCode(c)));
     }
     if (!search.trim()) return all;
-    const q = search.toLowerCase();
+    const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const q = normalize(search);
     return all.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+      (c) => normalize(c.name).includes(q) || normalize(c.code).includes(q)
     );
   }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, pageNumbers, selectedQuality, durability, showFavorites, favorites]);
 
   const allSearchResults = useMemo(() => {
     if (!search.trim()) return [];
-    const q = search.toLowerCase();
+    const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const q = normalize(search);
 
     const builtInResults = colorFamilies.flatMap((f) =>
       f.colors
@@ -1413,13 +1419,13 @@ export default function Home() {
         })
         .filter((c) => {
           if (selectedQuality !== null && !(durability[origCode(c)] ?? []).includes(selectedQuality)) return false;
-          return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+          return normalize(c.name).includes(q) || normalize(c.code).includes(q);
         })
     );
 
     const customResults = Object.values(customColors).flat().filter((c) => {
       if (selectedQuality !== null && !(durability[c.code] ?? []).includes(selectedQuality)) return false;
-      return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+      return normalize(c.name).includes(q) || normalize(c.code).includes(q);
     });
 
     return [...customResults, ...builtInResults];
