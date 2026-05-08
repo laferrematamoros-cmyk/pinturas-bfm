@@ -928,13 +928,13 @@ export default function Home() {
   const [selectedColor, setSelectedColor] = useState<Color | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [durability, setDurability] = useState<Record<string, number[]>>({});
-  const [durabilityPrices, setDurabilityPrices] = useState<Record<string, string>>(() => { try { return JSON.parse(localStorage.getItem("pinturas_durabilityPrices") ?? "{}"); } catch { return {}; } });
+  const [durabilityPrices, setDurabilityPrices] = useState<Record<string, string>>({});
   const [editDurabilityPrices, setEditDurabilityPrices] = useState<Record<string, string>>({});
-  const [galonPrices, setGalonPrices] = useState<Record<string, string>>(() => { try { return JSON.parse(localStorage.getItem("pinturas_galonPrices") ?? "{}"); } catch { return {}; } });
+  const [galonPrices, setGalonPrices] = useState<Record<string, string>>({});
   const [editGalonPrices, setEditGalonPrices] = useState<Record<string, string>>({});
-  const [galonOnSale, setGalonOnSale] = useState<number[]>(() => { try { return JSON.parse(localStorage.getItem("pinturas_galonOnSale") ?? "[]"); } catch { return []; } });
+  const [galonOnSale, setGalonOnSale] = useState<number[]>([]);
   const [editGalonOnSale, setEditGalonOnSale] = useState<number[]>([]);
-  const [durabilityOnSale, setDurabilityOnSale] = useState<number[]>(() => { try { return JSON.parse(localStorage.getItem("pinturas_durabilityOnSale") ?? "[]"); } catch { return []; } });
+  const [durabilityOnSale, setDurabilityOnSale] = useState<number[]>([]);
   const [editDurabilityOnSale, setEditDurabilityOnSale] = useState<number[]>([]);
   const [customColors, setCustomColors] = useState<Record<string, Color[]>>({});
   const [showAddColorModal, setShowAddColorModal] = useState(false);
@@ -946,9 +946,7 @@ export default function Home() {
   const [selectedQuality, setSelectedQuality] = useState<number | null>(null);
   const [nameOverrides, setNameOverrides] = useState<Record<string, { name: string; code: string }>>({});
   const [pageNumbers, setPageNumbers] = useState<Record<string, string>>({});
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("pinturas-favorites") ?? "[]"); } catch { return []; }
-  });
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
   const toggleFavorite = (code: string) => {
     setFavorites(prev => {
@@ -967,7 +965,7 @@ export default function Home() {
   const [newColorPageNumber, setNewColorPageNumber] = useState<string>("");
   const [savedFlash, setSavedFlash] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [eyedropperSupported] = useState(() => typeof window !== "undefined" && "EyeDropper" in window);
+  const [eyedropperSupported, setEyedropperSupported] = useState(false);
 
   // Admin auth
   const [isAdmin, setIsAdmin] = useState(false);
@@ -980,31 +978,56 @@ export default function Home() {
   const [showSiteSettings, setShowSiteSettings] = useState(false);
 
   // Site branding (editable by admin, persisted in localStorage)
-  const [siteName, setSiteName] = useState(() => { try { return localStorage.getItem("pinturas_siteName") ?? "Pinturas BFM"; } catch { return "Pinturas BFM"; } });
-  const [logoUrl, setLogoUrl] = useState<string | null>(() => { try { return localStorage.getItem("pinturas_logoUrl"); } catch { return null; } });
-  const [logo2Url, setLogo2Url] = useState<string | null>(() => { try { return localStorage.getItem("pinturas_logo2Url"); } catch { return null; } });
+  const [siteName, setSiteName] = useState("Pinturas BFM");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logo2Url, setLogo2Url] = useState<string | null>(null);
   const [editSiteName, setEditSiteName] = useState("Pinturas BFM");
   const [editLogoUrl, setEditLogoUrl] = useState<string | null>(null);
   const [editLogo2Url, setEditLogo2Url] = useState<string | null>(null);
-  const [announcementText, setAnnouncementText] = useState(() => { try { return localStorage.getItem("pinturas_announcementText") ?? ""; } catch { return ""; } });
+  const [announcementText, setAnnouncementText] = useState("");
   const [editAnnouncementText, setEditAnnouncementText] = useState("");
   const [logoSaveError, setLogoSaveError] = useState("");
-  const [roomPreviewEnabled, setRoomPreviewEnabled] = useState(() => { try { const v = localStorage.getItem("pinturas_roomPreviewEnabled"); return v === null ? true : v === "true"; } catch { return true; } });
+  const [roomPreviewEnabled, setRoomPreviewEnabled] = useState(true);
   const [editRoomPreviewEnabled, setEditRoomPreviewEnabled] = useState(true);
-  const [calcButtonEnabled, setCalcButtonEnabled] = useState(() => { try { const v = localStorage.getItem("pinturas_calcButtonEnabled"); return v === null ? true : v === "true"; } catch { return true; } });
+  const [calcButtonEnabled, setCalcButtonEnabled] = useState(true);
   const [editCalcButtonEnabled, setEditCalcButtonEnabled] = useState(true);
-  const [pwaIconUrl, setPwaIconUrl] = useState<string | null>(() => { try { return localStorage.getItem("pinturas_pwaIconUrl"); } catch { return null; } });
+  const [pwaIconUrl, setPwaIconUrl] = useState<string | null>(null);
   const [editPwaIconUrl, setEditPwaIconUrl] = useState<string | null>(null);
-  const [rendimientoLabel, setRendimientoLabel] = useState(() => { try { return localStorage.getItem("pinturas_rendimientoLabel") ?? "Rendimiento aproximado"; } catch { return "Rendimiento aproximado"; } });
+  const [rendimientoLabel, setRendimientoLabel] = useState("Rendimiento aproximado");
   const [editRendimientoLabel, setEditRendimientoLabel] = useState("Rendimiento aproximado");
-  const [roomButtonLabel, setRoomButtonLabel] = useState(() => { try { return localStorage.getItem("pinturas_roomButtonLabel") ?? "Ver en habitación"; } catch { return "Ver en habitación"; } });
+  const [roomButtonLabel, setRoomButtonLabel] = useState("Ver en habitación");
   const [editRoomButtonLabel, setEditRoomButtonLabel] = useState("Ver en habitación");
-  const [cardHeight, setCardHeight] = useState(() => { try { const v = localStorage.getItem("pinturas_cardHeight"); return v ? Number(v) : 52; } catch { return 52; } });
+  const [cardHeight, setCardHeight] = useState(52);
   const [editCardHeight, setEditCardHeight] = useState(52);
-  const [familyColors, setFamilyColors] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("pinturas_familyColors") ?? "null") ?? DEFAULT_FAMILY_COLORS; } catch { return DEFAULT_FAMILY_COLORS; } });
-  const [familyDisplayNames, setFamilyDisplayNames] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("pinturas_familyDisplayNames") ?? "null") ?? colorFamilies.map(f => f.name); } catch { return colorFamilies.map(f => f.name); } });
+  const [familyColors, setFamilyColors] = useState<string[]>(DEFAULT_FAMILY_COLORS);
+  const [familyDisplayNames, setFamilyDisplayNames] = useState<string[]>(colorFamilies.map(f => f.name));
   const [editFamilyColors, setEditFamilyColors] = useState<string[]>(DEFAULT_FAMILY_COLORS);
   const [editFamilyNames, setEditFamilyNames] = useState<string[]>(colorFamilies.map(f => f.name));
+
+  // Restore localStorage cache on mount (client-only, runs after hydration)
+  React.useEffect(() => {
+    try {
+      if (sessionStorage.getItem("pinturas-admin") === "1") setIsAdmin(true);
+      setEyedropperSupported("EyeDropper" in window);
+      const dp = localStorage.getItem("pinturas_durabilityPrices"); if (dp) setDurabilityPrices(JSON.parse(dp));
+      const gp = localStorage.getItem("pinturas_galonPrices"); if (gp) { const v = JSON.parse(gp); setGalonPrices(v); setEditGalonPrices(v); }
+      const gos = localStorage.getItem("pinturas_galonOnSale"); if (gos) { const v = JSON.parse(gos); setGalonOnSale(v); setEditGalonOnSale(v); }
+      const dos = localStorage.getItem("pinturas_durabilityOnSale"); if (dos) setDurabilityOnSale(JSON.parse(dos));
+      const fav = localStorage.getItem("pinturas-favorites"); if (fav) setFavorites(JSON.parse(fav));
+      const sn = localStorage.getItem("pinturas_siteName"); if (sn) setSiteName(sn);
+      const lu = localStorage.getItem("pinturas_logoUrl"); if (lu) setLogoUrl(lu);
+      const l2u = localStorage.getItem("pinturas_logo2Url"); if (l2u) setLogo2Url(l2u);
+      const at = localStorage.getItem("pinturas_announcementText"); if (at !== null) setAnnouncementText(at);
+      const rpe = localStorage.getItem("pinturas_roomPreviewEnabled"); if (rpe !== null) setRoomPreviewEnabled(rpe === "true");
+      const cbe = localStorage.getItem("pinturas_calcButtonEnabled"); if (cbe !== null) setCalcButtonEnabled(cbe === "true");
+      const piu = localStorage.getItem("pinturas_pwaIconUrl"); if (piu) setPwaIconUrl(piu);
+      const rl = localStorage.getItem("pinturas_rendimientoLabel"); if (rl) setRendimientoLabel(rl);
+      const rbl = localStorage.getItem("pinturas_roomButtonLabel"); if (rbl) setRoomButtonLabel(rbl);
+      const ch = localStorage.getItem("pinturas_cardHeight"); if (ch) setCardHeight(Number(ch));
+      const fc = localStorage.getItem("pinturas_familyColors"); if (fc) setFamilyColors(JSON.parse(fc));
+      const fdn = localStorage.getItem("pinturas_familyDisplayNames"); if (fdn) setFamilyDisplayNames(JSON.parse(fdn));
+    } catch {}
+  }, []);
 
   // Load data from Supabase on mount; restore admin session
   React.useEffect(() => {
@@ -2057,7 +2080,7 @@ export default function Home() {
                   key={i}
                   onClick={() => { setSelectedFamily(i); setSelectedColor(null); setSearch(""); }}
                   title={name}
-                  className={`relative w-8 h-8 rounded-md transition-all border border-black/15 shadow-sm ${
+                  className={`relative w-14 h-8 rounded-md transition-all border border-black/15 shadow-sm flex items-center justify-center gap-0.5 overflow-hidden ${
                     selectedFamily === i
                       ? "ring-2 ring-offset-1 ring-gray-400 scale-110"
                       : "hover:scale-110"
@@ -2065,12 +2088,11 @@ export default function Home() {
                   style={{ backgroundColor: familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888" }}
                 >
                   {selectedFamily === i && (
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </span>
+                    <svg className="w-3 h-3 text-white drop-shadow shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                   )}
+                  <span className="text-[9px] font-semibold text-white leading-none truncate px-1" style={{ textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" }}>{name}</span>
                 </button>
               ))}
             </div>
