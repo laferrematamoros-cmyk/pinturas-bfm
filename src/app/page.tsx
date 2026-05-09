@@ -432,17 +432,26 @@ const colorFamilies: ColorFamily[] = [
   },
 ];
 
-function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFavorite, onToggleFavorite }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number; isFavorite?: boolean; onToggleFavorite?: () => void }) {
+function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFavorite, onToggleFavorite, bulkSelectMode, bulkSelected }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number; isFavorite?: boolean; onToggleFavorite?: () => void; bulkSelectMode?: boolean; bulkSelected?: boolean }) {
   return (
     <div
       onClick={onClick}
-      className="flex flex-col cursor-pointer group relative z-0 hover:z-10 hover:-translate-y-1 hover:shadow-xl hover:border-gray-400 transition-all duration-150 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm"
+      className={`flex flex-col cursor-pointer group relative z-0 hover:z-10 hover:-translate-y-1 hover:shadow-xl hover:border-gray-400 transition-all duration-150 rounded-lg overflow-hidden border bg-white shadow-sm ${bulkSelected ? "border-teal-500 ring-2 ring-teal-400" : "border-gray-200"}`}
     >
       <div
         className="w-full transition-all duration-150 relative"
         style={{ backgroundColor: color.hex, height: `${cardHeight}px` }}
       >
-        {selected && (
+        {bulkSelectMode && (
+          <div className={`absolute top-1 right-1 w-5 h-5 rounded-md flex items-center justify-center shadow transition-colors ${bulkSelected ? "bg-teal-500" : "bg-black/30 border border-white/60"}`}>
+            {bulkSelected && (
+              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
+        )}
+        {!bulkSelectMode && selected && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-6 h-6 rounded-full bg-white/80 flex items-center justify-center shadow">
               <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -913,6 +922,10 @@ export default function Home() {
   const [savedFlash, setSavedFlash] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [eyedropperSupported, setEyedropperSupported] = useState(false);
+  const [bulkSelectMode, setBulkSelectMode] = useState(false);
+  const [bulkSelectedCodes, setBulkSelectedCodes] = useState<Set<string>>(new Set());
+  const [bulkTargetFamily, setBulkTargetFamily] = useState<number>(0);
+  const [bulkMoving, setBulkMoving] = useState(false);
 
   // Admin auth
   const [isAdmin, setIsAdmin] = useState(false);
@@ -1368,6 +1381,81 @@ export default function Home() {
     }
   }
 
+  async function handleSearchMoveColor() {
+    if (!selectedColor) return;
+    const targetFamilyName = familyDisplayNames[editTargetFamily];
+    setMovingColor(true);
+    setSaveError("");
+    try {
+      const pageNum = editPageNumber.trim() !== "" ? editPageNumber.trim() : null;
+      const normalized = editHex.startsWith("#") ? editHex : "#" + editHex;
+      const saved = await addCustomColor(targetFamilyName, editName, normalized, editCode, pageNum);
+      const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id, pageNumber: saved.page_number != null ? String(saved.page_number) : null };
+      setCustomColors((prev) => ({ ...prev, [targetFamilyName]: [...(prev[targetFamilyName] ?? []), newColor] }));
+      if (selectedColor.id) {
+        await deleteCustomColor(selectedColor.id);
+        setCustomColors((prev) => {
+          const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === selectedColor.id));
+          if (!family) return prev;
+          return { ...prev, [family]: prev[family].filter((c) => c.id !== selectedColor.id) };
+        });
+      } else {
+        const oc = origCode(selectedColor);
+        const next = [...deletedColorCodes, oc];
+        setDeletedColorCodes(next);
+        await saveDeletedColors(next);
+      }
+      setSelectedColor(null);
+      setSelectedFamily(editTargetFamily);
+    } catch (err) {
+      setSaveError(String(err instanceof Error ? err.message : err));
+    } finally {
+      setMovingColor(false);
+    }
+  }
+
+  async function handleBulkMoveColors() {
+    if (bulkSelectedCodes.size === 0) return;
+    const targetFamilyName = familyDisplayNames[bulkTargetFamily];
+    setBulkMoving(true);
+    setSaveError("");
+    const newDeletedCodes = [...deletedColorCodes];
+    try {
+      for (const code of bulkSelectedCodes) {
+        const color = displayedColors.find(c => (c.id ? String(c.id) : c.code) === code) ?? null;
+        if (!color) continue;
+        const pageNum = color.pageNumber ?? null;
+        const effectiveHex = getEffectiveHex(color);
+        const normalizedHex = effectiveHex.startsWith("#") ? effectiveHex : "#" + effectiveHex;
+        const saved = await addCustomColor(targetFamilyName, color.name, normalizedHex, color.code, pageNum);
+        const newColor: Color = { name: saved.name, hex: saved.hex, code: saved.code, id: saved.id, pageNumber: saved.page_number != null ? String(saved.page_number) : null };
+        setCustomColors((prev) => ({ ...prev, [targetFamilyName]: [...(prev[targetFamilyName] ?? []), newColor] }));
+        if (color.id) {
+          await deleteCustomColor(color.id);
+          setCustomColors((prev) => {
+            const family = Object.keys(prev).find((f) => prev[f].some((c) => c.id === color.id));
+            if (!family) return prev;
+            return { ...prev, [family]: prev[family].filter((c) => c.id !== color.id) };
+          });
+        } else {
+          const oc = origCode(color);
+          if (!newDeletedCodes.includes(oc)) newDeletedCodes.push(oc);
+        }
+      }
+      if (newDeletedCodes.length > deletedColorCodes.length) {
+        setDeletedColorCodes(newDeletedCodes);
+        await saveDeletedColors(newDeletedCodes);
+      }
+      setBulkSelectedCodes(new Set());
+      setBulkSelectMode(false);
+      setSelectedFamily(bulkTargetFamily);
+    } catch (err) {
+      setSaveError(String(err instanceof Error ? err.message : err));
+    } finally {
+      setBulkMoving(false);
+    }
+  }
+
   async function toggleDurability(code: string, years: number) {
     const current = durability[code] ?? [];
     const next = current.includes(years)
@@ -1390,7 +1478,12 @@ export default function Home() {
   const currentFamily = colorFamilies[selectedFamily] ?? { name: familyDisplayNames[selectedFamily] ?? `Familia ${selectedFamily + 1}`, colors: [] };
 
   const displayedColors = useMemo(() => {
-    const custom = customColors[currentFamily.name] ?? [];
+    const builtInName = currentFamily.name;
+    const displayName = familyDisplayNames[selectedFamily];
+    const custom = [
+      ...(customColors[builtInName] ?? []),
+      ...(displayName !== builtInName ? (customColors[displayName] ?? []) : []),
+    ];
     const builtIn = currentFamily.colors.filter((c) => !deletedColorCodes.includes(c.code));
     const builtInWithOverrides: Color[] = builtIn.map((c) => {
       const ov = nameOverrides[c.code];
@@ -2250,80 +2343,157 @@ export default function Home() {
                                 <button onClick={() => setSelectedColor(null)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors">
                                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
-                                <div>
-                                  <p className="text-xl font-extrabold text-gray-800 leading-tight">{selectedColor.name}</p>
-                                  <p className="text-sm text-gray-400 mt-0.5 font-mono">
-                                    {selectedColor.code}
-                                    {selectedColor.pageNumber != null && (
-                                      <span className="ml-2 text-xs font-semibold bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded">{selectedColor.pageNumber}</span>
-                                    )}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-3 flex-wrap">
-                                  <div className="w-12 h-12 rounded-full border-4 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: editHex }} />
-                                  {roomPreviewEnabled && (
-                                    <button onClick={() => setRoomPreviewOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
-                                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #2dd4bf, 0 0 20px #0d948880"; }}
-                                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}>
-                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                                      {roomButtonLabel}
+                                {isAdmin ? (
+                                  /* ── ADMIN: edit panel ── */
+                                  <>
+                                    <p className="text-[11px] font-semibold text-gray-700">Editar color</p>
+                                    <div className="flex flex-col gap-1.5">
+                                      <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-teal-400" placeholder="Nombre del color" />
+                                      <input type="text" value={editCode} onChange={(e) => setEditCode(e.target.value)} className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs font-mono text-gray-500 focus:outline-none focus:border-teal-400" placeholder="Código" />
+                                      <input type="text" value={editPageNumber} onChange={(e) => setEditPageNumber(e.target.value)} className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs text-gray-500 focus:outline-none focus:border-teal-400" placeholder="Página (opcional)" />
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <label className="cursor-pointer relative flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-lg border-2 border-gray-200 shadow-sm" style={{ backgroundColor: editHex }} />
+                                        <input type="color" value={editHex.length === 7 ? editHex : "#000000"} onChange={(e) => applyHex(e.target.value)} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                                      </label>
+                                      <input type="text" value={editHex} onChange={(e) => applyHex(e.target.value)} maxLength={7} className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-xs font-mono text-gray-700 focus:outline-none focus:border-teal-400" placeholder="#000000" />
+                                    </div>
+                                    <button onClick={handleSave} className={`w-full py-1.5 rounded text-xs font-semibold transition-colors ${savedFlash ? "bg-green-500 text-white" : "bg-teal-500 hover:bg-teal-600 text-white"}`}>
+                                      {savedFlash ? "Guardado" : "Guardar color"}
                                     </button>
-                                  )}
-                                  <button
-                                    onClick={() => toggleFavorite(origCode(selectedColor))}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all duration-200 hover:scale-110 active:scale-95 ${
-                                      favorites.includes(origCode(selectedColor))
-                                        ? "bg-red-50 border-red-300 text-red-500"
-                                        : "bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-400"
-                                    }`}
-                                  >
-                                    <svg className={`w-3.5 h-3.5 ${favorites.includes(origCode(selectedColor)) ? "fill-red-500 text-red-500 heart-beat" : "fill-none text-gray-400"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                    </svg>
-                                    Favorito
-                                  </button>
-                                </div>
-                                {(() => {
-                                  const sel = DURABILITY_OPTIONS.filter((opt) => (durability[origCode(selectedColor)] ?? []).includes(opt.years));
-                                  return sel.length > 0 ? (
-                                    <div className="flex flex-col gap-3">
-                                      <p className="text-base font-extrabold text-gray-800 mb-0">{rendimientoLabel}</p>
-                                      <div>
-                                        {/* Header */}
-                                        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 mb-1">
-                                          <span />
-                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/galon.png" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
-                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
-                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-20 text-right">Rendimiento</span>
+                                    {(() => {
+                                      const actualFamilyIdx = selectedColor.id
+                                        ? (() => { const fn = Object.keys(customColors).find(f => customColors[f].some(c => c.id === selectedColor.id)); return fn ? familyDisplayNames.indexOf(fn) : -1; })()
+                                        : colorFamilies.findIndex(f => f.colors.some(c => c.code === origCode(selectedColor)));
+                                      return (
+                                        <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
+                                          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Mover a otra familia</p>
+                                          <select value={editTargetFamily} onChange={(e) => setEditTargetFamily(Number(e.target.value))} className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-teal-400">
+                                            {familyDisplayNames.map((name, idx) => (
+                                              <option key={idx} value={idx} disabled={idx === actualFamilyIdx}>
+                                                {name}{idx === actualFamilyIdx ? " (actual)" : ""}
+                                              </option>
+                                            ))}
+                                          </select>
+                                          <button onClick={handleSearchMoveColor} disabled={movingColor || editTargetFamily === actualFamilyIdx} className="w-full py-1.5 rounded text-xs font-semibold bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white transition-colors">
+                                            {movingColor ? "Moviendo…" : "Mover a esta familia"}
+                                          </button>
                                         </div>
-                                        {/* Rows */}
-                                        <div className="flex flex-col gap-1.5">
-                                          {sel.map((opt) => {
-                                            const price = durabilityPrices[String(opt.years)];
-                                            const galon = galonPrices[String(opt.years)];
-                                            const cubSale = durabilityOnSale.includes(opt.years);
-                                            const galSale = galonOnSale.includes(opt.years);
-                                            if (!price && !galon) return null;
-                                            return (
-                                              <div key={opt.years} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2 rounded-lg text-[11px] bg-teal-50 border border-teal-200">
-                                                <span className="font-semibold text-teal-700">{opt.years} años</span>
-                                                <div className="flex flex-col items-end w-20 sm:w-24">
-                                                  {galSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                  <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
-                                                </div>
-                                                <div className="flex flex-col items-end w-20 sm:w-24">
-                                                  {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                  <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
-                                                </div>
-                                                <span className="text-xs text-right w-16 sm:w-20 text-teal-500">{opt.yield}</span>
+                                      );
+                                    })()}
+                                    {saveError && <p className="text-[10px] text-red-400">{saveError}</p>}
+                                    <button onClick={() => { if (window.confirm(`¿Eliminar "${selectedColor.name}"? Esta acción no se puede deshacer.`)) { handleDeleteColor(selectedColor); } }} className="text-[10px] text-red-400 hover:text-red-500 transition-colors text-center">
+                                      Eliminar color
+                                    </button>
+                                    <hr className="w-full border-gray-100" />
+                                    <div>
+                                      <p className="text-base font-extrabold text-gray-800 mb-1">{rendimientoLabel}</p>
+                                      <div className="flex flex-col gap-1.5">
+                                        {DURABILITY_OPTIONS.map((opt) => {
+                                          const checked = (durability[origCode(selectedColor)] ?? []).includes(opt.years);
+                                          const price = durabilityPrices[String(opt.years)];
+                                          return (
+                                            <label
+                                              key={opt.years}
+                                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-[11px] cursor-pointer select-none transition-colors ${
+                                                checked ? "bg-teal-500 border-teal-500 text-white" : "bg-white border-gray-200 text-gray-600 hover:border-teal-300"
+                                              }`}
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDurability(origCode(selectedColor), opt.years)} />
+                                                <span className="font-semibold">{opt.years} años</span>
                                               </div>
-                                            );
-                                          })}
-                                        </div>
+                                              <div className="flex items-center gap-2 flex-wrap justify-end">
+                                                {price && <span className={checked ? "text-white font-bold" : "text-teal-600 font-bold"}>{price}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/19L</span></span>}
+                                                {galonPrices[String(opt.years)] && <span className={checked ? "text-white/90 font-bold" : "text-teal-500 font-bold"}>{galonPrices[String(opt.years)]}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/4L</span></span>}
+                                                <span className={checked ? "text-white/80" : "text-gray-400"}>{opt.yield}</span>
+                                              </div>
+                                            </label>
+                                          );
+                                        })}
                                       </div>
                                     </div>
-                                  ) : null;
-                                })()}
+                                  </>
+                                ) : (
+                                  /* ── PÚBLICO: solo lectura ── */
+                                  <>
+                                    <div>
+                                      <p className="text-xl font-extrabold text-gray-800 leading-tight">{selectedColor.name}</p>
+                                      <p className="text-sm text-gray-400 mt-0.5 font-mono">
+                                        {selectedColor.code}
+                                        {selectedColor.pageNumber != null && (
+                                          <span className="ml-2 text-xs font-semibold bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded">{selectedColor.pageNumber}</span>
+                                        )}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                      <div className="w-12 h-12 rounded-full border-4 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: editHex }} />
+                                      {roomPreviewEnabled && (
+                                        <button onClick={() => setRoomPreviewOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
+                                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #2dd4bf, 0 0 20px #0d948880"; }}
+                                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}>
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                                          {roomButtonLabel}
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => toggleFavorite(origCode(selectedColor))}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all duration-200 hover:scale-110 active:scale-95 ${
+                                          favorites.includes(origCode(selectedColor))
+                                            ? "bg-red-50 border-red-300 text-red-500"
+                                            : "bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-400"
+                                        }`}
+                                      >
+                                        <svg className={`w-3.5 h-3.5 ${favorites.includes(origCode(selectedColor)) ? "fill-red-500 text-red-500 heart-beat" : "fill-none text-gray-400"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                        </svg>
+                                        Favorito
+                                      </button>
+                                    </div>
+                                    {(() => {
+                                      const sel = DURABILITY_OPTIONS.filter((opt) => (durability[origCode(selectedColor)] ?? []).includes(opt.years));
+                                      return sel.length > 0 ? (
+                                        <div className="flex flex-col gap-3">
+                                          <p className="text-base font-extrabold text-gray-800 mb-0">{rendimientoLabel}</p>
+                                          <div>
+                                            {/* Header */}
+                                            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 mb-1">
+                                              <span />
+                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/galon.png" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
+                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
+                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-20 text-right">Rendimiento</span>
+                                            </div>
+                                            {/* Rows */}
+                                            <div className="flex flex-col gap-1.5">
+                                              {sel.map((opt) => {
+                                                const price = durabilityPrices[String(opt.years)];
+                                                const galon = galonPrices[String(opt.years)];
+                                                const cubSale = durabilityOnSale.includes(opt.years);
+                                                const galSale = galonOnSale.includes(opt.years);
+                                                if (!price && !galon) return null;
+                                                return (
+                                                  <div key={opt.years} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2 rounded-lg text-[11px] bg-teal-50 border border-teal-200">
+                                                    <span className="font-semibold text-teal-700">{opt.years} años</span>
+                                                    <div className="flex flex-col items-end w-20 sm:w-24">
+                                                      {galSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                      <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end w-20 sm:w-24">
+                                                      {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
+                                                      <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
+                                                    </div>
+                                                    <span className="text-xs text-right w-16 sm:w-20 text-teal-500">{opt.yield}</span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ) : null;
+                                    })()}
+                                  </>
+                                )}
                               </div>
                             </div>
                           )}
@@ -2360,17 +2530,35 @@ export default function Home() {
                   {familyDisplayNames[selectedFamily] ?? currentFamily.name}
                 </p>
 
-                {/* Add color button — admin only */}
+                {/* Add color button + bulk select toggle — admin only */}
                 {isAdmin && (
-                  <div className="flex justify-start px-3 mb-3">
+                  <div className="flex justify-start gap-2 px-3 mb-3 flex-wrap">
                     <button
-                      onClick={() => openAddColorModal(currentFamily.name)}
+                      onClick={() => openAddColorModal(familyDisplayNames[selectedFamily])}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-teal-400 text-teal-500 text-xs font-semibold hover:bg-teal-50 transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                       </svg>
                       Agregar color
+                    </button>
+                    <button
+                      onClick={() => {
+                        const entering = !bulkSelectMode;
+                        setBulkSelectMode(entering);
+                        setBulkSelectedCodes(new Set());
+                        setSelectedColor(null);
+                        if (entering) {
+                          const firstOther = familyDisplayNames.findIndex((_, i) => i !== selectedFamily);
+                          setBulkTargetFamily(firstOther >= 0 ? firstOther : 0);
+                        }
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${bulkSelectMode ? "bg-teal-500 border-teal-500 text-white" : "border-dashed border-purple-400 text-purple-500 hover:bg-purple-50"}`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                      {bulkSelectMode ? `Seleccionando (${bulkSelectedCodes.size})` : "Selección múltiple"}
                     </button>
                   </div>
                 )}
@@ -2385,22 +2573,38 @@ export default function Home() {
                     return (
                       <React.Fragment key={rowIndex}>
                         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
-                          {rowColors.map((color) => (
-                            <ColorSwatch
-                              key={color.id ?? color.code}
-                              color={{ ...color, hex: getEffectiveHex(color) }}
-                              onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setRoomPreviewOpen(false); }}
-                              selected={selectedColor?.code === color.code}
-                              cardHeight={cardHeight}
-                              isFavorite={favorites.includes(color.code)}
-                              onToggleFavorite={() => toggleFavorite(color.code)}
-                              onDelete={isAdmin ? () => {
-                                if (window.confirm(`¿Eliminar "${color.name}"? Esta acción no se puede deshacer.`)) {
-                                  handleDeleteColor(color);
-                                }
-                              } : undefined}
-                            />
-                          ))}
+                          {rowColors.map((color) => {
+                            const swatchKey = color.id ? String(color.id) : color.code;
+                            return (
+                              <ColorSwatch
+                                key={color.id ?? color.code}
+                                color={{ ...color, hex: getEffectiveHex(color) }}
+                                onClick={() => {
+                                  if (bulkSelectMode) {
+                                    setBulkSelectedCodes(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(swatchKey)) next.delete(swatchKey); else next.add(swatchKey);
+                                      return next;
+                                    });
+                                  } else {
+                                    setSelectedColor(selectedColor?.code === color.code ? null : color);
+                                    setRoomPreviewOpen(false);
+                                  }
+                                }}
+                                selected={!bulkSelectMode && selectedColor?.code === color.code}
+                                bulkSelectMode={bulkSelectMode}
+                                bulkSelected={bulkSelectedCodes.has(swatchKey)}
+                                cardHeight={cardHeight}
+                                isFavorite={favorites.includes(color.code)}
+                                onToggleFavorite={bulkSelectMode ? undefined : () => toggleFavorite(color.code)}
+                                onDelete={isAdmin && !bulkSelectMode ? () => {
+                                  if (window.confirm(`¿Eliminar "${color.name}"? Esta acción no se puede deshacer.`)) {
+                                    handleDeleteColor(color);
+                                  }
+                                } : undefined}
+                              />
+                            );
+                          })}
                         </div>
                         {selectedRowIndex === rowIndex && selectedColor && (
                           <div className="flex flex-col sm:flex-row w-full mb-1.5">
@@ -2684,6 +2888,45 @@ export default function Home() {
             )}
           </>
       </main>
+
+      {/* Bulk move action bar */}
+      {isAdmin && bulkSelectMode && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-2xl px-4 py-3 flex flex-col sm:flex-row items-center gap-3">
+          <span className="text-sm font-semibold text-gray-700 flex-shrink-0">
+            {bulkSelectedCodes.size === 0 ? "Toca colores para seleccionar" : `${bulkSelectedCodes.size} color${bulkSelectedCodes.size !== 1 ? "es" : ""} seleccionado${bulkSelectedCodes.size !== 1 ? "s" : ""}`}
+          </span>
+          <div className="flex items-center gap-2 flex-1 flex-wrap justify-center sm:justify-start">
+            <label className="text-xs text-gray-500 font-medium flex-shrink-0">Mover a:</label>
+            <select
+              value={bulkTargetFamily}
+              onChange={(e) => setBulkTargetFamily(Number(e.target.value))}
+              className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-teal-400 bg-white"
+            >
+              {familyDisplayNames.map((name, idx) => (
+                <option key={idx} value={idx} disabled={idx === selectedFamily}>{name}{idx === selectedFamily ? " (actual)" : ""}</option>
+              ))}
+            </select>
+            <button
+              onClick={handleBulkMoveColors}
+              disabled={bulkSelectedCodes.size === 0 || bulkTargetFamily === selectedFamily || bulkMoving}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-teal-500 text-white text-xs font-bold hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {bulkMoving ? (
+                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+              )}
+              {bulkMoving ? "Moviendo..." : "Mover"}
+            </button>
+          </div>
+          <button
+            onClick={() => { setBulkSelectMode(false); setBulkSelectedCodes(new Set()); }}
+            className="px-4 py-1.5 rounded-lg border border-gray-300 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors flex-shrink-0"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
