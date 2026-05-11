@@ -313,6 +313,26 @@ export async function createLogoUploadUrl(ext: string): Promise<{ signedUrl: str
   return { signedUrl: data.signedUrl, path, publicUrl: pub.publicUrl };
 }
 
+// ── Color order (drag-and-drop reordering) ──────────────────
+
+export async function loadColorOrders(): Promise<Record<string, string[]>> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "color_orders")
+    .single();
+  if (!data?.value) return {};
+  try { return JSON.parse(data.value); } catch { return {}; }
+}
+
+export async function saveColorOrder(familyName: string, codes: string[]): Promise<void> {
+  const current = await loadColorOrders();
+  current[familyName] = codes;
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "color_orders", value: JSON.stringify(current) }, { onConflict: "key" });
+}
+
 // ── Custom colors ───────────────────────────────────────────
 
 export interface CustomColor {

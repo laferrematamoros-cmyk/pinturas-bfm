@@ -41,6 +41,8 @@ import {
   loadFamilySettings,
   saveFamilyColors,
   saveFamilyNames,
+  loadColorOrders,
+  saveColorOrder,
   type CustomColor,
 } from "@/lib/actions";
 
@@ -432,16 +434,23 @@ const colorFamilies: ColorFamily[] = [
   },
 ];
 
-function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFavorite, onToggleFavorite, bulkSelectMode, bulkSelected }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number; isFavorite?: boolean; onToggleFavorite?: () => void; bulkSelectMode?: boolean; bulkSelected?: boolean }) {
+function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFavorite, onToggleFavorite, bulkSelectMode, bulkSelected, reorderMode }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number; isFavorite?: boolean; onToggleFavorite?: () => void; bulkSelectMode?: boolean; bulkSelected?: boolean; reorderMode?: boolean }) {
   return (
     <div
       onClick={onClick}
-      className={`flex flex-col cursor-pointer group relative z-0 hover:z-10 hover:-translate-y-1 hover:shadow-xl hover:border-gray-400 transition-all duration-150 rounded-lg overflow-hidden border bg-white shadow-sm ${bulkSelected ? "border-teal-500 ring-2 ring-teal-400" : "border-gray-200"}`}
+      className={`flex flex-col ${reorderMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} group relative z-0 hover:z-10 hover:-translate-y-1 hover:shadow-xl hover:border-gray-400 transition-all duration-150 rounded-lg overflow-hidden border bg-white shadow-sm ${bulkSelected ? "border-teal-500 ring-2 ring-teal-400" : reorderMode ? "border-orange-200" : "border-gray-200"}`}
     >
       <div
         className="w-full transition-all duration-150 relative"
         style={{ backgroundColor: color.hex, height: `${cardHeight}px` }}
       >
+        {reorderMode && (
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 w-5 h-5 rounded-md bg-black/40 flex items-center justify-center">
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </div>
+        )}
         {bulkSelectMode && (
           <div className={`absolute top-1 right-1 w-5 h-5 rounded-md flex items-center justify-center shadow transition-colors ${bulkSelected ? "bg-teal-500" : "bg-black/30 border border-white/60"}`}>
             {bulkSelected && (
@@ -926,6 +935,10 @@ export default function Home() {
   const [bulkSelectedCodes, setBulkSelectedCodes] = useState<Set<string>>(new Set());
   const [bulkTargetFamily, setBulkTargetFamily] = useState<number>(0);
   const [bulkMoving, setBulkMoving] = useState(false);
+  const [colorOrders, setColorOrders] = useState<Record<string, string[]>>({});
+  const [reorderMode, setReorderMode] = useState(false);
+  const [dragSrcIdx, setDragSrcIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   // Admin auth
   const [isAdmin, setIsAdmin] = useState(false);
@@ -1044,6 +1057,7 @@ export default function Home() {
       if (colors.length > 0) { setFamilyColors(colors); setEditFamilyColors(colors); localStorage.setItem("pinturas_familyColors", JSON.stringify(colors)); }
       if (names.length > 0) { setFamilyDisplayNames(names); setEditFamilyNames(names); localStorage.setItem("pinturas_familyDisplayNames", JSON.stringify(names)); }
     });
+    loadColorOrders().then(setColorOrders);
   }, []);
 
   function handleUserClick() {
@@ -1456,6 +1470,19 @@ export default function Home() {
     }
   }
 
+  async function handleReorderDrop(toIdx: number) {
+    if (dragSrcIdx === null || dragSrcIdx === toIdx) return;
+    const reordered = [...displayedColors];
+    const [moved] = reordered.splice(dragSrcIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    const codes = reordered.map(c => c.code);
+    const familyKey = familyDisplayNames[selectedFamily] ?? currentFamily.name;
+    setColorOrders(prev => ({ ...prev, [familyKey]: codes }));
+    setDragSrcIdx(null);
+    setDragOverIdx(null);
+    await saveColorOrder(familyKey, codes);
+  }
+
   async function toggleDurability(code: string, years: number) {
     const current = durability[code] ?? [];
     const next = current.includes(years)
@@ -1495,7 +1522,18 @@ export default function Home() {
       };
     });
     let all = [...custom, ...builtInWithOverrides];
-    all.sort((a, b) => hexLuminance(b.hex) - hexLuminance(a.hex));
+    const familyKey = familyDisplayNames[selectedFamily] ?? currentFamily.name;
+    const savedOrder = colorOrders[familyKey];
+    if (savedOrder && savedOrder.length > 0) {
+      const orderMap = new Map(savedOrder.map((code, i) => [code, i]));
+      all.sort((a, b) => {
+        const ai = orderMap.get(a.code) ?? orderMap.get(a.originalCode ?? "") ?? 99999;
+        const bi = orderMap.get(b.code) ?? orderMap.get(b.originalCode ?? "") ?? 99999;
+        return ai !== bi ? ai - bi : hexLuminance(b.hex) - hexLuminance(a.hex);
+      });
+    } else {
+      all.sort((a, b) => hexLuminance(b.hex) - hexLuminance(a.hex));
+    }
     if (selectedQuality !== null) {
       all = all.filter((c) => (durability[origCode(c)] ?? []).includes(selectedQuality));
     }
@@ -1508,7 +1546,7 @@ export default function Home() {
     return all.filter(
       (c) => normalize(c.name).includes(q) || normalize(c.code).includes(q)
     );
-  }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, pageNumbers, selectedQuality, durability, showFavorites, favorites]);
+  }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, pageNumbers, selectedQuality, durability, showFavorites, favorites, colorOrders, familyDisplayNames, selectedFamily]);
 
   const allSearchResults = useMemo(() => {
     if (!search.trim()) return [];
@@ -2549,6 +2587,7 @@ export default function Home() {
                         setBulkSelectedCodes(new Set());
                         setSelectedColor(null);
                         if (entering) {
+                          setReorderMode(false);
                           const firstOther = familyDisplayNames.findIndex((_, i) => i !== selectedFamily);
                           setBulkTargetFamily(firstOther >= 0 ? firstOther : 0);
                         }
@@ -2560,10 +2599,53 @@ export default function Home() {
                       </svg>
                       {bulkSelectMode ? `Seleccionando (${bulkSelectedCodes.size})` : "Selección múltiple"}
                     </button>
+                    <button
+                      onClick={() => {
+                        const entering = !reorderMode;
+                        setReorderMode(entering);
+                        setSelectedColor(null);
+                        if (entering) setBulkSelectMode(false);
+                        setDragSrcIdx(null);
+                        setDragOverIdx(null);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${reorderMode ? "bg-orange-500 border-orange-500 text-white" : "border-dashed border-orange-400 text-orange-500 hover:bg-orange-50"}`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
+                      {reorderMode ? "Listo" : "Mover colores"}
+                    </button>
                   </div>
                 )}
 
-                {/* Color swatches grid — row-by-row so panel opens below selected row */}
+                {/* Color swatches grid */}
+                {reorderMode ? (
+                  <div className="pb-10 px-3">
+                    <p className="text-xs text-orange-500 font-medium mb-3 text-center">Arrastra los colores para reorganizarlos — se guarda automáticamente</p>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                      {displayedColors.map((color, idx) => (
+                        <div
+                          key={color.id ?? color.code}
+                          draggable
+                          onDragStart={() => setDragSrcIdx(idx)}
+                          onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
+                          onDrop={() => handleReorderDrop(idx)}
+                          onDragEnd={() => { setDragSrcIdx(null); setDragOverIdx(null); }}
+                          className={`transition-all duration-100 ${dragSrcIdx === idx ? "opacity-30 scale-95" : ""} ${dragOverIdx === idx && dragSrcIdx !== idx ? "ring-2 ring-orange-400 rounded-lg scale-105" : ""}`}
+                        >
+                          <ColorSwatch
+                            color={{ ...color, hex: getEffectiveHex(color) }}
+                            onClick={() => {}}
+                            selected={false}
+                            cardHeight={cardHeight}
+                            isFavorite={favorites.includes(color.code)}
+                            reorderMode={true}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
                 <div key={selectedFamily} className="pb-10 px-3">
                   {Array.from({ length: Math.ceil(displayedColors.length / 3) }, (_, rowIndex) => {
                     const rowColors = displayedColors.slice(rowIndex * 3, rowIndex * 3 + 3);
@@ -2884,6 +2966,7 @@ export default function Home() {
                     );
                   })}
                 </div>
+                )}
               </>
             )}
           </>
