@@ -313,6 +313,24 @@ export async function createLogoUploadUrl(ext: string): Promise<{ signedUrl: str
   return { signedUrl: data.signedUrl, path, publicUrl: pub.publicUrl };
 }
 
+// ── Family banners (gradient per family) ───────────────────
+
+export async function loadFamilyBanners(): Promise<Array<[string, string] | null>> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "family_banners")
+    .single();
+  if (!data?.value) return [];
+  try { return JSON.parse(data.value); } catch { return []; }
+}
+
+export async function saveFamilyBanners(banners: Array<[string, string] | null>): Promise<void> {
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "family_banners", value: JSON.stringify(banners) }, { onConflict: "key" });
+}
+
 // ── Color order (drag-and-drop reordering) ──────────────────
 
 export async function loadColorOrders(): Promise<Record<string, string[]>> {
