@@ -62,7 +62,7 @@ interface ColorFamily {
 
 const colorFamilies: ColorFamily[] = [
   {
-    name: "Rojos y Rosas",
+    name: "Rojos/Rosas",
     colors: [
       { name: "Mimos de Frutos Rojos", hex: "#863B67", code: "14RR 12/349" },
       { name: "Carmesí Intenso", hex: "#9E3147", code: "80RR 12/430" },
