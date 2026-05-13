@@ -1,4 +1,4 @@
-const CACHE = "pinturas-bfm-v2";
+const CACHE = "pinturas-bfm-v3";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -16,12 +16,6 @@ self.addEventListener("activate", (event) => {
         Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
       )
       .then(() => self.clients.claim())
-      .then(() =>
-        // Avisa a todos los clientes abiertos que recarguen
-        self.clients.matchAll({ includeUncontrolled: true, type: "window" }).then((clients) => {
-          clients.forEach((client) => client.postMessage({ type: "SW_UPDATED" }));
-        })
-      )
   );
 });
 
@@ -41,7 +35,6 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// Escucha el mensaje del admin para forzar recarga en todos los clientes
 self.addEventListener("message", (event) => {
   if (event.data?.type === "FORCE_UPDATE") {
     self.clients.matchAll({ includeUncontrolled: true, type: "window" }).then((clients) => {
