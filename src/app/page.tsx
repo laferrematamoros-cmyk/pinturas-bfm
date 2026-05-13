@@ -1065,6 +1065,8 @@ export default function Home() {
       setFamilyBanners(banners);
       setEditFamilyBanners(banners);
     });
+    // Ensure editFamilyBanners is padded after names load (async timing fix)
+
     loadColorOrders().then(setColorOrders);
   }, []);
 
@@ -1165,7 +1167,12 @@ export default function Home() {
     setEditPwaIconUrl(pwaIconUrl);
     setEditFamilyColors([...familyColors]);
     setEditFamilyNames([...familyDisplayNames]);
-    setEditFamilyBanners([...familyBanners]);
+    // Pad banners array to match families length so indexes always align
+    const paddedBanners: Array<[string, string] | null> = familyDisplayNames.map((_, i) => {
+      const b = familyBanners[i];
+      return b ? [...b] as [string, string] : null;
+    });
+    setEditFamilyBanners(paddedBanners);
     setShowSiteSettings(true);
     setShowAdminMenu(false);
   }
@@ -2101,6 +2108,7 @@ export default function Home() {
                   onClick={() => {
                     setEditFamilyNames(prev => [...prev, "Nueva familia"]);
                     setEditFamilyColors(prev => [...prev, "#888888"]);
+                    setEditFamilyBanners(prev => [...prev, null]);
                   }}
                   className="flex items-center justify-center gap-1.5 mt-1 py-2 rounded-lg border border-dashed border-teal-300 text-teal-500 text-xs font-semibold hover:bg-teal-50 transition-colors"
                 >
