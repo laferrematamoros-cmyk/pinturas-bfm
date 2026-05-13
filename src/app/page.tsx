@@ -2163,7 +2163,9 @@ export default function Home() {
                       ? "ring-2 ring-offset-1 ring-gray-400 scale-110"
                       : "hover:scale-110"
                   }`}
-                  style={{ backgroundColor: familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888" }}
+                  style={{ background: familyDisplayNames[i] === "Rojos/Rosas"
+                    ? `linear-gradient(135deg, ${familyColors[i] ?? "#C9464F"} 50%, #e87ca0 50%)`
+                    : (familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888") }}
                 >
                   {selectedFamily === i && (
                     <svg className="w-3 h-3 text-white drop-shadow shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
