@@ -1280,7 +1280,7 @@ export default function Home() {
   }
 
   function exportToCSV() {
-    const rows: string[][] = [['Familia', 'Nombre', 'Código', 'Color (Hex)', 'Línea (años)', 'Página', 'Estado']];
+    const rows: string[][] = [['Familia', 'Nombre', 'Código', 'Color (Hex)', 'Línea', 'Calidad', 'Página', 'Estado']];
     colorFamilies.forEach((family, idx) => {
       const builtInName = family.name;
       const displayName = familyDisplayNames[idx] ?? builtInName;
@@ -1297,10 +1297,10 @@ export default function Home() {
         const oc = color.originalCode ?? color.code;
         const rawHex = overrides[oc] ?? color.hex ?? '';
         const hex = rawHex ? '#' + rawHex.replace(/^#/, '').toUpperCase() : '';
-        const lines = (durability[oc] ?? []).sort((a, b) => a - b).map(y => `${y} años`).join(', ');
+        const calidad = (durability[oc] ?? []).sort((a, b) => a - b).map(y => `${y} años`).join(', ');
         const page = color.pageNumber ?? pageNumbers[oc] ?? '';
         const status = deletedColorCodes.includes(oc) ? 'Eliminado' : 'Activo';
-        rows.push([displayName, color.name, color.code, hex, lines, page, status]);
+        rows.push([displayName, color.name, color.code, hex, 'Sayer', calidad, page, status]);
       }
     });
     const csv = rows.map(r => r.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
