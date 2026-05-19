@@ -1279,6 +1279,42 @@ export default function Home() {
     return color.originalCode ?? color.code;
   }
 
+  function exportToCSV() {
+    const rows: string[][] = [['Familia', 'Nombre', 'Código', 'Color (Hex)', 'Línea (años)', 'Página', 'Estado']];
+    colorFamilies.forEach((family, idx) => {
+      const builtInName = family.name;
+      const displayName = familyDisplayNames[idx] ?? builtInName;
+      const custom = [
+        ...(customColors[builtInName] ?? []),
+        ...(displayName !== builtInName ? (customColors[displayName] ?? []) : []),
+      ];
+      const builtIn: Color[] = family.colors.map((c) => {
+        const ov = nameOverrides[c.code];
+        const pg = pageNumbers[c.code];
+        return { ...c, ...(ov ? { name: ov.name, code: ov.code, originalCode: c.code } : {}), ...(pg != null ? { pageNumber: pg } : {}) };
+      });
+      for (const color of [...custom, ...builtIn]) {
+        const oc = color.originalCode ?? color.code;
+        const rawHex = overrides[oc] ?? color.hex ?? '';
+        const hex = rawHex ? '#' + rawHex.replace(/^#/, '').toUpperCase() : '';
+        const lines = (durability[oc] ?? []).sort((a, b) => a - b).map(y => `${y} años`).join(', ');
+        const page = color.pageNumber ?? pageNumbers[oc] ?? '';
+        const status = deletedColorCodes.includes(oc) ? 'Eliminado' : 'Activo';
+        rows.push([displayName, color.name, color.code, hex, lines, page, status]);
+      }
+    });
+    const csv = rows.map(r => r.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `catalogo-pinturas-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function hexLuminance(hex: string): number {
     const h = hex.replace('#', '');
     const r = parseInt(h.substring(0, 2), 16) / 255;
@@ -1725,6 +1761,15 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               Actualizar página en todos
+            </button>
+            <button
+              onClick={() => { exportToCSV(); setShowAdminMenu(false); }}
+              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Exportar catálogo CSV
             </button>
             <hr className="my-1 border-gray-100" />
             <button
