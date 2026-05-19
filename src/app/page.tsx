@@ -2691,6 +2691,30 @@ export default function Home() {
                       </svg>
                       {reorderMode ? "Listo" : "Mover colores"}
                     </button>
+                    <button
+                      onClick={async () => {
+                        const lightness = (hex: string) => {
+                          const h = (hex || '#808080').replace('#', '').padEnd(6, '0');
+                          const r = parseInt(h.slice(0, 2), 16) / 255;
+                          const g = parseInt(h.slice(2, 4), 16) / 255;
+                          const b = parseInt(h.slice(4, 6), 16) / 255;
+                          return (Math.max(r, g, b) + Math.min(r, g, b)) / 2;
+                        };
+                        const sorted = [...displayedColors].sort((a, b) =>
+                          lightness(getEffectiveHex(b)) - lightness(getEffectiveHex(a))
+                        );
+                        const codes = sorted.map(c => c.code);
+                        const familyKey = familyDisplayNames[selectedFamily] ?? currentFamily.name;
+                        setColorOrders(prev => ({ ...prev, [familyKey]: codes }));
+                        await saveColorOrder(familyKey, codes);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-indigo-400 text-indigo-500 text-xs font-semibold hover:bg-indigo-50 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707m12.728 0-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7z" />
+                      </svg>
+                      Ordenar por brillo
+                    </button>
                   </div>
                 )}
 
