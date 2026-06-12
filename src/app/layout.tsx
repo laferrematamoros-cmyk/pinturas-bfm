@@ -30,13 +30,14 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
 if('serviceWorker' in navigator){
+  var safeUpdate = function(reg){ try { reg.update().catch(function(){}); } catch(e){} };
   navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(reg){
     // Buscar una versión nueva del SW al cargar y al volver a la pestaña.
-    reg.update();
+    safeUpdate(reg);
     document.addEventListener('visibilitychange', function(){
-      if(document.visibilityState === 'visible') reg.update();
+      if(document.visibilityState === 'visible') safeUpdate(reg);
     });
-  });
+  }).catch(function(){});
   navigator.serviceWorker.addEventListener('message', function(e){
     if(e.data && e.data.type === 'SW_UPDATED') window.location.reload();
   });
