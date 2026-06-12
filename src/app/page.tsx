@@ -1818,14 +1818,14 @@ export default function Home() {
       {/* Site settings modal */}
       {showSiteSettings && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-3">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto flex flex-col" style={{ maxHeight: "92vh" }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col" style={{ maxHeight: "92vh" }}>
             {/* Fixed header */}
             <div className="px-6 pt-6 pb-3 flex-shrink-0">
               <h2 className="text-lg font-semibold text-gray-800 mb-0.5">Configuración del sitio</h2>
               <p className="text-xs text-gray-400">Los cambios se verán en la página pública</p>
             </div>
             {/* Scrollable body */}
-            <div className="overflow-y-auto flex-1 px-6 pb-2">
+            <div className="overflow-y-auto overflow-x-hidden flex-1 px-6 pb-2">
 
             {/* Logo upload */}
             <p className="text-xs font-semibold text-gray-600 mb-2">Logo</p>
@@ -1906,8 +1906,8 @@ export default function Home() {
               maxLength={120}
             />
 
-            {/* Precios por durabilidad */}
-            <p className="text-xs font-semibold text-gray-600 mb-2">Precios por durabilidad</p>
+            {/* Precios por cubeta 19L */}
+            <p className="text-xs font-semibold text-gray-600 mb-2">Precios por cubeta (19 L)</p>
             <div className="flex flex-col gap-2 mb-6">
               {DURABILITY_OPTIONS.map((opt) => {
                 const isOnSale = editDurabilityOnSale.includes(opt.years);
@@ -1919,7 +1919,7 @@ export default function Home() {
                       value={editDurabilityPrices[String(opt.years)] ?? ""}
                       onChange={(e) => setEditDurabilityPrices((prev) => ({ ...prev, [String(opt.years)]: e.target.value }))}
                       placeholder="ej: $350"
-                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
                     />
                     <label className={`flex items-center gap-1.5 cursor-pointer px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors flex-shrink-0 ${
                       isOnSale ? "bg-orange-50 border-orange-400 text-orange-600" : "bg-white border-gray-200 text-gray-400 hover:border-orange-300"
@@ -1955,7 +1955,7 @@ export default function Home() {
                       value={editGalonPrices[String(opt.years)] ?? ""}
                       onChange={(e) => setEditGalonPrices((prev) => ({ ...prev, [String(opt.years)]: e.target.value }))}
                       placeholder="ej: $120"
-                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
                     />
                     <label className={`flex items-center gap-1.5 cursor-pointer px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors flex-shrink-0 ${
                       isOnSale ? "bg-orange-50 border-orange-400 text-orange-600" : "bg-white border-gray-200 text-gray-400 hover:border-orange-300"
