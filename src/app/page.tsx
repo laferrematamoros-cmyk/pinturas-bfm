@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import {
@@ -45,6 +45,9 @@ import {
   saveFamilyBanners,
   loadColorOrders,
   saveColorOrder,
+  login,
+  logout,
+  checkAdminSession,
   type CustomColor,
 } from "@/lib/actions";
 
@@ -522,8 +525,6 @@ const DURABILITY_OPTIONS: { years: number; yield: string }[] = [
   { years: 7, yield: "7 a 9 m²/L" },
 ];
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
-
 // ── Room preview ──────────────────────────────────────────────
 
 const ROOM_TABS = [
@@ -578,7 +579,7 @@ function RoomPreviewModal({ color, hex, onClose }: {
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 bg-black/75" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 bg-black/75" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight:"95vh" }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 bg-gray-900 text-white flex-shrink-0">
@@ -595,20 +596,15 @@ function RoomPreviewModal({ color, hex, onClose }: {
         <div className="flex bg-gray-900 gap-1 p-1.5 flex-shrink-0">
           {ROOM_TABS.map(rt => (
             <button key={rt.id} onClick={() => setTab(rt.id)}
-              className={`flex-1 py-2 text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1 select-none rounded-lg border ${
+              className={`neon-hover flex-1 py-2 text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1 select-none rounded-lg border ${
                 tab === rt.id
                   ? "bg-teal-500/20 text-teal-300 border-teal-400 scale-105"
                   : "bg-transparent text-gray-400 border-transparent hover:text-teal-300 hover:bg-teal-500/10 hover:border-teal-400 hover:scale-110 active:scale-95"
               }`}
-              style={tab === rt.id ? {
-                boxShadow: "0 0 8px #2dd4bf, 0 0 20px #0d9488, inset 0 0 8px #0d948820"
-              } : undefined}
-              onMouseEnter={e => {
-                if (tab !== rt.id) (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #2dd4bf, 0 0 20px #0d9488, inset 0 0 8px #0d948820";
-              }}
-              onMouseLeave={e => {
-                if (tab !== rt.id) (e.currentTarget as HTMLButtonElement).style.boxShadow = "";
-              }}
+              style={{
+                boxShadow: tab === rt.id ? "0 0 8px #2dd4bf, 0 0 20px #0d9488, inset 0 0 8px #0d948820" : undefined,
+                ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d9488, inset 0 0 8px #0d948820",
+              } as React.CSSProperties}
             >
               <span className={`transition-all duration-200 ${tab === rt.id ? "text-xl" : "text-base"}`}>{rt.emoji}</span>
               <span>{rt.label}</span>
@@ -780,7 +776,7 @@ function PaintCalculator({
                     {galon && (
                       <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                         <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
-                        <span className={`text-sm font-extrabold leading-tight ${active ? (galSale ? "text-white oferta-pulse" : "text-white") : galSale ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{galon}</span>
+                        <span className={`text-sm font-extrabold leading-tight ${active ? (galSale ? "text-white oferta-pulse" : "text-white") : galSale ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{galon}</span>
                         <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
                         {galSale && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                       </div>
@@ -788,7 +784,7 @@ function PaintCalculator({
                     {price && (
                       <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                         <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
-                        <span className={`text-sm font-extrabold leading-tight ${active ? (cubSale ? "text-white oferta-pulse" : "text-white") : cubSale ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{price}</span>
+                        <span className={`text-sm font-extrabold leading-tight ${active ? (cubSale ? "text-white oferta-pulse" : "text-white") : cubSale ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{price}</span>
                         <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
                         {cubSale && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                       </div>
@@ -893,6 +889,10 @@ export default function Home() {
   const [selectedFamily, setSelectedFamily] = useState(0);
   const [search, setSearch] = useState("");
   const [selectedColor, setSelectedColor] = useState<Color | null>(null);
+  // Carga progresiva: cuántos colores mostrar de la familia actual (se renderiza por lotes)
+  const COLORS_BATCH = 60;
+  const [visibleCount, setVisibleCount] = useState(COLORS_BATCH);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [durability, setDurability] = useState<Record<string, number[]>>({});
   const [durabilityPrices, setDurabilityPrices] = useState<Record<string, string>>({});
@@ -984,7 +984,6 @@ export default function Home() {
   // Restore localStorage cache on mount (client-only, runs after hydration)
   React.useEffect(() => {
     try {
-      if (sessionStorage.getItem("pinturas-admin") === "1") setIsAdmin(true);
       setEyedropperSupported("EyeDropper" in window);
       const dp = localStorage.getItem("pinturas_durabilityPrices"); if (dp) setDurabilityPrices(JSON.parse(dp));
       const gp = localStorage.getItem("pinturas_galonPrices"); if (gp) { const v = JSON.parse(gp); setGalonPrices(v); setEditGalonPrices(v); }
@@ -1008,7 +1007,8 @@ export default function Home() {
 
   // Load data from Supabase on mount; restore admin session
   React.useEffect(() => {
-    if (sessionStorage.getItem("pinturas-admin") === "1") setIsAdmin(true);
+    // La sesión real vive en una cookie httpOnly; preguntamos al servidor si sigue activa.
+    checkAdminSession().then((ok) => setIsAdmin(ok)).catch(() => {});
     // Load color overrides + durability from Supabase
     loadColorSettings().then((data) => {
       const hexMap: Record<string, string> = {};
@@ -1080,19 +1080,21 @@ export default function Home() {
     }
   }
 
-  function handleLogin() {
-    if (loginPassword === ADMIN_PASSWORD) {
-      sessionStorage.setItem("pinturas-admin", "1");
+  async function handleLogin() {
+    // La validación ocurre en el servidor; si es correcta, abre una cookie de sesión firmada.
+    const ok = await login(loginPassword);
+    if (ok) {
       setIsAdmin(true);
       setShowLoginModal(false);
       setLoginError(false);
+      setLoginPassword("");
     } else {
       setLoginError(true);
     }
   }
 
-  function handleLogout() {
-    sessionStorage.removeItem("pinturas-admin");
+  async function handleLogout() {
+    await logout();
     setIsAdmin(false);
     setShowAdminMenu(false);
   }
@@ -1602,6 +1604,34 @@ export default function Home() {
     );
   }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, pageNumbers, selectedQuality, durability, showFavorites, favorites, colorOrders, familyDisplayNames, selectedFamily]);
 
+  // Reiniciar la carga progresiva al cambiar de familia o filtro
+  useEffect(() => {
+    setVisibleCount(COLORS_BATCH);
+  }, [selectedFamily, selectedQuality, showFavorites, search]);
+
+  // Cargar más colores automáticamente al hacer scroll hasta el centinela
+  useEffect(() => {
+    if (visibleCount >= displayedColors.length) return;
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + COLORS_BATCH, displayedColors.length));
+        }
+      },
+      { rootMargin: "600px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [visibleCount, displayedColors.length]);
+
+  // Subconjunto visible de la familia actual (carga progresiva)
+  const visibleFamilyColors = useMemo(
+    () => displayedColors.slice(0, visibleCount),
+    [displayedColors, visibleCount]
+  );
+
   const allSearchResults = useMemo(() => {
     if (!search.trim()) return [];
     const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -1692,7 +1722,7 @@ export default function Home() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
             <h2 className="text-lg font-semibold text-gray-800 mb-1">Acceso administrador</h2>
-            <p className="text-xs text-gray-400 mb-5">Ingresá la contraseña para editar la paleta</p>
+            <p className="text-xs text-gray-400 mb-5">Ingresa la contraseña para editar la paleta</p>
 
             <input
               type="password"
@@ -2277,7 +2307,7 @@ export default function Home() {
                   key={i}
                   onClick={() => { setSelectedFamily(i); setSelectedColor(null); setSearch(""); }}
                   title={name}
-                  className={`relative w-14 h-8 rounded-md transition-all border border-black/15 shadow-sm flex items-center justify-center gap-0.5 overflow-hidden ${
+                  className={`relative h-8 min-w-14 px-2.5 rounded-md transition-all border border-black/15 shadow-sm flex items-center justify-center gap-1 ${
                     selectedFamily === i
                       ? "ring-2 ring-offset-1 ring-gray-400 scale-110"
                       : "hover:scale-110"
@@ -2291,7 +2321,7 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   )}
-                  <span className="text-[9px] font-semibold text-white leading-none truncate px-1" style={{ textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" }}>{name}</span>
+                  <span className="text-[10px] font-semibold text-white leading-none whitespace-nowrap" style={{ textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" }}>{name}</span>
                 </button>
               ))}
             </div>
@@ -2320,7 +2350,7 @@ export default function Home() {
             {DURABILITY_OPTIONS.some((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]) && (
               <div className="px-4 mb-6">
                 <p className="text-center text-base text-gray-900 mb-3 uppercase tracking-widest font-bold">
-                  Filtrá por calidad y precio
+                  Filtra por calidad y precio
                 </p>
 
                 {/* Todos los colores + Mis favoritos */}
@@ -2365,7 +2395,7 @@ export default function Home() {
 
                 {/* Combined quality grid */}
                 <div className="mb-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]).map((opt) => {
                       const price = durabilityPrices[String(opt.years)];
                       const galon = galonPrices[String(opt.years)];
@@ -2377,14 +2407,12 @@ export default function Home() {
                         <button
                           key={opt.years}
                           onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
-                          className={`relative flex flex-col items-center py-2.5 px-2 rounded-2xl border transition-all duration-200 shadow-sm ${
+                          className={`neon-hover relative flex flex-col items-center py-2.5 px-2 rounded-2xl border transition-all duration-200 shadow-sm ${
                             active
                               ? "bg-teal-500 border-teal-400 text-white shadow-md scale-105"
                               : "bg-white text-gray-700 border-gray-200 hover:scale-105 hover:border-teal-400"
                           }`}
-                          style={active ? { boxShadow: neonShadow } : undefined}
-                          onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = neonShadow; }}
-                          onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
+                          style={{ boxShadow: active ? neonShadow : undefined, ["--neon-hover" as string]: neonShadow } as React.CSSProperties}
                         >
                           {active && (
                             <span className="absolute top-1.5 right-1.5 w-4 h-4 flex items-center justify-center rounded-full bg-white/30">
@@ -2397,7 +2425,7 @@ export default function Home() {
                           {galon && (
                             <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                               <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
-                              <span className={`text-sm font-extrabold leading-tight ${active ? (galonOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : galonOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{galon}</span>
+                              <span className={`text-sm font-extrabold leading-tight ${active ? (galonOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : galonOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{galon}</span>
                               <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
                               {galonOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                             </div>
@@ -2405,7 +2433,7 @@ export default function Home() {
                           {price && (
                             <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                               <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
-                              <span className={`text-sm font-extrabold leading-tight ${active ? (durabilityOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : durabilityOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-600"}`}>{price}</span>
+                              <span className={`text-sm font-extrabold leading-tight ${active ? (durabilityOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : durabilityOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{price}</span>
                               <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
                               {durabilityOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                             </div>
@@ -2441,9 +2469,8 @@ export default function Home() {
                 {calcButtonEnabled && <div className="mt-4 flex justify-center">
                   <button
                     onClick={() => setCalcOpen(true)}
-                    className="flex items-center gap-2 bg-teal-500 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-teal-400"
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 10px #2dd4bf, 0 0 25px #0d948880"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
+                    className="neon-hover flex items-center gap-2 bg-teal-500 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-teal-400"
+                    style={{ ["--neon-hover" as string]: "0 0 10px #2dd4bf, 0 0 25px #0d948880" } as React.CSSProperties}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -2564,7 +2591,7 @@ export default function Home() {
                                                 <span className="font-semibold">{opt.years} años</span>
                                               </div>
                                               <div className="flex items-center gap-2 flex-wrap justify-end">
-                                                {price && <span className={checked ? "text-white font-bold" : "text-teal-600 font-bold"}>{price}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/19L</span></span>}
+                                                {price && <span className={checked ? "text-white font-bold" : "text-teal-700 font-bold"}>{price}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/19L</span></span>}
                                                 {galonPrices[String(opt.years)] && <span className={checked ? "text-white/90 font-bold" : "text-teal-500 font-bold"}>{galonPrices[String(opt.years)]}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/4L</span></span>}
                                                 <span className={checked ? "text-white/80" : "text-gray-400"}>{opt.yield}</span>
                                               </div>
@@ -2589,9 +2616,8 @@ export default function Home() {
                                     <div className="flex items-center gap-3 flex-wrap">
                                       <div className="w-12 h-12 rounded-full border-4 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: editHex }} />
                                       {roomPreviewEnabled && (
-                                        <button onClick={() => setRoomPreviewOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
-                                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #2dd4bf, 0 0 20px #0d948880"; }}
-                                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}>
+                                        <button onClick={() => setRoomPreviewOpen(true)} className="neon-hover flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
+                                          style={{ ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d948880" } as React.CSSProperties}>
                                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
                                           {roomButtonLabel}
                                         </button>
@@ -2792,10 +2818,10 @@ export default function Home() {
                   </div>
                 ) : (
                 <div key={selectedFamily} className="pb-10 px-3">
-                  {Array.from({ length: Math.ceil(displayedColors.length / 3) }, (_, rowIndex) => {
-                    const rowColors = displayedColors.slice(rowIndex * 3, rowIndex * 3 + 3);
+                  {Array.from({ length: Math.ceil(visibleFamilyColors.length / 3) }, (_, rowIndex) => {
+                    const rowColors = visibleFamilyColors.slice(rowIndex * 3, rowIndex * 3 + 3);
                     const selectedRowIndex = selectedColor
-                      ? Math.floor(displayedColors.findIndex(c => c.code === selectedColor.code) / 3)
+                      ? Math.floor(visibleFamilyColors.findIndex(c => c.code === selectedColor.code) / 3)
                       : -1;
                     return (
                       <React.Fragment key={rowIndex}>
@@ -3003,7 +3029,7 @@ export default function Home() {
                                               <span className="font-semibold">{opt.years} años</span>
                                             </div>
                                             <div className="flex items-center gap-2 flex-wrap justify-end">
-                                              {price && <span className={checked ? "text-white font-bold" : "text-teal-600 font-bold"}>{price}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/19L</span></span>}
+                                              {price && <span className={checked ? "text-white font-bold" : "text-teal-700 font-bold"}>{price}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/19L</span></span>}
                                               {galonPrices[String(opt.years)] && <span className={checked ? "text-white/90 font-bold" : "text-teal-500 font-bold"}>{galonPrices[String(opt.years)]}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/4L</span></span>}
                                               <span className={checked ? "text-white/80" : "text-gray-400"}>{opt.yield}</span>
                                             </div>
@@ -3032,9 +3058,8 @@ export default function Home() {
                                     {roomPreviewEnabled && (
                                       <button
                                         onClick={() => setRoomPreviewOpen(true)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
-                                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 8px #2dd4bf, 0 0 20px #0d948880"; }}
-                                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ""; }}
+                                        className="neon-hover flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
+                                        style={{ ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d948880" } as React.CSSProperties}
                                       >
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -3110,6 +3135,12 @@ export default function Home() {
                       </React.Fragment>
                     );
                   })}
+                  {visibleFamilyColors.length < displayedColors.length && (
+                    <div ref={loadMoreRef} className="flex flex-col items-center gap-2 py-6">
+                      <div className="w-6 h-6 border-2 border-teal-300 border-t-teal-600 rounded-full animate-spin" />
+                      <span className="text-xs text-gray-400">Mostrando {visibleFamilyColors.length} de {displayedColors.length} colores…</span>
+                    </div>
+                  )}
                 </div>
                 )}
               </>

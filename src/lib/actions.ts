@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "./validation";
+import { requireAdmin, setAdminSession, clearAdminSession, isAdmin, verifyPassword } from "./auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,24 @@ const supabaseAdmin = createClient(
     },
   }
 );
+
+// ── Autenticación de administrador ──────────────────────────
+
+/** Valida el password (server-only) y, si es correcto, abre sesión de admin (cookie firmada httpOnly). */
+export async function login(password: string): Promise<boolean> {
+  if (!verifyPassword(password)) return false;
+  await setAdminSession();
+  return true;
+}
+
+export async function logout(): Promise<void> {
+  await clearAdminSession();
+}
+
+/** Permite a la interfaz saber si la cookie de sesión sigue siendo válida (p. ej. tras recargar). */
+export async function checkAdminSession(): Promise<boolean> {
+  return isAdmin();
+}
 
 // ── Color settings ──────────────────────────────────────────
 
@@ -58,6 +77,7 @@ export async function loadDurabilityPrices(): Promise<Record<string, string>> {
 }
 
 export async function saveDurabilityPrices(prices: Record<string, string>): Promise<void> {
+  await requireAdmin();
   const clean: Record<string, string> = {};
   for (const [k, v] of Object.entries(prices)) {
     if (!isValidPrice(v)) throw new Error(`Precio inválido para ${k} años`);
@@ -83,6 +103,7 @@ export async function loadGalonPrices(): Promise<Record<string, string>> {
 }
 
 export async function saveGalonPrices(prices: Record<string, string>): Promise<void> {
+  await requireAdmin();
   const clean: Record<string, string> = {};
   for (const [k, v] of Object.entries(prices)) {
     if (v && !isValidPrice(v)) throw new Error(`Precio inválido para ${k} años`);
@@ -108,6 +129,7 @@ export async function loadDurabilityOnSale(): Promise<number[]> {
 }
 
 export async function saveDurabilityOnSale(years: number[]): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "durability_on_sale", value: JSON.stringify(years) }, { onConflict: "key" });
@@ -128,12 +150,14 @@ export async function loadGalonOnSale(): Promise<number[]> {
 }
 
 export async function saveGalonOnSale(years: number[]): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "galon_on_sale", value: JSON.stringify(years) }, { onConflict: "key" });
 }
 
 export async function saveColorHex(code: string, hex: string): Promise<void> {
+  await requireAdmin();
   if (!isValidHex(hex)) throw new Error("Formato de color inválido");
   await supabaseAdmin
     .from("color_settings")
@@ -141,6 +165,7 @@ export async function saveColorHex(code: string, hex: string): Promise<void> {
 }
 
 export async function deleteColorHex(code: string): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("color_settings")
     .update({ hex: null })
@@ -148,6 +173,7 @@ export async function deleteColorHex(code: string): Promise<void> {
 }
 
 export async function saveColorDurability(code: string, years: number[]): Promise<number[] | null> {
+  await requireAdmin();
   const { data: updated, error: updateError } = await supabaseAdmin
     .from("color_settings")
     .update({ durability_years: years, updated_at: new Date().toISOString() })
@@ -202,18 +228,21 @@ export async function loadFamilySettings(): Promise<{ colors: string[]; names: s
 }
 
 export async function saveFamilyColors(colors: string[]): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "family_colors", value: JSON.stringify(colors) }, { onConflict: "key" });
 }
 
 export async function saveFamilyNames(names: string[]): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "family_names", value: JSON.stringify(names) }, { onConflict: "key" });
 }
 
 export async function saveAnnouncementText(text: string): Promise<void> {
+  await requireAdmin();
   if (text.trim()) {
     await supabaseAdmin
       .from("site_settings")
@@ -224,6 +253,7 @@ export async function saveAnnouncementText(text: string): Promise<void> {
 }
 
 export async function savePwaIconUrl(url: string | null): Promise<void> {
+  await requireAdmin();
   if (url) {
     await supabaseAdmin
       .from("site_settings")
@@ -234,18 +264,21 @@ export async function savePwaIconUrl(url: string | null): Promise<void> {
 }
 
 export async function saveCalcButtonEnabled(enabled: boolean): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "calc_button_enabled", value: String(enabled) }, { onConflict: "key" });
 }
 
 export async function saveCardHeight(height: number): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "card_height", value: String(height) }, { onConflict: "key" });
 }
 
 export async function saveRendimientoLabel(label: string): Promise<void> {
+  await requireAdmin();
   const clean = sanitizeText(label, 60);
   if (!clean) throw new Error("El texto no puede estar vacío");
   await supabaseAdmin
@@ -254,6 +287,7 @@ export async function saveRendimientoLabel(label: string): Promise<void> {
 }
 
 export async function saveRoomButtonLabel(label: string): Promise<void> {
+  await requireAdmin();
   const clean = sanitizeText(label, 40);
   if (!clean) throw new Error("El texto no puede estar vacío");
   await supabaseAdmin
@@ -262,12 +296,14 @@ export async function saveRoomButtonLabel(label: string): Promise<void> {
 }
 
 export async function saveRoomPreviewEnabled(enabled: boolean): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "room_preview_enabled", value: String(enabled) }, { onConflict: "key" });
 }
 
 export async function saveSiteLogo2Url(url: string | null): Promise<void> {
+  await requireAdmin();
   if (url) {
     await supabaseAdmin
       .from("site_settings")
@@ -278,6 +314,7 @@ export async function saveSiteLogo2Url(url: string | null): Promise<void> {
 }
 
 export async function saveSiteName(name: string): Promise<void> {
+  await requireAdmin();
   const clean = sanitizeText(name, LIMITS.SITE_NAME);
   if (!clean) throw new Error("El nombre del sitio no puede estar vacío");
   await supabaseAdmin
@@ -286,6 +323,7 @@ export async function saveSiteName(name: string): Promise<void> {
 }
 
 export async function saveSiteLogoUrl(url: string | null): Promise<void> {
+  await requireAdmin();
   if (url) {
     await supabaseAdmin
       .from("site_settings")
@@ -298,6 +336,7 @@ export async function saveSiteLogoUrl(url: string | null): Promise<void> {
 // ── Logo upload — signed URL (client uploads directly to Supabase) ──────────
 
 export async function createLogoUploadUrl(ext: string): Promise<{ signedUrl: string; path: string; publicUrl: string }> {
+  await requireAdmin();
   const path = `logo-${Date.now()}.${ext}`;
 
   const { data, error } = await supabaseAdmin.storage
@@ -326,6 +365,7 @@ export async function loadFamilyBanners(): Promise<Array<[string, string] | null
 }
 
 export async function saveFamilyBanners(banners: Array<[string, string] | null>): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "family_banners", value: JSON.stringify(banners) }, { onConflict: "key" });
@@ -344,6 +384,7 @@ export async function loadColorOrders(): Promise<Record<string, string[]>> {
 }
 
 export async function saveColorOrder(familyName: string, codes: string[]): Promise<void> {
+  await requireAdmin();
   const current = await loadColorOrders();
   current[familyName] = codes;
   await supabaseAdmin
@@ -392,6 +433,7 @@ export async function addCustomColor(
   code: string,
   pageNumber?: string | null
 ): Promise<CustomColor> {
+  await requireAdmin();
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(code, LIMITS.COLOR_CODE);
   if (!cleanName) throw new Error("El nombre del color no puede estar vacío");
@@ -407,6 +449,7 @@ export async function addCustomColor(
 }
 
 export async function updateCustomColor(id: string, name: string, hex: string, code: string, pageNumber?: string | null): Promise<void> {
+  await requireAdmin();
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(code, LIMITS.COLOR_CODE);
   if (!cleanName) throw new Error("El nombre del color no puede estar vacío");
@@ -430,6 +473,7 @@ export async function loadColorPageNumbers(): Promise<Record<string, string>> {
 }
 
 export async function saveColorPageNumber(originalCode: string, pageNumber: string | null): Promise<void> {
+  await requireAdmin();
   const { data } = await supabaseAdmin
     .from("site_settings")
     .select("value")
@@ -447,6 +491,7 @@ export async function saveColorPageNumber(originalCode: string, pageNumber: stri
 }
 
 export async function deleteCustomColor(id: string): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin.from("custom_colors").delete().eq("id", id);
 }
 
@@ -463,6 +508,7 @@ export async function loadColorNameOverrides(): Promise<Record<string, { name: s
 }
 
 export async function saveColorNameOverride(originalCode: string, name: string, newCode: string): Promise<void> {
+  await requireAdmin();
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(newCode, LIMITS.COLOR_CODE);
   if (!cleanName) throw new Error("El nombre del color no puede estar vacío");
@@ -489,6 +535,7 @@ export async function loadDeletedColors(): Promise<string[]> {
 }
 
 export async function saveDeletedColors(codes: string[]): Promise<void> {
+  await requireAdmin();
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "deleted_colors", value: JSON.stringify(codes) }, { onConflict: "key" });

@@ -43,3 +43,17 @@ body {
   -webkit-text-stroke: 0.6px #000;
   text-shadow: 0 0 1px #000;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .oferta-pulse,
+  .heart-beat {
+    animation: none;
+  }
+}
+
+/* Brillo neón solo en dispositivos con mouse real (evita que se quede "pegado" al tocar en móvil/tablet) */
+@media (hover: hover) and (pointer: fine) {
+  .neon-hover:hover {
+    box-shadow: var(--neon-hover);
+  }
+}

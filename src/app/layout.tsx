@@ -30,7 +30,13 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js');
+  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(reg){
+    // Buscar una versión nueva del SW al cargar y al volver a la pestaña.
+    reg.update();
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') reg.update();
+    });
+  });
   navigator.serviceWorker.addEventListener('message', function(e){
     if(e.data && e.data.type === 'SW_UPDATED') window.location.reload();
   });
