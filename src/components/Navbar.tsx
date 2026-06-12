@@ -15,7 +15,7 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2U
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-0 flex items-center justify-between h-24 sm:h-32">
+      <div className="w-full px-4 sm:px-8 flex items-center justify-between h-24 sm:h-32">
         {/* Logo(s) */}
         <Link href="/" className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0">
           {logoUrl ? (
@@ -61,8 +61,8 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2U
       </div>
 
       {/* Info bar: botones + horario */}
-      <div className="bg-gray-50 border-b border-gray-100 px-3 sm:px-4 py-1.5">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      <div className="bg-gray-50 border-b border-gray-100 px-4 sm:px-8 py-1.5">
+        <div className="w-full flex flex-wrap items-center gap-x-3 gap-y-1.5">
 
           {/* WhatsApp */}
           <a
