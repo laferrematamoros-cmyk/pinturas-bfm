@@ -1,19 +1,31 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { updateTag } from "next/cache";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "./validation";
 import { requireAdmin, setAdminSession, clearAdminSession, isAdmin, verifyPassword } from "./auth";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    global: {
-      fetch: (url: RequestInfo | URL, options?: RequestInit) =>
-        fetch(url, { ...options, cache: "no-store" }),
-    },
-  }
-);
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const CATALOG_TAG = "catalog";
+
+// Cliente para ESCRITURAS y lecturas internas de read-modify-write: siempre fresco.
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  global: {
+    fetch: (url: RequestInfo | URL, options?: RequestInit) =>
+      fetch(url, { ...options, cache: "no-store" }),
+  },
+});
+
+// Cliente para LECTURAS públicas del catálogo: las consultas GET se cachean en el
+// Data Cache de Next (TTL 1h) con la etiqueta "catalog", y se invalidan en cada
+// escritura via revalidateTag(). Reduce drásticamente el egress de Supabase.
+const supabaseRead = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  global: {
+    fetch: (url: RequestInfo | URL, options?: RequestInit) =>
+      fetch(url, { ...options, next: { revalidate: 3600, tags: [CATALOG_TAG] } }),
+  },
+});
 
 // ── Autenticación de administrador ──────────────────────────
 
@@ -42,7 +54,7 @@ export async function loadColorSettings(): Promise<
   let allRows: Record<string, unknown>[] = [];
   let page = 0;
   while (true) {
-    const { data } = await supabaseAdmin
+    const { data } = await supabaseRead
       .from("color_settings")
       .select("*")
       .range(page * PAGE, (page + 1) * PAGE - 1);
@@ -63,7 +75,7 @@ export async function loadColorSettings(): Promise<
 }
 
 export async function loadDurabilityPrices(): Promise<Record<string, string>> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseRead
     .from("site_settings")
     .select("value")
     .eq("key", "durability_prices")
@@ -78,6 +90,7 @@ export async function loadDurabilityPrices(): Promise<Record<string, string>> {
 
 export async function saveDurabilityPrices(prices: Record<string, string>): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const clean: Record<string, string> = {};
   for (const [k, v] of Object.entries(prices)) {
     if (!isValidPrice(v)) throw new Error(`Precio inválido para ${k} años`);
@@ -89,7 +102,7 @@ export async function saveDurabilityPrices(prices: Record<string, string>): Prom
 }
 
 export async function loadGalonPrices(): Promise<Record<string, string>> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseRead
     .from("site_settings")
     .select("value")
     .eq("key", "galon_prices")
@@ -104,6 +117,7 @@ export async function loadGalonPrices(): Promise<Record<string, string>> {
 
 export async function saveGalonPrices(prices: Record<string, string>): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const clean: Record<string, string> = {};
   for (const [k, v] of Object.entries(prices)) {
     if (v && !isValidPrice(v)) throw new Error(`Precio inválido para ${k} años`);
@@ -115,7 +129,7 @@ export async function saveGalonPrices(prices: Record<string, string>): Promise<v
 }
 
 export async function loadDurabilityOnSale(): Promise<number[]> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseRead
     .from("site_settings")
     .select("value")
     .eq("key", "durability_on_sale")
@@ -130,13 +144,14 @@ export async function loadDurabilityOnSale(): Promise<number[]> {
 
 export async function saveDurabilityOnSale(years: number[]): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "durability_on_sale", value: JSON.stringify(years) }, { onConflict: "key" });
 }
 
 export async function loadGalonOnSale(): Promise<number[]> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseRead
     .from("site_settings")
     .select("value")
     .eq("key", "galon_on_sale")
@@ -151,6 +166,7 @@ export async function loadGalonOnSale(): Promise<number[]> {
 
 export async function saveGalonOnSale(years: number[]): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "galon_on_sale", value: JSON.stringify(years) }, { onConflict: "key" });
@@ -158,6 +174,7 @@ export async function saveGalonOnSale(years: number[]): Promise<void> {
 
 export async function saveColorHex(code: string, hex: string): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   if (!isValidHex(hex)) throw new Error("Formato de color inválido");
   await supabaseAdmin
     .from("color_settings")
@@ -166,6 +183,7 @@ export async function saveColorHex(code: string, hex: string): Promise<void> {
 
 export async function deleteColorHex(code: string): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("color_settings")
     .update({ hex: null })
@@ -174,6 +192,7 @@ export async function deleteColorHex(code: string): Promise<void> {
 
 export async function saveColorDurability(code: string, years: number[]): Promise<number[] | null> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const { data: updated, error: updateError } = await supabaseAdmin
     .from("color_settings")
     .update({ durability_years: years, updated_at: new Date().toISOString() })
@@ -200,7 +219,7 @@ export async function saveColorDurability(code: string, years: number[]): Promis
 // ── Site settings ───────────────────────────────────────────
 
 export async function loadSiteSettings(): Promise<{ name: string; logoUrl: string | null; logo2Url: string | null; roomPreviewEnabled: boolean; rendimientoLabel: string; roomButtonLabel: string; cardHeight: number; calcButtonEnabled: boolean; pwaIconUrl: string | null; announcementText: string }> {
-  const { data } = await supabaseAdmin.from("site_settings").select("*");
+  const { data } = await supabaseRead.from("site_settings").select("*");
   const map: Record<string, string> = {};
   for (const row of data ?? []) map[row.key] = row.value;
   return {
@@ -218,7 +237,7 @@ export async function loadSiteSettings(): Promise<{ name: string; logoUrl: strin
 }
 
 export async function loadFamilySettings(): Promise<{ colors: string[]; names: string[] }> {
-  const { data } = await supabaseAdmin.from("site_settings").select("*");
+  const { data } = await supabaseRead.from("site_settings").select("*");
   const map: Record<string, string> = {};
   for (const row of data ?? []) map[row.key] = row.value;
   return {
@@ -229,6 +248,7 @@ export async function loadFamilySettings(): Promise<{ colors: string[]; names: s
 
 export async function saveFamilyColors(colors: string[]): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "family_colors", value: JSON.stringify(colors) }, { onConflict: "key" });
@@ -236,6 +256,7 @@ export async function saveFamilyColors(colors: string[]): Promise<void> {
 
 export async function saveFamilyNames(names: string[]): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "family_names", value: JSON.stringify(names) }, { onConflict: "key" });
@@ -243,6 +264,7 @@ export async function saveFamilyNames(names: string[]): Promise<void> {
 
 export async function saveAnnouncementText(text: string): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   if (text.trim()) {
     await supabaseAdmin
       .from("site_settings")
@@ -254,6 +276,7 @@ export async function saveAnnouncementText(text: string): Promise<void> {
 
 export async function savePwaIconUrl(url: string | null): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   if (url) {
     await supabaseAdmin
       .from("site_settings")
@@ -265,6 +288,7 @@ export async function savePwaIconUrl(url: string | null): Promise<void> {
 
 export async function saveCalcButtonEnabled(enabled: boolean): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "calc_button_enabled", value: String(enabled) }, { onConflict: "key" });
@@ -272,6 +296,7 @@ export async function saveCalcButtonEnabled(enabled: boolean): Promise<void> {
 
 export async function saveCardHeight(height: number): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "card_height", value: String(height) }, { onConflict: "key" });
@@ -279,6 +304,7 @@ export async function saveCardHeight(height: number): Promise<void> {
 
 export async function saveRendimientoLabel(label: string): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const clean = sanitizeText(label, 60);
   if (!clean) throw new Error("El texto no puede estar vacío");
   await supabaseAdmin
@@ -288,6 +314,7 @@ export async function saveRendimientoLabel(label: string): Promise<void> {
 
 export async function saveRoomButtonLabel(label: string): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const clean = sanitizeText(label, 40);
   if (!clean) throw new Error("El texto no puede estar vacío");
   await supabaseAdmin
@@ -297,6 +324,7 @@ export async function saveRoomButtonLabel(label: string): Promise<void> {
 
 export async function saveRoomPreviewEnabled(enabled: boolean): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "room_preview_enabled", value: String(enabled) }, { onConflict: "key" });
@@ -304,6 +332,7 @@ export async function saveRoomPreviewEnabled(enabled: boolean): Promise<void> {
 
 export async function saveSiteLogo2Url(url: string | null): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   if (url) {
     await supabaseAdmin
       .from("site_settings")
@@ -315,6 +344,7 @@ export async function saveSiteLogo2Url(url: string | null): Promise<void> {
 
 export async function saveSiteName(name: string): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const clean = sanitizeText(name, LIMITS.SITE_NAME);
   if (!clean) throw new Error("El nombre del sitio no puede estar vacío");
   await supabaseAdmin
@@ -324,6 +354,7 @@ export async function saveSiteName(name: string): Promise<void> {
 
 export async function saveSiteLogoUrl(url: string | null): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   if (url) {
     await supabaseAdmin
       .from("site_settings")
@@ -337,6 +368,7 @@ export async function saveSiteLogoUrl(url: string | null): Promise<void> {
 
 export async function createLogoUploadUrl(ext: string): Promise<{ signedUrl: string; path: string; publicUrl: string }> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const path = `logo-${Date.now()}.${ext}`;
 
   const { data, error } = await supabaseAdmin.storage
@@ -355,7 +387,7 @@ export async function createLogoUploadUrl(ext: string): Promise<{ signedUrl: str
 // ── Family banners (gradient per family) ───────────────────
 
 export async function loadFamilyBanners(): Promise<Array<[string, string] | null>> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseRead
     .from("site_settings")
     .select("value")
     .eq("key", "family_banners")
@@ -366,6 +398,7 @@ export async function loadFamilyBanners(): Promise<Array<[string, string] | null
 
 export async function saveFamilyBanners(banners: Array<[string, string] | null>): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "family_banners", value: JSON.stringify(banners) }, { onConflict: "key" });
@@ -374,7 +407,7 @@ export async function saveFamilyBanners(banners: Array<[string, string] | null>)
 // ── Color order (drag-and-drop reordering) ──────────────────
 
 export async function loadColorOrders(): Promise<Record<string, string[]>> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseRead
     .from("site_settings")
     .select("value")
     .eq("key", "color_orders")
@@ -385,7 +418,14 @@ export async function loadColorOrders(): Promise<Record<string, string[]>> {
 
 export async function saveColorOrder(familyName: string, codes: string[]): Promise<void> {
   await requireAdmin();
-  const current = await loadColorOrders();
+  updateTag(CATALOG_TAG);
+  // Lectura fresca (sin caché) para no perder cambios en el read-modify-write.
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "color_orders")
+    .single();
+  const current: Record<string, string[]> = data?.value ? JSON.parse(data.value) : {};
   current[familyName] = codes;
   await supabaseAdmin
     .from("site_settings")
@@ -408,7 +448,7 @@ export async function loadCustomColors(): Promise<Record<string, CustomColor[]>>
   let all: CustomColor[] = [];
   let page = 0;
   while (true) {
-    const { data } = await supabaseAdmin
+    const { data } = await supabaseRead
       .from("custom_colors")
       .select("*")
       .order("created_at", { ascending: true })
@@ -434,6 +474,7 @@ export async function addCustomColor(
   pageNumber?: string | null
 ): Promise<CustomColor> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(code, LIMITS.COLOR_CODE);
   if (!cleanName) throw new Error("El nombre del color no puede estar vacío");
@@ -450,6 +491,7 @@ export async function addCustomColor(
 
 export async function updateCustomColor(id: string, name: string, hex: string, code: string, pageNumber?: string | null): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(code, LIMITS.COLOR_CODE);
   if (!cleanName) throw new Error("El nombre del color no puede estar vacío");
@@ -463,7 +505,7 @@ export async function updateCustomColor(id: string, name: string, hex: string, c
 }
 
 export async function loadColorPageNumbers(): Promise<Record<string, string>> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseRead
     .from("site_settings")
     .select("value")
     .eq("key", "color_page_numbers")
@@ -474,6 +516,7 @@ export async function loadColorPageNumbers(): Promise<Record<string, string>> {
 
 export async function saveColorPageNumber(originalCode: string, pageNumber: string | null): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const { data } = await supabaseAdmin
     .from("site_settings")
     .select("value")
@@ -492,13 +535,14 @@ export async function saveColorPageNumber(originalCode: string, pageNumber: stri
 
 export async function deleteCustomColor(id: string): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin.from("custom_colors").delete().eq("id", id);
 }
 
 // ── Built-in color overrides (name/code) ────────────────────
 
 export async function loadColorNameOverrides(): Promise<Record<string, { name: string; code: string }>> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseRead
     .from("site_settings")
     .select("value")
     .eq("key", "color_name_overrides")
@@ -509,6 +553,7 @@ export async function loadColorNameOverrides(): Promise<Record<string, { name: s
 
 export async function saveColorNameOverride(originalCode: string, name: string, newCode: string): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   const cleanName = sanitizeText(name, LIMITS.COLOR_NAME);
   const cleanCode = sanitizeText(newCode, LIMITS.COLOR_CODE);
   if (!cleanName) throw new Error("El nombre del color no puede estar vacío");
@@ -525,7 +570,7 @@ export async function saveColorNameOverride(originalCode: string, name: string, 
 }
 
 export async function loadDeletedColors(): Promise<string[]> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseRead
     .from("site_settings")
     .select("value")
     .eq("key", "deleted_colors")
@@ -536,6 +581,7 @@ export async function loadDeletedColors(): Promise<string[]> {
 
 export async function saveDeletedColors(codes: string[]): Promise<void> {
   await requireAdmin();
+  updateTag(CATALOG_TAG);
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "deleted_colors", value: JSON.stringify(codes) }, { onConflict: "key" });
