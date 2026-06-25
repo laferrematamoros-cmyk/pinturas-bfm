@@ -17,14 +17,14 @@ interface NavbarProps {
 }
 
 export default function Navbar({ siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onLogoLongPress }: NavbarProps) {
-  // Acceso oculto de administrador: toque largo (~3s) sobre el logo abre el login.
+  // Acceso oculto de administrador: toque largo (~5s) sobre el logo abre el login.
   // (En cualquier modo; el ícono visible de admin está oculto.)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
   const startPress = () => {
     if (!onLogoLongPress) return;
     longPressed.current = false;
-    pressTimer.current = setTimeout(() => { longPressed.current = true; onLogoLongPress(); }, 3000);
+    pressTimer.current = setTimeout(() => { longPressed.current = true; onLogoLongPress(); }, 5000);
   };
   const cancelPress = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; } };
 
