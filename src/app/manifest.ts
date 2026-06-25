@@ -14,7 +14,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#0d9488",
-    orientation: "portrait",
+    orientation: "any",
     icons: [
       {
         src: "/apple-icon",
