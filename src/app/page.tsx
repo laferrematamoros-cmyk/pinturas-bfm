@@ -1990,8 +1990,20 @@ export default function Home() {
   // Load data from Supabase on mount; restore admin session
   React.useEffect(() => {
     // Modo kiosko (tablet en tienda): ?kiosko=1 oculta info bar + admin y bloquea login.
+    // Se PERSISTE en el dispositivo (localStorage) para que la app instalada (PWA),
+    // que siempre abre en "/", recuerde el modo kiosko. Para salir: ?kiosko=0.
     const params = new URLSearchParams(window.location.search);
-    const isKiosk = params.get("kiosko") === "1";
+    const kioskParam = params.get("kiosko");
+    let isKiosk: boolean;
+    if (kioskParam === "1") {
+      isKiosk = true;
+      try { localStorage.setItem("pinturas_kiosko", "1"); } catch {}
+    } else if (kioskParam === "0") {
+      isKiosk = false;
+      try { localStorage.removeItem("pinturas_kiosko"); } catch {}
+    } else {
+      try { isKiosk = localStorage.getItem("pinturas_kiosko") === "1"; } catch { isKiosk = false; }
+    }
     setKioskMode(isKiosk);
     // Deep-link a un color: ?color=CÓDIGO (lo abre cuando carguen los datos).
     const colorParam = params.get("color");
@@ -2753,7 +2765,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} />
+      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onKioskExit={() => { if (!window.confirm("¿Salir del modo kiosko?")) return; try { localStorage.removeItem("pinturas_kiosko"); } catch {} window.location.href = `${window.location.origin}/?kiosko=0`; }} />
 
       {/* Room preview modal */}
       {roomPreviewOpen && selectedColor && (

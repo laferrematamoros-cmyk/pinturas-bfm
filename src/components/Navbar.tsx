@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 
 interface NavbarProps {
   isAdmin: boolean;
@@ -12,15 +13,30 @@ interface NavbarProps {
   kioskMode?: boolean;
   cartCount?: number;
   onCartClick?: () => void;
+  onKioskExit?: () => void;
 }
 
-export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick }: NavbarProps) {
+export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onKioskExit }: NavbarProps) {
+  // Toque largo (~1.5s) sobre el logo en modo kiosko → salida discreta (para el dueño).
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+  const startPress = () => {
+    if (!kioskMode || !onKioskExit) return;
+    longPressed.current = false;
+    pressTimer.current = setTimeout(() => { longPressed.current = true; onKioskExit(); }, 1500);
+  };
+  const cancelPress = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; } };
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="w-full px-4 sm:px-8 flex items-center justify-between h-24 sm:h-32">
         {/* Logo(s) */}
-        <Link href="/" className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0">
+        <Link href="/" className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0"
+          onClick={(e) => { if (longPressed.current) { e.preventDefault(); longPressed.current = false; } }}
+          onPointerDown={startPress}
+          onPointerUp={cancelPress}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}>
           {logoUrl ? (
             <img
               src={logoUrl}
