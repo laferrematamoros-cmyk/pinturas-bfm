@@ -13,17 +13,18 @@ interface NavbarProps {
   kioskMode?: boolean;
   cartCount?: number;
   onCartClick?: () => void;
-  onKioskExit?: () => void;
+  onLogoLongPress?: () => void;
 }
 
-export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onKioskExit }: NavbarProps) {
-  // Toque largo (~1.5s) sobre el logo en modo kiosko → salida discreta (para el dueño).
+export default function Navbar({ siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onLogoLongPress }: NavbarProps) {
+  // Acceso oculto de administrador: toque largo (~3s) sobre el logo abre el login.
+  // (En cualquier modo; el ícono visible de admin está oculto.)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
   const startPress = () => {
-    if (!kioskMode || !onKioskExit) return;
+    if (!onLogoLongPress) return;
     longPressed.current = false;
-    pressTimer.current = setTimeout(() => { longPressed.current = true; onKioskExit(); }, 1500);
+    pressTimer.current = setTimeout(() => { longPressed.current = true; onLogoLongPress(); }, 3000);
   };
   const cancelPress = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; } };
 
@@ -62,23 +63,7 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2U
 
         {/* Icons */}
         <div className="flex items-center gap-2 text-gray-600 flex-shrink-0">
-          {/* Admin (solo modo normal) */}
-          {!kioskMode && (
-            <button
-              onClick={onUserClick}
-              title={isAdmin ? "Administrador — cerrar sesión" : "Ingresar como administrador"}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-colors text-sm font-medium ${
-                isAdmin
-                  ? "bg-teal-500 text-white hover:bg-teal-600"
-                  : "hover:text-gray-900 hover:bg-gray-100"
-              }`}
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z" />
-              </svg>
-              {isAdmin && <span className="text-xs hidden sm:inline">Admin</span>}
-            </button>
-          )}
+          {/* El acceso de administrador está OCULTO: se entra con toque largo (~3s) en el logo. */}
 
           {/* Carrito (solo modo kiosko — tablet en tienda) */}
           {kioskMode && (

@@ -2119,6 +2119,18 @@ export default function Home() {
     }
   }
 
+  // Acceso oculto de administrador por toque largo (~3s) en el logo. Funciona en
+  // cualquier modo (incluido kiosko): si ya es admin abre el menú; si no, el login.
+  function handleLogoAccess() {
+    if (isAdmin) {
+      setShowAdminMenu((v) => !v);
+    } else {
+      setLoginPassword("");
+      setLoginError(false);
+      setShowLoginModal(true);
+    }
+  }
+
   async function handleLogin() {
     // La validación ocurre en el servidor; si es correcta, abre una cookie de sesión firmada.
     const ok = await login(loginPassword);
@@ -2127,6 +2139,11 @@ export default function Home() {
       setShowLoginModal(false);
       setLoginError(false);
       setLoginPassword("");
+      // Si se entró desde el kiosko, salir del kiosko (solo la contraseña permite salir).
+      if (kioskMode) {
+        setKioskMode(false);
+        try { localStorage.removeItem("pinturas_kiosko"); } catch {}
+      }
     } else {
       setLoginError(true);
     }
@@ -2765,7 +2782,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onKioskExit={() => { if (!window.confirm("¿Salir del modo kiosko?")) return; try { localStorage.removeItem("pinturas_kiosko"); } catch {} window.location.href = `${window.location.origin}/?kiosko=0`; }} />
+      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onLogoLongPress={handleLogoAccess} />
 
       {/* Room preview modal */}
       {roomPreviewOpen && selectedColor && (
