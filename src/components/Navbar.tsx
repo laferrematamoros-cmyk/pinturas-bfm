@@ -9,9 +9,12 @@ interface NavbarProps {
   logoUrl: string | null;
   logo2Url?: string | null;
   announcementText?: string;
+  kioskMode?: boolean;
+  cartCount?: number;
+  onCartClick?: () => void;
 }
 
-export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2Url, announcementText }: NavbarProps) {
+export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick }: NavbarProps) {
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -43,24 +46,43 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2U
 
         {/* Icons */}
         <div className="flex items-center gap-2 text-gray-600 flex-shrink-0">
-          <button
-            onClick={onUserClick}
-            title={isAdmin ? "Administrador — cerrar sesión" : "Ingresar como administrador"}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-colors text-sm font-medium ${
-              isAdmin
-                ? "bg-teal-500 text-white hover:bg-teal-600"
-                : "hover:text-gray-900 hover:bg-gray-100"
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z" />
-            </svg>
-            {isAdmin && <span className="text-xs hidden sm:inline">Admin</span>}
-          </button>
+          {/* Admin (solo modo normal) */}
+          {!kioskMode && (
+            <button
+              onClick={onUserClick}
+              title={isAdmin ? "Administrador — cerrar sesión" : "Ingresar como administrador"}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-colors text-sm font-medium ${
+                isAdmin
+                  ? "bg-teal-500 text-white hover:bg-teal-600"
+                  : "hover:text-gray-900 hover:bg-gray-100"
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z" />
+              </svg>
+              {isAdmin && <span className="text-xs hidden sm:inline">Admin</span>}
+            </button>
+          )}
+
+          {/* Carrito (solo modo kiosko — tablet en tienda) */}
+          {kioskMode && (
+            <button
+              onClick={onCartClick}
+              title="Ver carrito"
+              className="relative flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-bold px-4 sm:px-5 py-2.5 sm:py-3 rounded-full transition-colors shadow active:scale-95"
+            >
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+              <span className="text-sm sm:text-base">Ver carrito</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-teal-600 text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow">{cartCount}</span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Info bar: botones + horario */}
+      {/* Info bar: botones + horario — oculta en modo kiosko (tablet en tienda) */}
+      {!kioskMode && (
       <div className="bg-gray-50 border-b border-gray-100 px-4 sm:px-8 py-1.5">
         <div className="w-full flex flex-wrap items-center gap-x-3 gap-y-1.5">
 
@@ -112,6 +134,7 @@ export default function Navbar({ isAdmin, onUserClick, siteName, logoUrl, logo2U
 
         </div>
       </div>
+      )}
     </nav>
   );
 }

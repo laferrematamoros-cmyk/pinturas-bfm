@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { loadSiteSettings } from "@/lib/actions";
@@ -8,12 +8,17 @@ const geist = Geist({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const { name } = await loadSiteSettings();
   return {
     title: name,
     description: "Catálogo de pinturas, paleta de colores y calculadora",
-    viewport: "width=device-width, initial-scale=1, maximum-scale=1",
   };
 }
 

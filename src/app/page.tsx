@@ -48,8 +48,29 @@ import {
   login,
   logout,
   checkAdminSession,
+  createOrder,
+  loadOrders,
+  updateOrderStatus,
+  loadImpermeabilizante,
+  saveImpermeabilizante,
   type CustomColor,
+  type OrderRow,
+  type ImperConfig,
 } from "@/lib/actions";
+
+// Número de WhatsApp de la ferretería (destino de los pedidos).
+const FERRETERIA_WA = "528682340531";
+
+// Item del carrito (modo kiosko).
+interface CartItem {
+  uid: string;
+  name: string;
+  code: string;
+  hex: string;
+  years: number;   // 2 | 3 | 4 | 7
+  cubetas: number;
+  galones: number;
+}
 
 interface Color {
   name: string;
@@ -579,7 +600,7 @@ function RoomPreviewModal({ color, hex, onClose }: {
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 bg-black/75" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 bg-black/75" style={{ zIndex: 80 }} onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight:"95vh" }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 bg-gray-900 text-white flex-shrink-0">
@@ -885,6 +906,951 @@ function PaintCalculator({
   );
 }
 
+// ── Wall-by-wall calculator (solo modo kiosko) ─────────────────
+// El cliente agrega paredes (ancho × alto), se suma el área y se
+// muestra el resultado en las 4 calidades a la vez para comparar.
+
+interface Wall { w: string; h: string }
+
+function WallPaintCalculator({
+  durabilityPrices,
+  durabilityOnSale,
+  galonPrices,
+  galonOnSale,
+  onClose,
+}: {
+  durabilityPrices: Record<string, string>;
+  durabilityOnSale: number[];
+  galonPrices: Record<string, string>;
+  galonOnSale: number[];
+  onClose: () => void;
+}) {
+  const [walls, setWalls] = useState<Wall[]>([{ w: "", h: "" }]);
+  const [coats, setCoats] = useState(2);
+  const [inputMode, setInputMode] = useState<"medidas" | "area">("medidas");
+  const [directArea, setDirectArea] = useState("");
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const FACTOR = 0.055; // 1 L ≈ 0.055 cubetas de 19 L
+
+  // Área de cada pared (0 si está incompleta o inválida)
+  const wallAreas = walls.map((wl) => {
+    const w = parseFloat(wl.w.replace(",", "."));
+    const h = parseFloat(wl.h.replace(",", "."));
+    return !isNaN(w) && !isNaN(h) && w > 0 && h > 0 ? w * h : 0;
+  });
+  const directAreaNum = parseFloat(directArea.replace(",", "."));
+  const baseArea = inputMode === "area"
+    ? (!isNaN(directAreaNum) && directAreaNum > 0 ? directAreaNum : 0)
+    : wallAreas.reduce((a, b) => a + b, 0);
+  const hasArea = baseArea > 0;
+  const totalArea = baseArea * coats;
+
+  const availableOptions = DURABILITY_OPTIONS.filter((o) => durabilityPrices[String(o.years)]);
+
+  function computeForYears(years: number) {
+    const yieldPerLiter = YIELD_MAP[years];
+    const liters = Math.ceil(totalArea / yieldPerLiter);
+    const units = liters * FACTOR;
+    const hasGalon = !!galonPrices[String(years)];
+    let cubetas: number;
+    let galones: number;
+    if (hasGalon) {
+      // Combinado: cubetas completas + galones para el resto
+      cubetas = Math.floor(units);
+      const remaining = units - cubetas;
+      galones = remaining > 0 ? Math.ceil(remaining / (4 * FACTOR)) : 0;
+      if (cubetas === 0 && galones === 0) galones = 1; // mínimo 1 envase
+    } else {
+      // Solo cubetas (redondeo hacia arriba)
+      cubetas = Math.max(1, Math.ceil(units));
+      galones = 0;
+    }
+    const cubPrice = parsePrice(durabilityPrices[String(years)] ?? "");
+    const galPrice = parsePrice(galonPrices[String(years)] ?? "");
+    const total =
+      (cubPrice != null ? cubetas * cubPrice : 0) +
+      (galPrice != null ? galones * galPrice : 0);
+    const cubOnSale = durabilityOnSale.includes(years);
+    const galOnSale = galonOnSale.includes(years);
+    return { liters, cubetas, galones, hasGalon, total, cubOnSale, galOnSale };
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90dvh]" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z M4 9h16 M4 14h16 M9 4v16" />
+            </svg>
+            <h2 className="font-bold text-base">Calcular por paredes</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+        </div>
+
+        <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto">
+          {/* Selector de modo: por medidas o área directa */}
+          <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
+            <button onClick={() => setInputMode("medidas")}
+              className={`py-2 rounded-lg text-sm font-semibold transition-all ${inputMode === "medidas" ? "bg-white text-gray-900 shadow" : "text-gray-500"}`}>Por medidas</button>
+            <button onClick={() => setInputMode("area")}
+              className={`py-2 rounded-lg text-sm font-semibold transition-all ${inputMode === "area" ? "bg-white text-gray-900 shadow" : "text-gray-500"}`}>Sé el área (m²)</button>
+          </div>
+
+          {/* Área directa */}
+          {inputMode === "area" && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Área total a pintar</label>
+              <div className="relative">
+                <input type="number" inputMode="decimal" min="0" placeholder="Ej: 45" value={directArea}
+                  onChange={(e) => setDirectArea(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-gray-900 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 pr-14" />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">m²</span>
+              </div>
+            </div>
+          )}
+
+          {/* Walls list */}
+          {inputMode === "medidas" && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Medidas de tus paredes
+            </label>
+            <div className="flex flex-col gap-2">
+              {walls.map((wl, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-400 w-14 flex-shrink-0">Pared {i + 1}</span>
+                  <input
+                    type="number" inputMode="decimal" min="0" placeholder="Ancho"
+                    value={wl.w}
+                    onChange={(e) => setWalls((prev) => prev.map((p, idx) => idx === i ? { ...p, w: e.target.value } : p))}
+                    className="w-full min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                  />
+                  <span className="text-gray-400 font-bold flex-shrink-0">×</span>
+                  <input
+                    type="number" inputMode="decimal" min="0" placeholder="Alto"
+                    value={wl.h}
+                    onChange={(e) => setWalls((prev) => prev.map((p, idx) => idx === i ? { ...p, h: e.target.value } : p))}
+                    className="w-full min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                  />
+                  <span className="text-[10px] text-gray-400 w-9 flex-shrink-0">{wallAreas[i] > 0 ? `${wallAreas[i].toFixed(1)}m²` : "m"}</span>
+                  {walls.length > 1 && (
+                    <button
+                      onClick={() => setWalls((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="w-7 h-7 flex-shrink-0 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors"
+                      title="Quitar pared"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setWalls((prev) => [...prev, { w: "", h: "" }])}
+              className="mt-2 flex items-center gap-1.5 text-teal-600 hover:text-teal-700 text-sm font-semibold"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Agregar otra pared
+            </button>
+          </div>
+          )}
+
+          {/* Total area (solo en modo medidas; en modo área ya lo escribió) */}
+          {inputMode === "medidas" && hasArea && (
+            <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+              <span className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Área total</span>
+              <span className="text-xl font-black text-gray-800">{baseArea.toFixed(1)} <span className="text-sm font-semibold text-gray-500">m²</span></span>
+            </div>
+          )}
+
+          {/* Coats */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Número de manos (pasadas)</label>
+            <div className="flex gap-2">
+              {[1, 2, 3].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setCoats(n)}
+                  className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                    coats === n ? "bg-teal-500 border-teal-500 text-white shadow-md" : "bg-white border-gray-200 text-gray-600 hover:border-teal-300"
+                  }`}
+                >
+                  {n} {n === 1 ? "mano" : "manos"}
+                  {n === 2 && <span className="block text-[10px] opacity-70">recomendado</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Results: all qualities */}
+          {hasArea && availableOptions.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide text-center">
+                Lo que necesitas según la calidad
+              </p>
+              {availableOptions.map((opt) => {
+                const r = computeForYears(opt.years);
+                return (
+                  <div key={opt.years} className="bg-teal-50 border border-teal-200 rounded-2xl px-4 py-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-extrabold text-teal-800">{opt.years} años</span>
+                      <span className="text-[11px] text-teal-500">{r.liters} L · {opt.yield}</span>
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {r.cubetas > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <img src="/cubeta.png" alt="cubeta" className="w-5 h-5 object-contain" />
+                          <span className="text-base font-black text-gray-800">{r.cubetas}</span>
+                          <span className="text-[10px] text-gray-500">cubeta{r.cubetas !== 1 ? "s" : ""} 19L</span>
+                        </span>
+                      )}
+                      {r.cubetas > 0 && r.galones > 0 && <span className="text-teal-500 font-bold">+</span>}
+                      {r.galones > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <img src="/galon.png" alt="galón" className="w-5 h-5 object-contain" />
+                          <span className="text-base font-black text-gray-800">{r.galones}</span>
+                          <span className="text-[10px] text-gray-500">galón{r.galones !== 1 ? "es" : ""} 4L</span>
+                        </span>
+                      )}
+                      {r.total > 0 && (
+                        <span className="ml-auto text-right">
+                          <span className={`text-base font-black ${r.cubOnSale || r.galOnSale ? "text-orange-500" : "text-teal-700"}`}>
+                            ${r.total.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="block text-[9px] text-gray-400 leading-none">aprox.</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-[10px] text-gray-400 text-center mt-1">
+                Cálculo aproximado. Los precios pueden variar; confirma en mostrador.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-5 text-center text-gray-400 text-sm">
+              Ingresa el ancho y alto de al menos una pared para ver cuánta pintura necesitas
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Calculadora de impermeabilizante (solo modo kiosko) ────────
+// Suma secciones de azotea (largo × ancho) y calcula cuántas unidades
+// se necesitan. 1 unidad cubre `coverageM2` m² a `coats` pasadas.
+
+function ImpermeabilizanteCalculator({ config, onClose }: { config: ImperConfig; onClose: () => void }) {
+  const [secciones, setSecciones] = useState<{ l: string; a: string }[]>([{ l: "", a: "" }]);
+  const [inputMode, setInputMode] = useState<"medidas" | "area">("medidas");
+  const [directArea, setDirectArea] = useState("");
+  const coats = config.coats || 2; // pasadas fijas (las que configura el admin)
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const areas = secciones.map((s) => {
+    const l = parseFloat(s.l.replace(",", "."));
+    const a = parseFloat(s.a.replace(",", "."));
+    return !isNaN(l) && !isNaN(a) && l > 0 && a > 0 ? l * a : 0;
+  });
+  const directAreaNum = parseFloat(directArea.replace(",", "."));
+  const totalArea = inputMode === "area"
+    ? (!isNaN(directAreaNum) && directAreaNum > 0 ? directAreaNum : 0)
+    : areas.reduce((x, y) => x + y, 0);
+  const hasArea = totalArea > 0;
+
+  // Material total por unidad = m² × pasadas base (ej. 19 × 2 = 38 "m²-pasada").
+  const materialPorUnidad = config.coverageM2 * config.coats;
+  const coberturaAPasadas = materialPorUnidad / coats; // m² que cubre 1 unidad a las pasadas elegidas
+  const unidades = hasArea ? Math.ceil(totalArea / coberturaAPasadas) : 0;
+  const precioU = parsePrice(config.price ?? "") ?? 0;
+  const totalPrecio = unidades * precioU;
+  // Litros que sobran: como solo se vende en unidades enteras (cubetas), casi siempre sobra material.
+  const litrosPorUnidad = config.litersPerUnit || 19;
+  const litrosNecesarios = hasArea ? (totalArea * litrosPorUnidad) / coberturaAPasadas : 0;
+  const litrosSobrantes = Math.max(0, Math.round((unidades * litrosPorUnidad - litrosNecesarios) * 10) / 10);
+
+  return (
+    <div className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" style={{ zIndex: 95 }} onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[92dvh]" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7M3 21h18" /></svg>
+            <h2 className="font-bold text-base">{config.name || "Impermeabilizante"}</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+        </div>
+
+        <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto">
+          <p className="text-[11px] text-gray-500 -mb-1">
+            Cada {config.unitLabel || "unidad"} cubre <span className="font-semibold text-gray-700">{config.coverageM2} m²</span> a {config.coats} pasadas.
+          </p>
+
+          {/* Selector de modo: por medidas o área directa */}
+          <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
+            <button onClick={() => setInputMode("medidas")}
+              className={`py-2 rounded-lg text-sm font-semibold transition-all ${inputMode === "medidas" ? "bg-white text-gray-900 shadow" : "text-gray-500"}`}>Por medidas</button>
+            <button onClick={() => setInputMode("area")}
+              className={`py-2 rounded-lg text-sm font-semibold transition-all ${inputMode === "area" ? "bg-white text-gray-900 shadow" : "text-gray-500"}`}>Sé el área (m²)</button>
+          </div>
+
+          {/* Área directa */}
+          {inputMode === "area" && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Área total a cubrir</label>
+              <div className="relative">
+                <input type="number" inputMode="decimal" min="0" placeholder="Ej: 60" value={directArea}
+                  onChange={(e) => setDirectArea(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-gray-900 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 pr-14" />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">m²</span>
+              </div>
+            </div>
+          )}
+
+          {/* Secciones de azotea */}
+          {inputMode === "medidas" && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Medidas de la azotea</label>
+            <div className="flex flex-col gap-2">
+              {secciones.map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-400 w-16 flex-shrink-0">Sección {i + 1}</span>
+                  <input type="number" inputMode="decimal" min="0" placeholder="Largo" value={s.l}
+                    onChange={(e) => setSecciones((p) => p.map((x, idx) => idx === i ? { ...x, l: e.target.value } : x))}
+                    className="w-full min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" />
+                  <span className="text-gray-400 font-bold flex-shrink-0">×</span>
+                  <input type="number" inputMode="decimal" min="0" placeholder="Ancho" value={s.a}
+                    onChange={(e) => setSecciones((p) => p.map((x, idx) => idx === i ? { ...x, a: e.target.value } : x))}
+                    className="w-full min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" />
+                  <span className="text-[10px] text-gray-400 w-9 flex-shrink-0">{areas[i] > 0 ? `${areas[i].toFixed(1)}m²` : "m"}</span>
+                  {secciones.length > 1 && (
+                    <button onClick={() => setSecciones((p) => p.filter((_, idx) => idx !== i))}
+                      className="w-7 h-7 flex-shrink-0 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors" title="Quitar sección">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setSecciones((p) => [...p, { l: "", a: "" }])}
+              className="mt-2 flex items-center gap-1.5 text-teal-600 hover:text-teal-700 text-sm font-semibold">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+              Agregar otra sección
+            </button>
+          </div>
+          )}
+
+          {inputMode === "medidas" && hasArea && (
+            <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+              <span className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Área total</span>
+              <span className="text-xl font-black text-gray-800">{totalArea.toFixed(1)} <span className="text-sm font-semibold text-gray-500">m²</span></span>
+            </div>
+          )}
+
+          {/* Resultado */}
+          {hasArea ? (
+            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex flex-col gap-2">
+              <p className="text-xs text-teal-700 font-semibold uppercase tracking-wide">Necesitas</p>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-3xl font-black text-teal-700">{unidades}</span>
+                <span className="text-lg font-semibold text-teal-600">× {config.unitLabel || "unidad"}</span>
+              </div>
+              <p className="text-[11px] text-teal-600">Cubre {(coberturaAPasadas).toFixed(1)} m² por {config.unitLabel || "unidad"} a {coats} {coats === 1 ? "pasada" : "pasadas"}.</p>
+              {litrosSobrantes > 0 && (
+                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mt-0.5">
+                  <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  <span className="text-[11px] text-amber-700">Te sobrarán aprox. <span className="font-bold">{litrosSobrantes} L</span> (solo se vende en {config.unitLabel || "unidad"} completa).</span>
+                </div>
+              )}
+              {precioU > 0 && (
+                <div className="flex items-center justify-between border-t border-teal-200 pt-2 mt-1">
+                  <span className="text-sm text-teal-700 font-semibold">Precio aprox.</span>
+                  <span className="text-xl font-black text-teal-700">{money(totalPrecio)}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-5 text-center text-gray-400 text-sm">
+              Ingresa el largo y ancho de la azotea para calcular cuánto impermeabilizante necesitas
+            </div>
+          )}
+          <p className="text-[10px] text-gray-400 text-center">Cálculo aproximado. Confirma en mostrador.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Carrito / Pedidos (modo kiosko) ────────────────────────────
+
+function priceNum(s: string | undefined): number {
+  return parsePrice(s ?? "") ?? 0;
+}
+
+function lineSubtotal(it: { years: number; cubetas: number; galones: number }, dp: Record<string, string>, gp: Record<string, string>): number {
+  return it.cubetas * priceNum(dp[String(it.years)]) + it.galones * priceNum(gp[String(it.years)]);
+}
+
+function money(n: number): string {
+  return "$" + n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+const PAYMENT_LABELS: Record<string, string> = {
+  efectivo: "Efectivo",
+  debito: "Tarjeta débito",
+  credito: "Tarjeta crédito",
+  transferencia: "Transferencia",
+};
+
+function Stepper({ label, value, unit, price, onChange, disabled }: { label: string; value: number; unit: string; price: number; onChange: (v: number) => void; disabled?: boolean }) {
+  return (
+    <div className={`flex items-center justify-between rounded-xl border px-3 py-2.5 ${disabled ? "bg-gray-50 border-gray-100 opacity-60" : "bg-white border-gray-200"}`}>
+      <div className="flex items-center gap-2 min-w-0">
+        <img src={label === "Cubetas" ? "/cubeta.png" : "/galon.png"} alt="" className="w-6 h-6 object-contain flex-shrink-0" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-800 leading-tight">{label}</p>
+          <p className="text-[10px] text-gray-400 leading-tight">{unit}{price > 0 ? ` · ${money(price)} c/u` : ""}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={() => onChange(Math.max(0, value - 1))}
+          disabled={disabled || value === 0}
+          className="w-8 h-8 rounded-lg border border-gray-200 text-gray-600 font-bold text-lg flex items-center justify-center disabled:opacity-30 hover:bg-gray-50 active:scale-95"
+        >−</button>
+        <span className="w-7 text-center text-base font-black text-gray-900">{value}</span>
+        <button
+          onClick={() => onChange(value + 1)}
+          disabled={disabled}
+          className="w-8 h-8 rounded-lg bg-teal-500 text-white font-bold text-lg flex items-center justify-center disabled:opacity-30 hover:bg-teal-600 active:scale-95"
+        >+</button>
+      </div>
+    </div>
+  );
+}
+
+function AddToCartModal({ color, colorYears, durabilityPrices, galonPrices, onAdd, onClose }: {
+  color: { name: string; code: string; hex: string };
+  colorYears: number[];
+  durabilityPrices: Record<string, string>;
+  galonPrices: Record<string, string>;
+  onAdd: (item: CartItem) => void;
+  onClose: () => void;
+}) {
+  // Solo las calidades en las que ESTE color está disponible (con precio configurado).
+  // Si el color no tiene calidades configuradas, se permiten todas las que tengan precio.
+  const colorPriced = DURABILITY_OPTIONS.filter((o) => colorYears.includes(o.years) && (durabilityPrices[String(o.years)] || galonPrices[String(o.years)]));
+  const allPriced = DURABILITY_OPTIONS.filter((o) => durabilityPrices[String(o.years)] || galonPrices[String(o.years)]);
+  const pricedYears = colorPriced.length > 0 ? colorPriced : allPriced;
+  const [years, setYears] = useState<number | null>(() => pricedYears[0]?.years ?? null);
+  const [cubetas, setCubetas] = useState(0);
+  const [galones, setGalones] = useState(0);
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const cubP = years != null ? priceNum(durabilityPrices[String(years)]) : 0;
+  const galP = years != null ? priceNum(galonPrices[String(years)]) : 0;
+  const hasCub = years != null && !!durabilityPrices[String(years)];
+  const hasGal = years != null && !!galonPrices[String(years)];
+  const subtotal = cubetas * cubP + galones * galP;
+  const canAdd = years != null && cubetas + galones > 0;
+
+  return (
+    <div className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" style={{ zIndex: 95 }} onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[92dvh]" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full border-2 border-white/30 flex-shrink-0" style={{ backgroundColor: color.hex }} />
+            <div className="min-w-0">
+              <p className="font-bold text-sm leading-tight truncate">{color.name}</p>
+              <p className="text-[11px] text-gray-400 font-mono leading-tight">{color.code}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+        </div>
+
+        <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto">
+          {/* Calidad */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">¿Qué calidad quieres?</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {pricedYears.map((o) => (
+                <button
+                  key={o.years}
+                  onClick={() => setYears(o.years)}
+                  className={`py-2.5 rounded-xl border text-sm font-bold transition-all ${
+                    years === o.years ? "bg-teal-500 border-teal-500 text-white shadow-md" : "bg-white border-gray-200 text-gray-600 hover:border-teal-300"
+                  }`}
+                >{o.years} años</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Presentaciones */}
+          <div className="flex flex-col gap-2">
+            <label className="block text-sm font-semibold text-gray-700">¿Qué presentaciones?</label>
+            <Stepper label="Cubetas" unit="19 L" price={cubP} value={cubetas} onChange={setCubetas} disabled={!hasCub} />
+            <Stepper label="Galones" unit="4 L" price={galP} value={galones} onChange={setGalones} disabled={!hasGal} />
+          </div>
+
+          {/* Subtotal */}
+          {subtotal > 0 && (
+            <div className="flex items-center justify-between bg-teal-50 border border-teal-200 rounded-xl px-4 py-2.5">
+              <span className="text-xs text-teal-700 font-semibold uppercase tracking-wide">Subtotal</span>
+              <span className="text-lg font-black text-teal-700">{money(subtotal)}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="px-4 py-3 border-t border-gray-100 flex gap-2 flex-shrink-0">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
+          <button
+            onClick={() => { if (canAdd && years != null) onAdd({ uid: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: color.name, code: color.code, hex: color.hex, years, cubetas, galones }); }}
+            disabled={!canAdd}
+            className="flex-[2] py-2.5 rounded-xl bg-teal-500 text-white text-sm font-bold hover:bg-teal-600 disabled:opacity-40 active:scale-95 transition-all"
+          >Agregar al carrito</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CartModal({ cart, durabilityPrices, galonPrices, onRemove, onCheckout, onContinue, onClose }: {
+  cart: CartItem[];
+  durabilityPrices: Record<string, string>;
+  galonPrices: Record<string, string>;
+  onRemove: (uid: string) => void;
+  onCheckout: () => void;
+  onContinue: () => void;
+  onClose: () => void;
+}) {
+  const total = cart.reduce((a, it) => a + lineSubtotal(it, durabilityPrices, galonPrices), 0);
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" style={{ zIndex: 95 }} onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[92dvh]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+            <h2 className="font-bold text-base">Tu carrito {cart.length > 0 && <span className="text-teal-400">({cart.length})</span>}</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+        </div>
+
+        <div className="p-4 flex flex-col gap-2 overflow-y-auto">
+          {cart.length === 0 ? (
+            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-8 text-center text-gray-400 text-sm">
+              Tu carrito está vacío. Toca un color y luego “Agregar al carrito”.
+            </div>
+          ) : cart.map((it) => {
+            const sub = lineSubtotal(it, durabilityPrices, galonPrices);
+            return (
+              <div key={it.uid} className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-3 py-2.5">
+                <div className="w-9 h-9 rounded-lg border-2 border-gray-100 flex-shrink-0" style={{ backgroundColor: it.hex }} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-800 leading-tight truncate">{it.name}</p>
+                  <p className="text-[10px] text-gray-400 font-mono leading-tight">{it.code}</p>
+                  <p className="text-[11px] text-teal-600 font-semibold leading-tight mt-0.5">
+                    {it.years} años · {it.cubetas > 0 && `${it.cubetas} cub.`}{it.cubetas > 0 && it.galones > 0 && " + "}{it.galones > 0 && `${it.galones} gal.`}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-black text-gray-800">{money(sub)}</p>
+                  <button onClick={() => onRemove(it.uid)} className="text-[11px] text-red-400 hover:text-red-600">Quitar</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {cart.length > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total</span>
+              <span className="text-2xl font-black text-gray-900">{money(total)}</span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={onContinue} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Seguir agregando</button>
+              <button onClick={onCheckout} className="flex-[2] py-2.5 rounded-xl bg-teal-500 text-white text-sm font-bold hover:bg-teal-600 active:scale-95 transition-all">Realizar pedido</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CheckoutModal({ cart, durabilityPrices, galonPrices, onClearCart, onClose }: {
+  cart: CartItem[];
+  durabilityPrices: Record<string, string>;
+  galonPrices: Record<string, string>;
+  onClearCart: () => void;
+  onClose: () => void;
+}) {
+  const total = cart.reduce((a, it) => a + lineSubtotal(it, durabilityPrices, galonPrices), 0);
+
+  const [step, setStep] = useState<"form" | "review" | "sent">("form");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [cond1, setCond1] = useState(false);
+  const [cond2, setCond2] = useState(false);
+  const [cond3, setCond3] = useState(false);
+  const [method, setMethod] = useState("efectivo");
+  const [payFull, setPayFull] = useState(false);
+  const [deposit, setDeposit] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<{ id: number; subtotal: number; deposit: number; balance: number; paidFull: boolean } | null>(null);
+
+  const cardOrTransfer = method === "debito" || method === "credito" || method === "transferencia";
+  const cleanPhone = phone.replace(/\D/g, "");
+  const depositNum = cardOrTransfer || payFull ? total : (parseFloat(deposit.replace(",", ".")) || 0);
+  const balance = Math.max(0, total - depositNum);
+
+  const paymentOk = cardOrTransfer ? total > 0 : depositNum > 0 && depositNum <= total;
+  const canGenerate = name.trim().length > 0 && cleanPhone.length === 10 && cond1 && cond2 && cond3 && paymentOk && cart.length > 0;
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape" && step !== "sent") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose, step]);
+
+  function buildOrderText(folio: number, totals: { subtotal: number; deposit: number; balance: number; paidFull: boolean }): string {
+    const d = new Date();
+    const fecha = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    // Solo símbolos seguros (×, —, ·, viñetas y *negritas* de WhatsApp): se ven bien
+    // en todos los WhatsApp, incluido el de Windows que rompe los emojis.
+    const lines: string[] = [];
+    lines.push(`*PEDIDO #${folio} — Pinturas BFM*`);
+    lines.push(`Pedido realizado el ${fecha}`);
+    lines.push(`Cliente: ${name.trim()}  ·  WhatsApp: ${cleanPhone}`);
+    lines.push("————————————————");
+    cart.forEach((it, i) => {
+      lines.push(`*${i + 1}) ${it.name}*  [${it.code}]`);
+      lines.push(`   • Calidad ${it.years} años`);
+      if (it.cubetas > 0) lines.push(`   • ${it.cubetas} × Cubeta 19L`);
+      if (it.galones > 0) lines.push(`   • ${it.galones} × Galón 4L`);
+      lines.push(`   • Ver color: ${origin}/?color=${encodeURIComponent(it.code)}`);
+    });
+    lines.push("————————————————");
+    lines.push(`*Total: ${money(totals.subtotal)}*`);
+    lines.push(`Pago (${PAYMENT_LABELS[method]}): ${money(totals.deposit)}`);
+    lines.push(totals.paidFull ? `Pagado completo` : `Saldo pendiente: ${money(totals.balance)}`);
+    lines.push("————————————————");
+    lines.push(`*Confirmado por el cliente:*`);
+    lines.push(`• Revisé los colores que quiero en el muestrario físico.`);
+    lines.push(`• Entiendo que la luz cálida o blanca puede cambiar el tono de mi pintura.`);
+    lines.push(`• Entiendo que el rendimiento es aproximado y puede variar según la superficie (rugosa, lisa o sin sellador de paredes).`);
+    lines.push(`• Los colores pueden verse diferentes en cada dispositivo móvil por las distintas pantallas, y bajo iluminación cálida o blanca.`);
+    return lines.join("\n");
+  }
+
+  async function confirmAndSave() {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await createOrder({
+        customerName: name.trim(),
+        customerPhone: cleanPhone,
+        items: cart.map((it) => ({ name: it.name, code: it.code, hex: it.hex, years: it.years, cubetas: it.cubetas, galones: it.galones })),
+        deposit: depositNum,
+        paymentMethod: method,
+      });
+      setResult(res);
+      setStep("sent");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo generar el pedido.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function sendWhatsApp(to: string) {
+    if (!result) return;
+    const text = buildOrderText(result.id, result);
+    window.open(`https://wa.me/${to}?text=${encodeURIComponent(text)}`, "_blank");
+  }
+
+  return (
+    <div className="fixed inset-0 z-[96] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" style={{ zIndex: 96 }} onClick={() => step !== "sent" && onClose()}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[94dvh]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
+          <h2 className="font-bold text-base">
+            {step === "form" ? "Datos del pedido" : step === "review" ? "Revisa tu pedido" : "¡Pedido generado!"}
+          </h2>
+          {step !== "sent" && <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>}
+        </div>
+
+        {/* ── Paso FORM ── */}
+        {step === "form" && (
+          <>
+            <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto">
+              {/* Datos cliente */}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre del cliente *</label>
+                  <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Nombre completo"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">WhatsApp del cliente *</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400 font-semibold">+52</span>
+                    <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="numeric" maxLength={14} placeholder="10 dígitos"
+                      className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" />
+                  </div>
+                  {cleanPhone.length > 0 && cleanPhone.length !== 10 && <p className="text-[11px] text-red-400 mt-1">Debe tener 10 dígitos</p>}
+                </div>
+              </div>
+
+              {/* Condiciones */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex flex-col gap-2.5">
+                <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">Confirma antes de pedir</p>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={cond1} onChange={(e) => setCond1(e.target.checked)} className="mt-0.5 w-4 h-4 accent-teal-500 flex-shrink-0" />
+                  <span className="text-xs text-gray-700">Revisé los colores que quiero en el muestrario físico.</span>
+                </label>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={cond2} onChange={(e) => setCond2(e.target.checked)} className="mt-0.5 w-4 h-4 accent-teal-500 flex-shrink-0" />
+                  <span className="text-xs text-gray-700">Entiendo que la luz cálida o blanca puede cambiar el tono de mi pintura.</span>
+                </label>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={cond3} onChange={(e) => setCond3(e.target.checked)} className="mt-0.5 w-4 h-4 accent-teal-500 flex-shrink-0" />
+                  <span className="text-xs text-gray-700">Entiendo que el rendimiento es aproximado y puede variar según la superficie (rugosa, lisa o sin sellador de paredes).</span>
+                </label>
+              </div>
+
+              {/* Pago */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Forma de pago</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(PAYMENT_LABELS).map(([key, lbl]) => (
+                    <button key={key} onClick={() => { setMethod(key); if (key !== "efectivo") setPayFull(true); }}
+                      className={`py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                        method === key ? "bg-teal-500 border-teal-500 text-white shadow-md" : "bg-white border-gray-200 text-gray-600 hover:border-teal-300"
+                      }`}>{lbl}</button>
+                  ))}
+                </div>
+                {cardOrTransfer && (
+                  <p className="text-[11px] text-gray-500 mt-1.5">Con tarjeta o transferencia el pago debe ser completo (sin abonos).</p>
+                )}
+              </div>
+
+              {/* Total / abono / saldo */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Total</span>
+                  <span className="text-lg font-black text-gray-900">{money(total)}</span>
+                </div>
+                {!cardOrTransfer && (
+                  <>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={payFull} onChange={(e) => setPayFull(e.target.checked)} className="w-4 h-4 accent-teal-500" />
+                      <span className="text-xs text-gray-600">Paga el total ahora</span>
+                    </label>
+                    {!payFull && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-gray-500">Abono</span>
+                        <div className="relative w-32">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                          <input value={deposit} onChange={(e) => setDeposit(e.target.value)} inputMode="decimal" placeholder="0.00"
+                            className="w-full border border-gray-200 rounded-lg pl-6 pr-3 py-2 text-sm text-right font-semibold focus:outline-none focus:border-teal-400" />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                  <span className="text-sm font-semibold text-gray-600">Saldo</span>
+                  <span className={`text-lg font-black ${balance > 0 ? "text-orange-500" : "text-teal-600"}`}>{money(balance)}</span>
+                </div>
+              </div>
+
+              {!cardOrTransfer && !payFull && depositNum <= 0 && (
+                <p className="text-[11px] text-gray-400 -mt-2">Registra un abono mayor a $0 o marca “Paga el total ahora”.</p>
+              )}
+            </div>
+
+            <div className="px-4 py-3 border-t border-gray-100 flex gap-2 flex-shrink-0">
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
+              <button onClick={() => setStep("review")} disabled={!canGenerate}
+                className="flex-[2] py-2.5 rounded-xl bg-teal-500 text-white text-sm font-bold hover:bg-teal-600 disabled:opacity-40 active:scale-95 transition-all">Generar pedido</button>
+            </div>
+          </>
+        )}
+
+        {/* ── Paso REVIEW (ticket) ── */}
+        {step === "review" && (
+          <>
+            <div className="p-4 sm:p-5 overflow-y-auto">
+              <div className="border border-dashed border-gray-300 rounded-2xl p-4 font-mono text-xs text-gray-700">
+                <p className="text-center font-bold text-sm text-gray-900 mb-1">PINTURAS BFM</p>
+                <p className="text-center text-[10px] text-gray-400 mb-3">Ticket de pedido</p>
+                <p><span className="text-gray-400">Cliente:</span> {name.trim()}</p>
+                <p><span className="text-gray-400">WhatsApp:</span> +52 {cleanPhone}</p>
+                <div className="border-t border-dashed border-gray-200 my-2" />
+                {cart.map((it, i) => (
+                  <div key={it.uid} className="mb-2.5">
+                    <p className="font-semibold text-gray-800 flex items-center gap-1.5 flex-wrap">
+                      <span>{i + 1}. {it.name}</span>
+                      <span className="inline-block w-3.5 h-3.5 rounded-sm border border-gray-300 align-middle" style={{ backgroundColor: it.hex }} />
+                      <span className="text-gray-400">[{it.code}]</span>
+                    </p>
+                    <p>Calidad {it.years} años</p>
+                    {it.cubetas > 0 && <p>{it.cubetas} × Cubeta 19L</p>}
+                    {it.galones > 0 && <p>{it.galones} × Galón 4L</p>}
+                    <p className="text-right text-gray-600">{money(lineSubtotal(it, durabilityPrices, galonPrices))}</p>
+                  </div>
+                ))}
+                <div className="border-t border-dashed border-gray-200 my-2" />
+                <div className="flex justify-between"><span>Total</span><span className="font-bold">{money(total)}</span></div>
+                <div className="flex justify-between"><span>Pago ({PAYMENT_LABELS[method]})</span><span>{money(depositNum)}</span></div>
+                <div className="flex justify-between"><span>Saldo</span><span className={balance > 0 ? "text-orange-500 font-bold" : "text-teal-600 font-bold"}>{money(balance)}</span></div>
+                <div className="border-t border-dashed border-gray-200 my-2" />
+                {/* Condiciones aceptadas + nota de color */}
+                <div className="text-[10px] leading-snug text-gray-500 flex flex-col gap-1">
+                  <p>✔ Revisé los colores que quiero en el muestrario físico.</p>
+                  <p>✔ Entiendo que la luz cálida o blanca puede cambiar el tono de mi pintura.</p>
+                  <p>✔ Entiendo que el rendimiento es aproximado y puede variar según la superficie (rugosa, lisa o sin sellador de paredes).</p>
+                  <p className="text-gray-400 mt-0.5">Nota: los colores pueden verse diferentes en cada dispositivo móvil por las distintas pantallas, y bajo iluminación cálida o blanca.</p>
+                </div>
+              </div>
+              {error && <p className="text-xs text-red-500 mt-3 text-center">{error}</p>}
+            </div>
+            <div className="px-4 py-3 border-t border-gray-100 flex gap-2 flex-shrink-0">
+              <button onClick={() => setStep("form")} disabled={saving} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">Editar</button>
+              <button onClick={confirmAndSave} disabled={saving}
+                className="flex-[2] py-2.5 rounded-xl bg-teal-500 text-white text-sm font-bold hover:bg-teal-600 disabled:opacity-50 active:scale-95 transition-all">
+                {saving ? "Generando…" : "Confirmar y enviar"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── Paso SENT ── */}
+        {step === "sent" && result && (
+          <div className="p-5 flex flex-col gap-4 overflow-y-auto">
+            <div className="flex flex-col items-center text-center gap-1">
+              <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mb-1">
+                <svg className="w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <p className="font-bold text-gray-900">Pedido #{result.id} guardado</p>
+              <p className="text-xs text-gray-500">Envía el pedido por WhatsApp. Toca cada botón y presiona enviar.</p>
+            </div>
+            <button onClick={() => sendWhatsApp(FERRETERIA_WA)} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 active:scale-95 transition-all">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z" /></svg>
+              Enviar a la ferretería
+            </button>
+            <button onClick={() => sendWhatsApp(`52${cleanPhone}`)} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green-50 text-green-700 border border-green-300 text-sm font-bold hover:bg-green-100 active:scale-95 transition-all">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z" /></svg>
+              Enviar copia al cliente
+            </button>
+            <button onClick={() => { onClearCart(); onClose(); }} className="mt-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Nuevo pedido</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: {
+  orders: OrderRow[];
+  loading: boolean;
+  onRefresh: () => void;
+  onSetStatus: (id: number, status: string) => void;
+  onClose: () => void;
+}) {
+  const STATUS = ["nuevo", "procesado", "entregado", "cancelado"];
+  const STATUS_COLOR: Record<string, string> = {
+    nuevo: "bg-blue-100 text-blue-700",
+    procesado: "bg-amber-100 text-amber-700",
+    entregado: "bg-teal-100 text-teal-700",
+    cancelado: "bg-red-100 text-red-600",
+  };
+  return (
+    <div className="fixed inset-0 z-[97] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" style={{ zIndex: 97 }} onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92dvh]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
+          <h2 className="font-bold text-base">Pedidos {orders.length > 0 && <span className="text-teal-400">({orders.length})</span>}</h2>
+          <div className="flex items-center gap-3">
+            <button onClick={onRefresh} className="text-gray-300 hover:text-white text-xs">Actualizar</button>
+            <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+          </div>
+        </div>
+        <div className="p-4 flex flex-col gap-3 overflow-y-auto">
+          {loading ? (
+            <p className="text-center text-gray-400 py-10 text-sm">Cargando…</p>
+          ) : orders.length === 0 ? (
+            <p className="text-center text-gray-400 py-10 text-sm">Aún no hay pedidos.</p>
+          ) : orders.map((o) => (
+            <div key={o.id} className="border border-gray-200 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <div>
+                  <span className="font-black text-gray-900">#{o.id}</span>
+                  <span className="text-[11px] text-gray-400 ml-2">{new Date(o.created_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}</span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLOR[o.status] ?? "bg-gray-100 text-gray-600"}`}>{o.status}</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-800">{o.customer_name}</p>
+              <a href={`https://wa.me/52${o.customer_phone}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-green-600 hover:underline">+52 {o.customer_phone}</a>
+              <div className="mt-2 flex flex-col gap-0.5">
+                {o.items.map((it, i) => (
+                  <p key={i} className="text-[11px] text-gray-600">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm align-middle mr-1" style={{ backgroundColor: it.hex }} />
+                    {it.name} <span className="text-gray-400 font-mono">[{it.code}]</span> · {it.years} años · {it.cubetas > 0 && `${it.cubetas} cub.`}{it.cubetas > 0 && it.galones > 0 && " + "}{it.galones > 0 && `${it.galones} gal.`}
+                  </p>
+                ))}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="text-gray-500">{PAYMENT_LABELS[o.payment_method] ?? o.payment_method} · {o.paid_full ? "Pagado" : `Abono ${money(o.deposit)}`}</span>
+                <span className="font-black text-gray-800">{money(o.subtotal)}{o.balance > 0 && <span className="text-orange-500 font-normal ml-1">(saldo {money(o.balance)})</span>}</span>
+              </div>
+              <div className="mt-2 flex gap-1 flex-wrap">
+                {STATUS.map((s) => (
+                  <button key={s} onClick={() => onSetStatus(o.id, s)} disabled={o.status === s}
+                    className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${o.status === s ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"}`}>{s}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [selectedFamily, setSelectedFamily] = useState(0);
   const [search, setSearch] = useState("");
@@ -944,8 +1910,24 @@ export default function Home() {
 
   // Admin auth
   const [isAdmin, setIsAdmin] = useState(false);
+  const [kioskMode, setKioskMode] = useState(false); // tablet en tienda: solo logo + catálogo
+  const [kioskLinkCopied, setKioskLinkCopied] = useState(false);
+  const [pendingColorCode, setPendingColorCode] = useState<string | null>(null); // deep-link ?color=CÓDIGO
   const [calcOpen, setCalcOpen] = useState(false);
+  const [wallCalcOpen, setWallCalcOpen] = useState(false);
+  const [imperCalcOpen, setImperCalcOpen] = useState(false);
+  const [imperConfig, setImperConfig] = useState<ImperConfig>({ enabled: false, name: "Impermeabilizante", price: "", coverageM2: 19, coats: 2, unitLabel: "Cubeta 19L", litersPerUnit: 19 });
+  const [editImper, setEditImper] = useState<ImperConfig>({ enabled: false, name: "Impermeabilizante", price: "", coverageM2: 19, coats: 2, unitLabel: "Cubeta 19L", litersPerUnit: 19 });
   const [roomPreviewOpen, setRoomPreviewOpen] = useState(false);
+  // Carrito / pedidos (solo modo kiosko)
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [addToCartColor, setAddToCartColor] = useState<Color | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  // Vista admin de pedidos
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState(false);
@@ -1007,8 +1989,18 @@ export default function Home() {
 
   // Load data from Supabase on mount; restore admin session
   React.useEffect(() => {
+    // Modo kiosko (tablet en tienda): ?kiosko=1 oculta info bar + admin y bloquea login.
+    const params = new URLSearchParams(window.location.search);
+    const isKiosk = params.get("kiosko") === "1";
+    setKioskMode(isKiosk);
+    // Deep-link a un color: ?color=CÓDIGO (lo abre cuando carguen los datos).
+    const colorParam = params.get("color");
+    if (colorParam) setPendingColorCode(colorParam);
     // La sesión real vive en una cookie httpOnly; preguntamos al servidor si sigue activa.
-    checkAdminSession().then((ok) => setIsAdmin(ok)).catch(() => {});
+    // En modo kiosko NO se restaura la sesión admin: la tablet queda solo como catálogo.
+    if (!isKiosk) {
+      checkAdminSession().then((ok) => setIsAdmin(ok)).catch(() => {});
+    }
     // Load color overrides + durability from Supabase
     loadColorSettings().then((data) => {
       const hexMap: Record<string, string> = {};
@@ -1068,9 +2060,44 @@ export default function Home() {
     // Ensure editFamilyBanners is padded after names load (async timing fix)
 
     loadColorOrders().then(setColorOrders);
+    // Config del impermeabilizante (calculadora kiosko)
+    loadImpermeabilizante().then((cfg) => { setImperConfig(cfg); setEditImper(cfg); });
   }, []);
 
+  // Deep-link ?color=CÓDIGO → busca el color y lo abre (cuando ya cargaron overrides/custom).
+  React.useEffect(() => {
+    if (!pendingColorCode) return;
+    const code = pendingColorCode;
+    // Custom colors (por nombre de familia)
+    for (const [famName, list] of Object.entries(customColors)) {
+      const cm = list.find((c) => c.code === code);
+      if (cm) {
+        const fi = colorFamilies.findIndex((f) => f.name === famName);
+        if (fi >= 0) setSelectedFamily(fi);
+        setSearch(code);
+        setSelectedColor(cm);
+        setPendingColorCode(null);
+        return;
+      }
+    }
+    // Colores integrados (considera overrides de código)
+    for (let fi = 0; fi < colorFamilies.length; fi++) {
+      for (const c of colorFamilies[fi].colors) {
+        const ov = nameOverrides[c.code];
+        const displayCode = ov ? ov.code : c.code;
+        if (displayCode === code || c.code === code) {
+          setSelectedFamily(fi);
+          setSearch(code);
+          setSelectedColor({ ...c, ...(ov ? { name: ov.name, code: ov.code, originalCode: c.code } : {}) });
+          setPendingColorCode(null);
+          return;
+        }
+      }
+    }
+  }, [pendingColorCode, customColors, nameOverrides]);
+
   function handleUserClick() {
+    if (kioskMode) return; // tablet en tienda: sin acceso a admin
     if (isAdmin) {
       setShowAdminMenu((v) => !v);
     } else {
@@ -1097,6 +2124,46 @@ export default function Home() {
     await logout();
     setIsAdmin(false);
     setShowAdminMenu(false);
+  }
+
+  async function copyKioskLink() {
+    const link = `${window.location.origin}/?kiosko=1`;
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      // Fallback para navegadores sin permiso de clipboard
+      const ta = document.createElement("textarea");
+      ta.value = link;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
+    }
+    setKioskLinkCopied(true);
+    setTimeout(() => setKioskLinkCopied(false), 2000);
+  }
+
+  async function openOrders() {
+    setShowAdminMenu(false);
+    setOrdersOpen(true);
+    setOrdersLoading(true);
+    try {
+      const data = await loadOrders();
+      setOrders(data);
+    } catch {
+      setSaveError("No se pudieron cargar los pedidos.");
+    } finally {
+      setOrdersLoading(false);
+    }
+  }
+
+  async function handleSetOrderStatus(id: number, status: string) {
+    try {
+      await updateOrderStatus(id, status);
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+    } catch {
+      setSaveError("No se pudo actualizar el estado del pedido.");
+    }
   }
 
   function openAddColorModal(familyName: string) {
@@ -1175,6 +2242,7 @@ export default function Home() {
       return b ? [...b] as [string, string] : null;
     });
     setEditFamilyBanners(paddedBanners);
+    setEditImper({ ...imperConfig });
     setShowSiteSettings(true);
     setShowAdminMenu(false);
   }
@@ -1229,6 +2297,8 @@ export default function Home() {
       await saveFamilyColors(editFamilyColors);
       await saveFamilyNames(editFamilyNames);
       await saveFamilyBanners(editFamilyBanners);
+      await saveImpermeabilizante(editImper);
+      setImperConfig(editImper);
 
       // Logo 1
       if (editLogoUrl && editLogoUrl.startsWith("data:")) {
@@ -1683,7 +2753,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} />
+      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} />
 
       {/* Room preview modal */}
       {roomPreviewOpen && selectedColor && (
@@ -1705,9 +2775,73 @@ export default function Home() {
         />
       )}
 
+      {/* Wall-by-wall calculator (solo modo kiosko) */}
+      {wallCalcOpen && (
+        <WallPaintCalculator
+          durabilityPrices={durabilityPrices}
+          durabilityOnSale={durabilityOnSale}
+          galonPrices={galonPrices}
+          galonOnSale={galonOnSale}
+          onClose={() => setWallCalcOpen(false)}
+        />
+      )}
+
+      {/* Calculadora de impermeabilizante (solo modo kiosko) */}
+      {imperCalcOpen && (
+        <ImpermeabilizanteCalculator config={imperConfig} onClose={() => setImperCalcOpen(false)} />
+      )}
+
+      {/* Agregar al carrito (solo modo kiosko) */}
+      {addToCartColor && (
+        <AddToCartModal
+          color={addToCartColor}
+          colorYears={durability[origCode(addToCartColor)] ?? []}
+          durabilityPrices={durabilityPrices}
+          galonPrices={galonPrices}
+          onAdd={(item) => { setCart((prev) => [...prev, item]); setAddToCartColor(null); setCartOpen(true); }}
+          onClose={() => setAddToCartColor(null)}
+        />
+      )}
+
+      {/* Carrito (solo modo kiosko) */}
+      {cartOpen && (
+        <CartModal
+          cart={cart}
+          durabilityPrices={durabilityPrices}
+          galonPrices={galonPrices}
+          onRemove={(uid) => setCart((prev) => prev.filter((it) => it.uid !== uid))}
+          onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }}
+          onContinue={() => setCartOpen(false)}
+          onClose={() => setCartOpen(false)}
+        />
+      )}
+
+      {/* Checkout / ticket / envío (solo modo kiosko) */}
+      {checkoutOpen && (
+        <CheckoutModal
+          cart={cart}
+          durabilityPrices={durabilityPrices}
+          galonPrices={galonPrices}
+          onClearCart={() => setCart([])}
+          onClose={() => setCheckoutOpen(false)}
+        />
+      )}
+
+      {/* Pedidos (admin) */}
+      {ordersOpen && (
+        <AdminOrdersModal
+          orders={orders}
+          loading={ordersLoading}
+          onRefresh={openOrders}
+          onSetStatus={handleSetOrderStatus}
+          onClose={() => setOrdersOpen(false)}
+        />
+      )}
+
+
       {/* Error toast */}
       {saveError && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] bg-red-500 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] bg-red-500 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg flex items-center gap-3" style={{ zIndex: 200 }}>
           <span>{saveError}</span>
           <button onClick={() => setSaveError("")} className="text-white/80 hover:text-white transition-colors">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1719,7 +2853,7 @@ export default function Home() {
 
       {/* Login modal */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" style={{ zIndex: 100 }}>
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
             <h2 className="text-lg font-semibold text-gray-800 mb-1">Acceso administrador</h2>
             <p className="text-xs text-gray-400 mb-5">Ingresa la contraseña para editar la paleta</p>
@@ -1761,10 +2895,12 @@ export default function Home() {
       {isAdmin && showAdminMenu && (
         <div
           className="fixed inset-0 z-[90]"
+          style={{ zIndex: 90 }}
           onClick={() => setShowAdminMenu(false)}
         >
           <div
             className="fixed right-4 top-16 sm:top-24 bg-white rounded-xl shadow-xl border border-gray-100 py-1 w-48 sm:w-52 z-[91]"
+            style={{ zIndex: 91 }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1793,6 +2929,30 @@ export default function Home() {
               Actualizar página en todos
             </button>
             <button
+              onClick={copyKioskLink}
+              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              {kioskLinkCopied ? (
+                <svg className="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                </svg>
+              )}
+              {kioskLinkCopied ? "¡Enlace copiado!" : "Copiar enlace de tablet"}
+            </button>
+            <button
+              onClick={openOrders}
+              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              Pedidos
+            </button>
+            <button
               onClick={() => { exportToCSV(); setShowAdminMenu(false); }}
               className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
@@ -1817,7 +2977,7 @@ export default function Home() {
 
       {/* Site settings modal */}
       {showSiteSettings && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-3">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-3" style={{ zIndex: 100 }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col" style={{ maxHeight: "92vh" }}>
             {/* Fixed header */}
             <div className="px-6 pt-6 pb-3 flex-shrink-0">
@@ -1996,7 +3156,7 @@ export default function Home() {
 
             {/* Rendimiento label */}
             <div className="py-3 border-t border-gray-100 mt-2">
-              <p className="text-sm font-medium text-gray-700 mb-1">Texto "Rendimiento aproximado"</p>
+              <p className="text-sm font-medium text-gray-700 mb-1">Texto “Rendimiento aproximado”</p>
               <p className="text-xs text-gray-400 mb-2">Etiqueta que aparece en el panel de detalle del color</p>
               <input
                 type="text"
@@ -2010,7 +3170,7 @@ export default function Home() {
 
             {/* Room button label */}
             <div className="py-3 border-t border-gray-100 mt-2">
-              <p className="text-sm font-medium text-gray-700 mb-1">Texto del botón "Ver en habitación"</p>
+              <p className="text-sm font-medium text-gray-700 mb-1">Texto del botón “Ver en habitación”</p>
               <p className="text-xs text-gray-400 mb-2">Texto que aparece en el botón de vista previa de habitación</p>
               <input
                 type="text"
@@ -2073,7 +3233,7 @@ export default function Home() {
             {/* Calc button toggle */}
             <div className="flex items-center justify-between py-3 border-t border-gray-100 mt-2">
               <div>
-                <p className="text-sm font-medium text-gray-700">Botón "Calcular pintura"</p>
+                <p className="text-sm font-medium text-gray-700">Botón “Calcular pintura”</p>
                 <p className="text-xs text-gray-400">Muestra u oculta el botón de calculadora</p>
               </div>
               <button
@@ -2082,6 +3242,61 @@ export default function Home() {
               >
                 <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${editCalcButtonEnabled ? "translate-x-5" : ""}`} />
               </button>
+            </div>
+
+            {/* Impermeabilizante (calculadora kiosko) */}
+            <div className="py-3 border-t border-gray-100 mt-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Calculadora de impermeabilizante</p>
+                  <p className="text-xs text-gray-400">Solo en modo kiosko (tablet)</p>
+                </div>
+                <button
+                  onClick={() => setEditImper((p) => ({ ...p, enabled: !p.enabled }))}
+                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${editImper.enabled ? "bg-teal-500" : "bg-gray-300"}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${editImper.enabled ? "translate-x-5" : ""}`} />
+                </button>
+              </div>
+              {editImper.enabled && (
+                <div className="mt-3 flex flex-col gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Nombre</label>
+                    <input value={editImper.name} maxLength={60} onChange={(e) => setEditImper((p) => ({ ...p, name: e.target.value }))}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" placeholder="Impermeabilizante" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-500 mb-1">Precio por unidad</label>
+                      <input value={editImper.price} maxLength={20} onChange={(e) => setEditImper((p) => ({ ...p, price: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" placeholder="$1,200.00" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-500 mb-1">Presentación</label>
+                      <input value={editImper.unitLabel} maxLength={40} onChange={(e) => setEditImper((p) => ({ ...p, unitLabel: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" placeholder="Cubeta 19L" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-500 mb-1">Cobertura (m²)</label>
+                      <input type="number" inputMode="decimal" min="1" value={editImper.coverageM2} onChange={(e) => setEditImper((p) => ({ ...p, coverageM2: Number(e.target.value) }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-500 mb-1">A cuántas pasadas</label>
+                      <input type="number" inputMode="numeric" min="1" max="5" value={editImper.coats} onChange={(e) => setEditImper((p) => ({ ...p, coats: Number(e.target.value) }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                    </div>
+                  </div>
+                  <div className="w-1/2 pr-1">
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Litros por unidad</label>
+                    <input type="number" inputMode="decimal" min="1" value={editImper.litersPerUnit} onChange={(e) => setEditImper((p) => ({ ...p, litersPerUnit: Number(e.target.value) }))}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+                  </div>
+                  <p className="text-[11px] text-gray-400">Una {editImper.unitLabel || "unidad"} ({editImper.litersPerUnit || 0} L) cubre {editImper.coverageM2 || 0} m² a {editImper.coats || 0} pasadas.</p>
+                </div>
+              )}
             </div>
 
             {/* Family colors & names */}
@@ -2223,7 +3438,7 @@ export default function Home() {
 
       {/* Add color modal */}
       {showAddColorModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" style={{ zIndex: 100 }}>
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs mx-4">
             <h2 className="text-base font-semibold text-gray-800 mb-4">Agregar color — {addColorFamily}</h2>
 
@@ -2478,6 +3693,32 @@ export default function Home() {
                     Calcular cuánta pintura necesito
                   </button>
                 </div>}
+
+                {/* Wall calculator button — solo modo kiosko (tablet en tienda) */}
+                {kioskMode && <div className="mt-3 flex justify-center">
+                  <button
+                    onClick={() => setWallCalcOpen(true)}
+                    className="neon-hover flex items-center gap-2 bg-gray-900 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-gray-800"
+                    style={{ ["--neon-hover" as string]: "0 0 10px #2dd4bf, 0 0 25px #0d948880" } as React.CSSProperties}
+                  >
+                    <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z M4 9h16 M4 14h16 M9 4v16" />
+                    </svg>
+                    Calcular por paredes
+                  </button>
+                </div>}
+
+                {/* Calculadora de impermeabilizante — solo kiosko, si está activada */}
+                {kioskMode && imperConfig.enabled && <div className="mt-3 flex justify-center">
+                  <button
+                    onClick={() => setImperCalcOpen(true)}
+                    className="neon-hover flex items-center gap-2 bg-gray-900 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-gray-800"
+                    style={{ ["--neon-hover" as string]: "0 0 10px #2dd4bf, 0 0 25px #0d948880" } as React.CSSProperties}
+                  >
+                    <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7M3 21h18" /></svg>
+                    Calcular {imperConfig.name || "impermeabilizante"}
+                  </button>
+                </div>}
               </div>
             )}
 
@@ -2635,6 +3876,17 @@ export default function Home() {
                                         </svg>
                                         Favorito
                                       </button>
+                                      {/* Agregar al carrito — solo modo kiosko (tablet en tienda) */}
+                                      {kioskMode && (
+                                        <button
+                                          onClick={() => setAddToCartColor({ ...selectedColor, hex: editHex })}
+                                          className="neon-hover flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500 text-white text-xs font-bold transition-all duration-200 hover:scale-110 hover:bg-teal-600 active:scale-95"
+                                          style={{ ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d948880" } as React.CSSProperties}
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                          Agregar al carrito
+                                        </button>
+                                      )}
                                     </div>
                                     {(() => {
                                       const sel = DURABILITY_OPTIONS.filter((opt) => (durability[origCode(selectedColor)] ?? []).includes(opt.years));
@@ -3080,6 +4332,17 @@ export default function Home() {
                                       </svg>
                                       {favorites.includes(origCode(selectedColor)) ? "Favorito" : "Favorito"}
                                     </button>
+                                    {/* Agregar al carrito — solo modo kiosko (tablet en tienda) */}
+                                    {kioskMode && (
+                                      <button
+                                        onClick={() => setAddToCartColor({ ...selectedColor, hex: editHex })}
+                                        className="neon-hover flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500 text-white text-xs font-bold transition-all duration-200 hover:scale-110 hover:bg-teal-600 active:scale-95"
+                                        style={{ ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d948880" } as React.CSSProperties}
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                        Agregar al carrito
+                                      </button>
+                                    )}
                                   </div>
 
                                   {(() => {

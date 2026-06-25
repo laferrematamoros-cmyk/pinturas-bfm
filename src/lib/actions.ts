@@ -586,3 +586,188 @@ export async function saveDeletedColors(codes: string[]): Promise<void> {
     .from("site_settings")
     .upsert({ key: "deleted_colors", value: JSON.stringify(codes) }, { onConflict: "key" });
 }
+
+// ── Pedidos digitales (modo kiosko) ─────────────────────────
+
+export interface OrderItemInput {
+  name: string;
+  code: string;
+  hex: string;
+  years: number;     // 2 | 3 | 4 | 7
+  cubetas: number;
+  galones: number;
+}
+
+export interface OrderInput {
+  customerName: string;
+  customerPhone: string;      // 10 dígitos
+  items: OrderItemInput[];
+  deposit: number;            // abono; se ignora si el método obliga pago completo
+  paymentMethod: string;      // 'efectivo' | 'debito' | 'credito' | 'transferencia'
+}
+
+export interface OrderRow {
+  id: number;
+  created_at: string;
+  customer_name: string;
+  customer_phone: string;
+  items: Array<OrderItemInput & { subtotal: number }>;
+  subtotal: number;
+  deposit: number;
+  balance: number;
+  payment_method: string;
+  paid_full: boolean;
+  status: string;
+}
+
+const PAYMENT_METHODS = ["efectivo", "debito", "credito", "transferencia"];
+const VALID_YEARS = [2, 3, 4, 7];
+
+function priceToNumber(s: string | undefined): number {
+  if (!s) return 0;
+  const n = parseFloat(s.replace(/[^0-9.]/g, ""));
+  return isNaN(n) ? 0 : n;
+}
+
+/**
+ * Crea un pedido desde la tablet (kiosko, SIN sesión admin).
+ * El total se recalcula en el servidor con los precios vigentes para
+ * evitar manipulación desde el cliente. Aplica la regla de pago:
+ * tarjeta/transferencia exigen pago completo; efectivo admite abono.
+ */
+export async function createOrder(
+  input: OrderInput
+): Promise<{ id: number; subtotal: number; deposit: number; balance: number; paidFull: boolean }> {
+  const name = sanitizeText(input.customerName ?? "", 80);
+  const phone = (input.customerPhone ?? "").replace(/\D/g, "");
+  if (!name) throw new Error("El nombre del cliente es obligatorio");
+  if (phone.length !== 10) throw new Error("El WhatsApp debe tener 10 dígitos");
+  if (!Array.isArray(input.items) || input.items.length === 0) throw new Error("El carrito está vacío");
+  if (input.items.length > 50) throw new Error("Demasiados productos en el pedido");
+  const method = String(input.paymentMethod);
+  if (!PAYMENT_METHODS.includes(method)) throw new Error("Método de pago inválido");
+
+  // Precios vigentes para recomputar el total en el servidor.
+  const [durPrices, galPrices] = await Promise.all([loadDurabilityPrices(), loadGalonPrices()]);
+
+  const items = input.items.map((it) => {
+    const years = Number(it.years);
+    if (!VALID_YEARS.includes(years)) throw new Error("Calidad inválida en uno de los colores");
+    const cubetas = Math.max(0, Math.floor(Number(it.cubetas) || 0));
+    const galones = Math.max(0, Math.floor(Number(it.galones) || 0));
+    if (cubetas + galones === 0) throw new Error("Cada color debe llevar al menos una cubeta o galón");
+    const cubP = priceToNumber(durPrices[String(years)]);
+    const galP = priceToNumber(galPrices[String(years)]);
+    const subtotal = cubetas * cubP + galones * galP;
+    return {
+      name: sanitizeText(it.name ?? "", 80),
+      code: sanitizeText(it.code ?? "", 40),
+      hex: isValidHex(it.hex) ? it.hex : "#000000",
+      years,
+      cubetas,
+      galones,
+      subtotal,
+    };
+  });
+
+  const subtotal = Math.round(items.reduce((a, b) => a + b.subtotal, 0) * 100) / 100;
+  const cardOrTransfer = method === "debito" || method === "credito" || method === "transferencia";
+  let deposit = Math.max(0, Number(input.deposit) || 0);
+  if (cardOrTransfer) deposit = subtotal; // tarjeta/transferencia → pago completo obligatorio
+  if (deposit > subtotal) deposit = subtotal;
+  if (deposit <= 0) throw new Error("Debes registrar un abono o el pago completo");
+  deposit = Math.round(deposit * 100) / 100;
+  const balance = Math.round(Math.max(0, subtotal - deposit) * 100) / 100;
+  const paidFull = balance <= 0;
+
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .insert({
+      customer_name: name,
+      customer_phone: phone,
+      items,
+      subtotal,
+      deposit,
+      balance,
+      payment_method: method,
+      paid_full: paidFull,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return { id: data.id as number, subtotal, deposit, balance, paidFull };
+}
+
+/** Lista los pedidos guardados (solo admin). */
+export async function loadOrders(): Promise<OrderRow[]> {
+  await requireAdmin();
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OrderRow[];
+}
+
+/** Cambia el estado de un pedido (solo admin). */
+export async function updateOrderStatus(id: number, status: string): Promise<void> {
+  await requireAdmin();
+  const allowed = ["nuevo", "procesado", "entregado", "cancelado"];
+  if (!allowed.includes(status)) throw new Error("Estado inválido");
+  const { error } = await supabaseAdmin.from("orders").update({ status }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Impermeabilizante (calculadora especial, modo kiosko) ────
+
+export interface ImperConfig {
+  enabled: boolean;
+  name: string;
+  price: string;        // precio por unidad, ej. "$1,200.00"
+  coverageM2: number;   // m² que cubre 1 unidad a `coats` pasadas
+  coats: number;        // pasadas base (def 2)
+  unitLabel: string;    // presentación, ej. "Cubeta 19L"
+  litersPerUnit: number; // litros por unidad (def 19) — para calcular el sobrante
+}
+
+const IMPER_DEFAULT: ImperConfig = {
+  enabled: false,
+  name: "Impermeabilizante",
+  price: "",
+  coverageM2: 19,
+  coats: 2,
+  unitLabel: "Cubeta 19L",
+  litersPerUnit: 19,
+};
+
+export async function loadImpermeabilizante(): Promise<ImperConfig> {
+  const { data } = await supabaseRead
+    .from("site_settings")
+    .select("value")
+    .eq("key", "impermeabilizante")
+    .single();
+  if (!data?.value) return IMPER_DEFAULT;
+  try {
+    return { ...IMPER_DEFAULT, ...JSON.parse(data.value) };
+  } catch {
+    return IMPER_DEFAULT;
+  }
+}
+
+export async function saveImpermeabilizante(cfg: ImperConfig): Promise<void> {
+  await requireAdmin();
+  updateTag(CATALOG_TAG);
+  const clean: ImperConfig = {
+    enabled: !!cfg.enabled,
+    name: sanitizeText(cfg.name || "Impermeabilizante", 60),
+    price: sanitizeText(cfg.price || "", 20),
+    coverageM2: Math.max(1, Number(cfg.coverageM2) || 19),
+    coats: Math.max(1, Math.min(5, Math.floor(Number(cfg.coats) || 2))),
+    unitLabel: sanitizeText(cfg.unitLabel || "Cubeta 19L", 40),
+    litersPerUnit: Math.max(1, Number(cfg.litersPerUnit) || 19),
+  };
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "impermeabilizante", value: JSON.stringify(clean) }, { onConflict: "key" });
+}
