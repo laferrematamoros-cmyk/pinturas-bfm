@@ -2944,6 +2944,15 @@ export default function Home() {
               {kioskLinkCopied ? "¡Enlace copiado!" : "Copiar enlace de tablet"}
             </button>
             <button
+              onClick={() => { setShowAdminMenu(false); window.location.href = `${window.location.origin}/?kiosko=1`; }}
+              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-teal-600 hover:bg-teal-50 transition-colors"
+            >
+              <svg className="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Entrar al modo kiosko
+            </button>
+            <button
               onClick={openOrders}
               className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
