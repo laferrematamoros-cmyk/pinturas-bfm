@@ -924,8 +924,6 @@ function WallPaintCalculator({
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const FACTOR = 0.055; // 1 L ≈ 0.055 cubetas de 19 L
-
   // Área de cada pared (0 si está incompleta o inválida)
   const wallAreas = walls.map((wl) => {
     const w = parseFloat(wl.w.replace(",", "."));
@@ -944,19 +942,27 @@ function WallPaintCalculator({
   function computeForYears(years: number) {
     const yieldPerLiter = YIELD_MAP[years];
     const liters = Math.ceil(totalArea / yieldPerLiter);
-    const units = liters * FACTOR;
     const hasGalon = !!galonPrices[String(years)];
     let cubetas: number;
     let galones: number;
     if (hasGalon) {
-      // Combinado: cubetas completas + galones para el resto
-      cubetas = Math.floor(units);
-      const remaining = units - cubetas;
-      galones = remaining > 0 ? Math.ceil(remaining / (4 * FACTOR)) : 0;
-      if (cubetas === 0 && galones === 0) galones = 1; // mínimo 1 envase
+      // Tamaños REALES: cubeta = 19 L, galón = 4 L.
+      // Compara 2 opciones y elige la que compre MENOS litros (menos desperdicio):
+      //   A) solo cubetas      B) cubetas completas + galones para el resto.
+      const cubA = Math.ceil(liters / 19);
+      const cubB = Math.floor(liters / 19);
+      const restanteB = liters - cubB * 19;
+      const galB = restanteB > 0 ? Math.ceil(restanteB / 4) : 0;
+      const litrosA = cubA * 19;
+      const litrosB = cubB * 19 + galB * 4;
+      if (cubB + galB > 0 && litrosB <= litrosA) {
+        cubetas = cubB; galones = galB;
+      } else {
+        cubetas = Math.max(1, cubA); galones = 0;
+      }
     } else {
       // Solo cubetas (redondeo hacia arriba)
-      cubetas = Math.max(1, Math.ceil(units));
+      cubetas = Math.max(1, Math.ceil(liters / 19));
       galones = 0;
     }
     const cubPrice = parsePrice(durabilityPrices[String(years)] ?? "");
