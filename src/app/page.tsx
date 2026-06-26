@@ -1826,7 +1826,7 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
               </div>
               <div className="mt-2 flex gap-1 flex-wrap">
                 {STATUS.map((s) => (
-                  <button key={s} onClick={() => onSetStatus(o.id, s)} disabled={o.status === s}
+                  <button key={s} onClick={() => { if (window.confirm(`¿Cambiar el pedido #${o.id} a "${s}"?`)) onSetStatus(o.id, s); }} disabled={o.status === s}
                     className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${o.status === s ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"}`}>{s}</button>
                 ))}
               </div>
