@@ -4,46 +4,34 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import {
-  loadColorSettings,
+  loadInitialData,
   saveColorHex,
   deleteColorHex,
   saveColorDurability,
-  loadDurabilityPrices,
   saveDurabilityPrices,
-  loadDurabilityOnSale,
   saveDurabilityOnSale,
-  loadSiteSettings,
   saveRoomPreviewEnabled,
   saveCalcButtonEnabled,
   savePwaIconUrl,
-  loadColorPageNumbers,
   saveColorPageNumber,
   saveRoomButtonLabel,
   saveRendimientoLabel,
   saveCardHeight,
-  loadGalonPrices,
   saveGalonPrices,
-  loadGalonOnSale,
   saveGalonOnSale,
   saveSiteName,
   saveSiteLogoUrl,
   saveSiteLogo2Url,
   saveAnnouncementText,
   createLogoUploadUrl,
-  loadCustomColors,
   addCustomColor,
   updateCustomColor,
   deleteCustomColor,
-  loadColorNameOverrides,
   saveColorNameOverride,
-  loadDeletedColors,
   saveDeletedColors,
-  loadFamilySettings,
   saveFamilyColors,
   saveFamilyNames,
-  loadFamilyBanners,
   saveFamilyBanners,
-  loadColorOrders,
   saveColorOrder,
   login,
   logout,
@@ -51,7 +39,6 @@ import {
   createOrder,
   loadOrders,
   updateOrderStatus,
-  loadImpermeabilizante,
   saveImpermeabilizante,
   type CustomColor,
   type OrderRow,
@@ -2014,66 +2001,58 @@ export default function Home() {
       checkAdminSession().then((ok) => setIsAdmin(ok)).catch(() => {});
     }
     // Load color overrides + durability from Supabase
-    loadColorSettings().then((data) => {
+    // UNA sola server action trae todo en paralelo (antes eran ~14 llamadas).
+    loadInitialData().then((d) => {
+      // Overrides de hex + durabilidad por color
       const hexMap: Record<string, string> = {};
       const durMap: Record<string, number[]> = {};
-      for (const [code, val] of Object.entries(data)) {
+      for (const [code, val] of Object.entries(d.colorSettings)) {
         if (val.hex) hexMap[code] = val.hex;
         if (val.durability_years?.length) durMap[code] = val.durability_years;
       }
       setOverrides(hexMap);
       setDurability(durMap);
-    });
-    // Load site branding from Supabase
-    loadSiteSettings().then(({ name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, roomButtonLabel: rbl, cardHeight: ch, calcButtonEnabled: cbe, pwaIconUrl: piUrl, announcementText: at }) => {
+
+      // Branding del sitio
+      const { name, logoUrl: logo, logo2Url: logo2, roomPreviewEnabled: rpe, rendimientoLabel: rl, roomButtonLabel: rbl, cardHeight: ch, calcButtonEnabled: cbe, pwaIconUrl: piUrl, announcementText: at } = d.site;
       setSiteName(name); localStorage.setItem("pinturas_siteName", name);
       if (logo) { setLogoUrl(logo); localStorage.setItem("pinturas_logoUrl", logo); }
       if (logo2) { setLogo2Url(logo2); localStorage.setItem("pinturas_logo2Url", logo2); }
       setAnnouncementText(at); localStorage.setItem("pinturas_announcementText", at);
-      setRoomPreviewEnabled(rpe); localStorage.setItem("pinturas_roomPreviewEnabled", String(rpe));
-      setEditRoomPreviewEnabled(rpe);
-      setCalcButtonEnabled(cbe); localStorage.setItem("pinturas_calcButtonEnabled", String(cbe));
-      setEditCalcButtonEnabled(cbe);
-      if (piUrl) { setPwaIconUrl(piUrl); localStorage.setItem("pinturas_pwaIconUrl", piUrl); }
-      setEditPwaIconUrl(piUrl);
-      setRendimientoLabel(rl); localStorage.setItem("pinturas_rendimientoLabel", rl);
-      setEditRendimientoLabel(rl);
-      setRoomButtonLabel(rbl); localStorage.setItem("pinturas_roomButtonLabel", rbl);
-      setEditRoomButtonLabel(rbl);
-      setCardHeight(ch); localStorage.setItem("pinturas_cardHeight", String(ch));
-      setEditCardHeight(ch);
-    });
-    // Load global durability prices and on-sale flags
-    loadDurabilityPrices().then((p) => { setDurabilityPrices(p); localStorage.setItem("pinturas_durabilityPrices", JSON.stringify(p)); });
-    loadGalonPrices().then((p) => { setGalonPrices(p); setEditGalonPrices(p); localStorage.setItem("pinturas_galonPrices", JSON.stringify(p)); });
-    loadDurabilityOnSale().then((s) => { setDurabilityOnSale(s); localStorage.setItem("pinturas_durabilityOnSale", JSON.stringify(s)); });
-    loadGalonOnSale().then((s) => { setGalonOnSale(s); setEditGalonOnSale(s); localStorage.setItem("pinturas_galonOnSale", JSON.stringify(s)); });
-    // Load custom colors
-    loadCustomColors().then((data) => {
+      setRoomPreviewEnabled(rpe); localStorage.setItem("pinturas_roomPreviewEnabled", String(rpe)); setEditRoomPreviewEnabled(rpe);
+      setCalcButtonEnabled(cbe); localStorage.setItem("pinturas_calcButtonEnabled", String(cbe)); setEditCalcButtonEnabled(cbe);
+      if (piUrl) { setPwaIconUrl(piUrl); localStorage.setItem("pinturas_pwaIconUrl", piUrl); } setEditPwaIconUrl(piUrl);
+      setRendimientoLabel(rl); localStorage.setItem("pinturas_rendimientoLabel", rl); setEditRendimientoLabel(rl);
+      setRoomButtonLabel(rbl); localStorage.setItem("pinturas_roomButtonLabel", rbl); setEditRoomButtonLabel(rbl);
+      setCardHeight(ch); localStorage.setItem("pinturas_cardHeight", String(ch)); setEditCardHeight(ch);
+
+      // Precios y ofertas
+      setDurabilityPrices(d.durabilityPrices); localStorage.setItem("pinturas_durabilityPrices", JSON.stringify(d.durabilityPrices));
+      setGalonPrices(d.galonPrices); setEditGalonPrices(d.galonPrices); localStorage.setItem("pinturas_galonPrices", JSON.stringify(d.galonPrices));
+      setDurabilityOnSale(d.durabilityOnSale); localStorage.setItem("pinturas_durabilityOnSale", JSON.stringify(d.durabilityOnSale));
+      setGalonOnSale(d.galonOnSale); setEditGalonOnSale(d.galonOnSale); localStorage.setItem("pinturas_galonOnSale", JSON.stringify(d.galonOnSale));
+
+      // Colores personalizados
       const mapped: Record<string, Color[]> = {};
-      for (const [family, colors] of Object.entries(data)) {
+      for (const [family, colors] of Object.entries(d.customColors)) {
         mapped[family] = colors.map((c) => ({ name: c.name, hex: c.hex, code: c.code, id: c.id, pageNumber: c.page_number != null ? String(c.page_number) : null }));
       }
       setCustomColors(mapped);
-    });
-    // Load built-in color overrides and deleted list
-    loadColorNameOverrides().then(setNameOverrides);
-    loadColorPageNumbers().then(setPageNumbers);
-    loadDeletedColors().then(setDeletedColorCodes);
-    // Load family colors, display names and banners
-    loadFamilySettings().then(({ colors, names }) => {
-      if (colors.length > 0) { setFamilyColors(colors); setEditFamilyColors(colors); localStorage.setItem("pinturas_familyColors", JSON.stringify(colors)); }
-      if (names.length > 0) { setFamilyDisplayNames(names); setEditFamilyNames(names); localStorage.setItem("pinturas_familyDisplayNames", JSON.stringify(names)); }
-    });
-    loadFamilyBanners().then((banners) => {
-      setFamilyBanners(banners);
-      setEditFamilyBanners(banners);
-    });
-    // Ensure editFamilyBanners is padded after names load (async timing fix)
 
-    loadColorOrders().then(setColorOrders);
-    // Config del impermeabilizante (calculadora kiosko)
-    loadImpermeabilizante().then((cfg) => { setImperConfig(cfg); setEditImper(cfg); });
+      // Overrides de nombre/código, páginas, eliminados
+      setNameOverrides(d.nameOverrides);
+      setPageNumbers(d.pageNumbers);
+      setDeletedColorCodes(d.deletedColors);
+
+      // Familias (colores, nombres, banners) y orden
+      if (d.familySettings.colors.length > 0) { setFamilyColors(d.familySettings.colors); setEditFamilyColors(d.familySettings.colors); localStorage.setItem("pinturas_familyColors", JSON.stringify(d.familySettings.colors)); }
+      if (d.familySettings.names.length > 0) { setFamilyDisplayNames(d.familySettings.names); setEditFamilyNames(d.familySettings.names); localStorage.setItem("pinturas_familyDisplayNames", JSON.stringify(d.familySettings.names)); }
+      setFamilyBanners(d.familyBanners); setEditFamilyBanners(d.familyBanners);
+      setColorOrders(d.colorOrders);
+
+      // Impermeabilizante (calculadora kiosko)
+      setImperConfig(d.impermeabilizante); setEditImper(d.impermeabilizante);
+    }).catch(() => {});
   }, []);
 
   // Deep-link ?color=CÓDIGO → busca el color y lo abre (cuando ya cargaron overrides/custom).

@@ -771,3 +771,37 @@ export async function saveImpermeabilizante(cfg: ImperConfig): Promise<void> {
     .from("site_settings")
     .upsert({ key: "impermeabilizante", value: JSON.stringify(clean) }, { onConflict: "key" });
 }
+
+// ── Carga inicial combinada ─────────────────────────────────
+// Reúne en UNA sola server action todas las lecturas públicas que la
+// página necesita al montar. Antes eran ~14 llamadas separadas (14
+// invocaciones de función por cada cliente); ahora es 1, lo que reduce
+// muchísimo la carga ante picos de tráfico. Las lecturas internas siguen
+// cacheadas (Data Cache de Next), así que el egress de Supabase no cambia.
+export async function loadInitialData() {
+  const [
+    colorSettings, site, durabilityPrices, galonPrices, durabilityOnSale,
+    galonOnSale, customColors, nameOverrides, pageNumbers, deletedColors,
+    familySettings, familyBanners, colorOrders, impermeabilizante,
+  ] = await Promise.all([
+    loadColorSettings(),
+    loadSiteSettings(),
+    loadDurabilityPrices(),
+    loadGalonPrices(),
+    loadDurabilityOnSale(),
+    loadGalonOnSale(),
+    loadCustomColors(),
+    loadColorNameOverrides(),
+    loadColorPageNumbers(),
+    loadDeletedColors(),
+    loadFamilySettings(),
+    loadFamilyBanners(),
+    loadColorOrders(),
+    loadImpermeabilizante(),
+  ]);
+  return {
+    colorSettings, site, durabilityPrices, galonPrices, durabilityOnSale,
+    galonOnSale, customColors, nameOverrides, pageNumbers, deletedColors,
+    familySettings, familyBanners, colorOrders, impermeabilizante,
+  };
+}
