@@ -2,8 +2,32 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { updateTag } from "next/cache";
+import { headers } from "next/headers";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "./validation";
 import { requireAdmin, setAdminSession, clearAdminSession, isAdmin, verifyPassword } from "./auth";
+
+// ── Rate limit anti-spam para createOrder (público) ─────────
+// Best-effort en memoria por instancia: máx 5 pedidos por minuto por IP.
+// No es un firewall, pero corta el caso típico de spam rápido desde un
+// mismo origen sin depender de servicios externos.
+const ORDER_RATE_LIMIT = 5;
+const ORDER_RATE_WINDOW_MS = 60_000;
+const orderHits = new Map<string, number[]>();
+
+function withinOrderRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const recent = (orderHits.get(ip) ?? []).filter((t) => now - t < ORDER_RATE_WINDOW_MS);
+  if (recent.length >= ORDER_RATE_LIMIT) return false;
+  recent.push(now);
+  orderHits.set(ip, recent);
+  // Limpieza ocasional para que el Map no crezca sin límite.
+  if (orderHits.size > 5000) {
+    for (const [k, v] of orderHits) {
+      if (v.every((t) => now - t > ORDER_RATE_WINDOW_MS)) orderHits.delete(k);
+    }
+  }
+  return true;
+}
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -638,6 +662,12 @@ function priceToNumber(s: string | undefined): number {
 export async function createOrder(
   input: OrderInput
 ): Promise<{ id: number; subtotal: number; deposit: number; balance: number; paidFull: boolean }> {
+  // Anti-spam: límite por IP antes de hacer cualquier trabajo.
+  const hdrs = await headers();
+  const ip = (hdrs.get("x-forwarded-for") ?? "").split(",")[0].trim() || "desconocido";
+  if (!withinOrderRateLimit(ip)) {
+    throw new Error("Estás haciendo pedidos muy rápido. Espera un minuto e intenta de nuevo.");
+  }
   const name = sanitizeText(input.customerName ?? "", 80);
   const phone = (input.customerPhone ?? "").replace(/\D/g, "");
   if (!name) throw new Error("El nombre del cliente es obligatorio");
