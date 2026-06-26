@@ -57,6 +57,7 @@ interface CartItem {
   years: number;   // 2 | 3 | 4 | 7
   cubetas: number;
   galones: number;
+  pageNumber?: string | null;
 }
 
 interface Color {
@@ -1337,7 +1338,7 @@ function Stepper({ label, value, unit, price, onChange, disabled }: { label: str
 }
 
 function AddToCartModal({ color, colorYears, durabilityPrices, galonPrices, onAdd, onClose }: {
-  color: { name: string; code: string; hex: string };
+  color: { name: string; code: string; hex: string; pageNumber?: string | null };
   colorYears: number[];
   durabilityPrices: Record<string, string>;
   galonPrices: Record<string, string>;
@@ -1417,7 +1418,7 @@ function AddToCartModal({ color, colorYears, durabilityPrices, galonPrices, onAd
         <div className="px-4 py-3 border-t border-gray-100 flex gap-2 flex-shrink-0">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
           <button
-            onClick={() => { if (canAdd && years != null) onAdd({ uid: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: color.name, code: color.code, hex: color.hex, years, cubetas, galones }); }}
+            onClick={() => { if (canAdd && years != null) onAdd({ uid: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: color.name, code: color.code, hex: color.hex, years, cubetas, galones, pageNumber: color.pageNumber ?? null }); }}
             disabled={!canAdd}
             className="flex-[2] py-2.5 rounded-xl bg-teal-500 text-white text-sm font-bold hover:bg-teal-600 disabled:opacity-40 active:scale-95 transition-all"
           >Agregar al carrito</button>
@@ -1466,7 +1467,7 @@ function CartModal({ cart, durabilityPrices, galonPrices, onRemove, onCheckout, 
                 <div className="w-9 h-9 rounded-lg border-2 border-gray-100 flex-shrink-0" style={{ backgroundColor: it.hex }} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-gray-800 leading-tight truncate">{it.name}</p>
-                  <p className="text-[10px] text-gray-400 font-mono leading-tight">{it.code}</p>
+                  <p className="text-[10px] text-gray-400 font-mono leading-tight">{it.code}{it.pageNumber ? ` · Pág. ${it.pageNumber}` : ""}</p>
                   <p className="text-[11px] text-teal-600 font-semibold leading-tight mt-0.5">
                     {it.years} años · {it.cubetas > 0 && `${it.cubetas} cub.`}{it.cubetas > 0 && it.galones > 0 && " + "}{it.galones > 0 && `${it.galones} gal.`}
                   </p>
@@ -1545,7 +1546,7 @@ function CheckoutModal({ cart, durabilityPrices, galonPrices, onClearCart, onClo
     lines.push(`Cliente: ${name.trim()}  ·  WhatsApp: ${cleanPhone}`);
     lines.push("————————————————");
     cart.forEach((it, i) => {
-      lines.push(`*${i + 1}) ${it.name}*  [${it.code}]`);
+      lines.push(`*${i + 1}) ${it.name}*  [${it.code}]${it.pageNumber ? `  · Pág. ${it.pageNumber}` : ""}`);
       lines.push(`   • Calidad ${it.years} años`);
       if (it.cubetas > 0) lines.push(`   • ${it.cubetas} × Cubeta 19L`);
       if (it.galones > 0) lines.push(`   • ${it.galones} × Galón 4L`);
@@ -1571,7 +1572,7 @@ function CheckoutModal({ cart, durabilityPrices, galonPrices, onClearCart, onClo
       const res = await createOrder({
         customerName: name.trim(),
         customerPhone: cleanPhone,
-        items: cart.map((it) => ({ name: it.name, code: it.code, hex: it.hex, years: it.years, cubetas: it.cubetas, galones: it.galones })),
+        items: cart.map((it) => ({ name: it.name, code: it.code, hex: it.hex, years: it.years, cubetas: it.cubetas, galones: it.galones, pageNumber: it.pageNumber })),
         deposit: depositNum,
         paymentMethod: method,
       });
@@ -1714,6 +1715,7 @@ function CheckoutModal({ cart, durabilityPrices, galonPrices, onClearCart, onClo
                       <span>{i + 1}. {it.name}</span>
                       <span className="inline-block w-3.5 h-3.5 rounded-sm border border-gray-300 align-middle" style={{ backgroundColor: it.hex }} />
                       <span className="text-gray-400">[{it.code}]</span>
+                      {it.pageNumber && <span className="text-gray-400">· Pág. {it.pageNumber}</span>}
                     </p>
                     <p>Calidad {it.years} años</p>
                     {it.cubetas > 0 && <p>{it.cubetas} × Cubeta 19L</p>}
@@ -1824,7 +1826,7 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
                 {o.items.map((it, i) => (
                   <p key={i} className="text-[11px] text-gray-600">
                     <span className="inline-block w-2.5 h-2.5 rounded-sm align-middle mr-1" style={{ backgroundColor: it.hex }} />
-                    {it.name} <span className="text-gray-400 font-mono">[{it.code}]</span> · {it.years} años · {it.cubetas > 0 && `${it.cubetas} cub.`}{it.cubetas > 0 && it.galones > 0 && " + "}{it.galones > 0 && `${it.galones} gal.`}
+                    {it.name} <span className="text-gray-400 font-mono">[{it.code}]</span>{it.pageNumber && <span className="text-gray-400"> · Pág. {it.pageNumber}</span>} · {it.years} años · {it.cubetas > 0 && `${it.cubetas} cub.`}{it.cubetas > 0 && it.galones > 0 && " + "}{it.galones > 0 && `${it.galones} gal.`}
                   </p>
                 ))}
               </div>
@@ -1882,7 +1884,7 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
                       <div className="w-12 h-12 rounded-lg border-2 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: it.hex }} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-gray-900 leading-tight">{it.name}</p>
-                        <p className="text-xs text-gray-400 font-mono">{it.code}</p>
+                        <p className="text-xs text-gray-400 font-mono">{it.code}{it.pageNumber ? ` · Pág. ${it.pageNumber}` : ""}</p>
                         <p className="text-sm text-teal-700 font-semibold mt-1">Calidad {it.years} años</p>
                         {it.cubetas > 0 && <p className="text-sm text-gray-700">{it.cubetas} × Cubeta 19L</p>}
                         {it.galones > 0 && <p className="text-sm text-gray-700">{it.galones} × Galón 4L</p>}

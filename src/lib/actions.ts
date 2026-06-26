@@ -620,6 +620,7 @@ export interface OrderItemInput {
   years: number;     // 2 | 3 | 4 | 7
   cubetas: number;
   galones: number;
+  pageNumber?: string | null;
 }
 
 export interface OrderInput {
@@ -696,6 +697,7 @@ export async function createOrder(
       years,
       cubetas,
       galones,
+      pageNumber: it.pageNumber ? sanitizeText(String(it.pageNumber), 20) : null,
       subtotal,
     };
   });
