@@ -1786,7 +1786,9 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
     entregado: "bg-teal-100 text-teal-700",
     cancelado: "bg-red-100 text-red-600",
   };
+  const [detailOrder, setDetailOrder] = useState<OrderRow | null>(null);
   return (
+    <>
     <div className="fixed inset-0 z-[97] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" style={{ zIndex: 97 }} onClick={onClose}>
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92dvh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
@@ -1808,7 +1810,13 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
                   <span className="font-black text-gray-900">#{o.id}</span>
                   <span className="text-[11px] text-gray-400 ml-2">{new Date(o.created_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}</span>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLOR[o.status] ?? "bg-gray-100 text-gray-600"}`}>{o.status}</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setDetailOrder(o)} className="text-[10px] font-semibold text-teal-600 hover:text-teal-700 hover:underline flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    Ver detalle
+                  </button>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLOR[o.status] ?? "bg-gray-100 text-gray-600"}`}>{o.status}</span>
+                </div>
               </div>
               <p className="text-sm font-semibold text-gray-800">{o.customer_name}</p>
               <a href={`https://wa.me/52${o.customer_phone}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-green-600 hover:underline">+52 {o.customer_phone}</a>
@@ -1835,6 +1843,77 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
         </div>
       </div>
     </div>
+
+    {/* Vista grande del detalle de un pedido */}
+    {detailOrder && (() => {
+      const o = detailOrder;
+      return (
+        <div className="fixed inset-0 z-[98] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70" style={{ zIndex: 98 }} onClick={() => setDetailOrder(null)}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[94dvh]" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white flex-shrink-0">
+              <div>
+                <h2 className="font-black text-2xl leading-none">Pedido #{o.id}</h2>
+                <p className="text-xs text-gray-400 mt-1">{new Date(o.created_at).toLocaleString("es-MX", { dateStyle: "long", timeStyle: "short" })}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-gray-100 text-gray-700"}`}>{o.status}</span>
+                <button onClick={() => setDetailOrder(null)} className="text-gray-300 hover:text-white text-2xl leading-none">✕</button>
+              </div>
+            </div>
+
+            <div className="p-5 flex flex-col gap-4 overflow-y-auto">
+              {/* Cliente */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <p className="text-[11px] text-gray-400 uppercase tracking-wide font-semibold mb-1">Cliente</p>
+                <p className="text-lg font-bold text-gray-900">{o.customer_name}</p>
+                <a href={`https://wa.me/52${o.customer_phone}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-green-600 hover:underline mt-0.5">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z" /></svg>
+                  +52 {o.customer_phone}
+                </a>
+              </div>
+
+              {/* Colores */}
+              <div>
+                <p className="text-[11px] text-gray-400 uppercase tracking-wide font-semibold mb-2">Colores ({o.items.length})</p>
+                <div className="flex flex-col gap-2">
+                  {o.items.map((it, i) => (
+                    <div key={i} className="flex items-center gap-3 border border-gray-200 rounded-xl p-3">
+                      <div className="w-12 h-12 rounded-lg border-2 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: it.hex }} />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-gray-900 leading-tight">{it.name}</p>
+                        <p className="text-xs text-gray-400 font-mono">{it.code}</p>
+                        <p className="text-sm text-teal-700 font-semibold mt-0.5">
+                          Calidad {it.years} años · {it.cubetas > 0 && `${it.cubetas} × Cubeta 19L`}{it.cubetas > 0 && it.galones > 0 && "  +  "}{it.galones > 0 && `${it.galones} × Galón 4L`}
+                        </p>
+                      </div>
+                      {typeof it.subtotal === "number" && it.subtotal > 0 && (
+                        <span className="text-sm font-black text-gray-800 flex-shrink-0">{money(it.subtotal)}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Totales */}
+              <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex flex-col gap-1.5">
+                <div className="flex justify-between text-base"><span className="text-gray-600">Total</span><span className="font-black text-gray-900">{money(o.subtotal)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Pago ({PAYMENT_LABELS[o.payment_method] ?? o.payment_method})</span><span className="font-semibold text-gray-700">{money(o.deposit)}</span></div>
+                <div className="flex justify-between text-base border-t border-teal-200 pt-1.5">
+                  <span className="font-semibold text-gray-600">Saldo</span>
+                  <span className={`font-black ${o.balance > 0 ? "text-orange-500" : "text-teal-600"}`}>{o.balance > 0 ? money(o.balance) : "Pagado completo"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-gray-100 flex-shrink-0">
+              <button onClick={() => setDetailOrder(null)} className="w-full py-2.5 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+    </>
   );
 }
 
