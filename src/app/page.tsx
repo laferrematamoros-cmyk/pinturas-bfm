@@ -1092,17 +1092,22 @@ function WallPaintCalculator({
           </div>
 
           {/* Results: all qualities */}
-          {hasArea && availableOptions.length > 0 ? (
+          {hasArea && availableOptions.length > 0 ? (() => {
+            const resultados = availableOptions.map((opt) => ({ opt, r: computeForYears(opt.years) }));
+            let mejorYears: number | null = null;
+            let mejorTotal = Infinity;
+            for (const { opt, r } of resultados) { if (r.total > 0 && r.total < mejorTotal) { mejorTotal = r.total; mejorYears = opt.years; } }
+            return (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide text-center">
                 Lo que necesitas según la calidad
               </p>
-              {availableOptions.map((opt) => {
-                const r = computeForYears(opt.years);
+              {resultados.map(({ opt, r }) => {
+                const esMejor = mejorYears != null && opt.years === mejorYears;
                 return (
-                  <div key={opt.years} className="bg-teal-50 border border-teal-200 rounded-2xl px-4 py-3">
+                  <div key={opt.years} className={`rounded-2xl px-4 py-3 ${esMejor ? "bg-teal-50 border-2 border-teal-500 shadow-sm" : "bg-teal-50 border border-teal-200"}`}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-extrabold text-teal-800">{opt.years} años</span>
+                      <span className="font-extrabold text-teal-800 flex items-center gap-2">{opt.years} años{esMejor && <span className="text-[9px] font-black bg-teal-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wide whitespace-nowrap">Más económica</span>}</span>
                       <span className="text-[11px] text-teal-500">{r.liters} L · {opt.yield}</span>
                     </div>
                     <div className="flex items-center gap-3 flex-wrap">
@@ -1140,7 +1145,8 @@ function WallPaintCalculator({
                 Cálculo aproximado. Los precios pueden variar; confirma en mostrador.
               </p>
             </div>
-          ) : (
+            );
+          })() : (
             <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-5 text-center text-gray-400 text-sm">
               Ingresa el ancho y alto de al menos una pared para ver cuánta pintura necesitas
             </div>
