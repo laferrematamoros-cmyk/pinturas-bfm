@@ -1883,9 +1883,9 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-gray-900 leading-tight">{it.name}</p>
                         <p className="text-xs text-gray-400 font-mono">{it.code}</p>
-                        <p className="text-sm text-teal-700 font-semibold mt-0.5">
-                          Calidad {it.years} años · {it.cubetas > 0 && `${it.cubetas} × Cubeta 19L`}{it.cubetas > 0 && it.galones > 0 && "  +  "}{it.galones > 0 && `${it.galones} × Galón 4L`}
-                        </p>
+                        <p className="text-sm text-teal-700 font-semibold mt-1">Calidad {it.years} años</p>
+                        {it.cubetas > 0 && <p className="text-sm text-gray-700">{it.cubetas} × Cubeta 19L</p>}
+                        {it.galones > 0 && <p className="text-sm text-gray-700">{it.galones} × Galón 4L</p>}
                       </div>
                       {typeof it.subtotal === "number" && it.subtotal > 0 && (
                         <span className="text-sm font-black text-gray-800 flex-shrink-0">{money(it.subtotal)}</span>
