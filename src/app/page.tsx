@@ -942,31 +942,31 @@ function WallPaintCalculator({
   function computeForYears(years: number) {
     const yieldPerLiter = YIELD_MAP[years];
     const liters = Math.ceil(totalArea / yieldPerLiter);
+    const cubPrice = parsePrice(durabilityPrices[String(years)] ?? "");
+    const galPrice = parsePrice(galonPrices[String(years)] ?? "");
     const hasGalon = !!galonPrices[String(years)];
     let cubetas: number;
     let galones: number;
-    if (hasGalon) {
-      // Tamaños REALES: cubeta = 19 L, galón = 4 L.
-      // Compara 2 opciones y elige la que compre MENOS litros (menos desperdicio):
-      //   A) solo cubetas      B) cubetas completas + galones para el resto.
-      const cubA = Math.ceil(liters / 19);
-      const cubB = Math.floor(liters / 19);
-      const restanteB = liters - cubB * 19;
-      const galB = restanteB > 0 ? Math.ceil(restanteB / 4) : 0;
-      const litrosA = cubA * 19;
-      const litrosB = cubB * 19 + galB * 4;
-      if (cubB + galB > 0 && litrosB <= litrosA) {
-        cubetas = cubB; galones = galB;
+    if (hasGalon && cubPrice != null && galPrice != null) {
+      // Tamaños REALES: cubeta = 19 L, galón = 4 L. Llena con cubetas completas
+      // y, para el resto, elige lo MÁS BARATO: galones o una cubeta más.
+      const cubBase = Math.floor(liters / 19);
+      const restante = liters - cubBase * 19;
+      if (restante <= 0) {
+        cubetas = Math.max(1, cubBase); galones = 0;
       } else {
-        cubetas = Math.max(1, cubA); galones = 0;
+        const galRest = Math.ceil(restante / 4);
+        if (galRest * galPrice < cubPrice) {
+          cubetas = cubBase; galones = galRest;       // más barato con galones
+        } else {
+          cubetas = cubBase + 1; galones = 0;          // más barato una cubeta más
+        }
       }
     } else {
       // Solo cubetas (redondeo hacia arriba)
       cubetas = Math.max(1, Math.ceil(liters / 19));
       galones = 0;
     }
-    const cubPrice = parsePrice(durabilityPrices[String(years)] ?? "");
-    const galPrice = parsePrice(galonPrices[String(years)] ?? "");
     const total =
       (cubPrice != null ? cubetas * cubPrice : 0) +
       (galPrice != null ? galones * galPrice : 0);
