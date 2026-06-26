@@ -1089,6 +1089,9 @@ function WallPaintCalculator({
                 </button>
               ))}
             </div>
+            <div className="mt-2 text-[11px] text-gray-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-snug">
+              <span className="font-bold text-amber-700">💡 Recomendado:</span> 2 manos para 2, 3 y 4 años · 1 mano para 7 años. Si el color es muy oscuro, considera de 2 a 3 manos.
+            </div>
           </div>
 
           {/* Results: all qualities */}
