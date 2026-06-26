@@ -13,31 +13,33 @@ interface NavbarProps {
   kioskMode?: boolean;
   cartCount?: number;
   onCartClick?: () => void;
-  onLogoLongPress?: () => void;
+  onSecretAccess?: () => void;
 }
 
-export default function Navbar({ siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onLogoLongPress }: NavbarProps) {
-  // Acceso oculto de administrador: toque largo (~5s) sobre el logo abre el login.
-  // (En cualquier modo; el ícono visible de admin está oculto.)
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressed = useRef(false);
-  const startPress = () => {
-    if (!onLogoLongPress) return;
-    longPressed.current = false;
-    pressTimer.current = setTimeout(() => { longPressed.current = true; onLogoLongPress(); }, 5000);
+export default function Navbar({ siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onSecretAccess }: NavbarProps) {
+  // Acceso oculto de administrador: 6 toques seguidos sobre el logo abren el login.
+  // El logo deja de navegar; el contador se reinicia si pasan >2s entre toques.
+  const tapCount = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleLogoTap = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!onSecretAccess) return;
+    tapCount.current += 1;
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+    if (tapCount.current >= 6) {
+      tapCount.current = 0;
+      onSecretAccess();
+    } else {
+      tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 2000);
+    }
   };
-  const cancelPress = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; } };
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="w-full px-4 sm:px-8 flex items-center justify-between h-24 sm:h-32">
-        {/* Logo(s) */}
-        <Link href="/" className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0"
-          onClick={(e) => { if (longPressed.current) { e.preventDefault(); longPressed.current = false; } }}
-          onPointerDown={startPress}
-          onPointerUp={cancelPress}
-          onPointerLeave={cancelPress}
-          onPointerCancel={cancelPress}>
+        {/* Logo(s) — 6 toques = acceso oculto de admin (no navega) */}
+        <Link href="/" className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0 select-none"
+          onClick={handleLogoTap}>
           {logoUrl ? (
             <img
               src={logoUrl}

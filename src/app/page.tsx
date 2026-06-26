@@ -2119,8 +2119,8 @@ export default function Home() {
     }
   }
 
-  // Acceso oculto de administrador por toque largo (~3s) en el logo. Funciona en
-  // cualquier modo (incluido kiosko): si ya es admin abre el menú; si no, el login.
+  // Acceso oculto de administrador: 6 toques al logo. Funciona en cualquier modo
+  // (incluido kiosko): si ya es admin abre el menú; si no, el login.
   function handleLogoAccess() {
     if (isAdmin) {
       setShowAdminMenu((v) => !v);
@@ -2782,7 +2782,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onLogoLongPress={handleLogoAccess} />
+      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onSecretAccess={handleLogoAccess} />
 
       {/* Room preview modal */}
       {roomPreviewOpen && selectedColor && (
