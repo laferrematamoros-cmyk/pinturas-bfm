@@ -1826,7 +1826,7 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
                 {o.items.map((it, i) => (
                   <p key={i} className="text-[11px] text-gray-600">
                     <span className="inline-block w-2.5 h-2.5 rounded-sm align-middle mr-1" style={{ backgroundColor: it.hex }} />
-                    {it.name} <span className="text-gray-400 font-mono">[{it.code}]</span>{it.pageNumber && <span className="text-gray-400"> · Pág. {it.pageNumber}</span>} · {it.years} años · {it.cubetas > 0 && `${it.cubetas} cub.`}{it.cubetas > 0 && it.galones > 0 && " + "}{it.galones > 0 && `${it.galones} gal.`}
+                    {it.name} <span className="text-gray-400 font-mono">[{it.code}]</span>{it.pageNumber && <span className="mx-1 inline-block bg-yellow-200 text-yellow-800 font-bold rounded px-1.5 py-0.5 text-[10px] align-middle">Pág. {it.pageNumber}</span>} · {it.years} años · {it.cubetas > 0 && `${it.cubetas} cub.`}{it.cubetas > 0 && it.galones > 0 && " + "}{it.galones > 0 && `${it.galones} gal.`}
                   </p>
                 ))}
               </div>
@@ -1884,7 +1884,7 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
                       <div className="w-12 h-12 rounded-lg border-2 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: it.hex }} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-gray-900 leading-tight">{it.name}</p>
-                        <p className="text-xs text-gray-400 font-mono">{it.code}{it.pageNumber ? ` · Pág. ${it.pageNumber}` : ""}</p>
+                        <p className="text-xs text-gray-400 font-mono flex items-center gap-1.5 flex-wrap">{it.code}{it.pageNumber && <span className="bg-yellow-200 text-yellow-800 font-bold rounded px-1.5 py-0.5 text-[11px]">Pág. {it.pageNumber}</span>}</p>
                         <p className="text-sm text-teal-700 font-semibold mt-1">Calidad {it.years} años</p>
                         {it.cubetas > 0 && <p className="text-sm text-gray-700">{it.cubetas} × Cubeta 19L</p>}
                         {it.galones > 0 && <p className="text-sm text-gray-700">{it.galones} × Galón 4L</p>}
