@@ -1981,6 +1981,7 @@ export default function Home() {
   const [kioskMode, setKioskMode] = useState(false); // tablet en tienda: solo logo + catálogo
   const [kioskLinkCopied, setKioskLinkCopied] = useState(false);
   const [pendingColorCode, setPendingColorCode] = useState<string | null>(null); // deep-link ?color=CÓDIGO
+  const [newVersionAvailable, setNewVersionAvailable] = useState(false); // hay un deploy nuevo
   const [calcOpen, setCalcOpen] = useState(false);
   const [wallCalcOpen, setWallCalcOpen] = useState(false);
   const [imperCalcOpen, setImperCalcOpen] = useState(false);
@@ -2135,6 +2136,42 @@ export default function Home() {
       setImperConfig(d.impermeabilizante); setEditImper(d.impermeabilizante);
     }).catch(() => {});
   }, []);
+
+  // Detecta un deploy nuevo y marca para recargar (evita "Server Action not found"
+  // en tablets/PWAs que quedan abiertas mucho tiempo). La recarga real ocurre solo
+  // cuando la app está libre (ver efecto siguiente).
+  React.useEffect(() => {
+    let active = true;
+    let known: string | null = null;
+    const check = async () => {
+      try {
+        const r = await fetch("/api/version", { cache: "no-store" });
+        const { v } = await r.json();
+        if (!active || !v) return;
+        if (known === null) { known = v; return; }
+        if (v !== known) setNewVersionAvailable(true);
+      } catch {}
+    };
+    check();
+    const id = setInterval(check, 2 * 60 * 1000); // cada 2 min
+    const onVis = () => { if (document.visibilityState === "visible") check(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { active = false; clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+  }, []);
+
+  // Recarga segura: solo cuando no hay un pedido o edición en curso.
+  React.useEffect(() => {
+    if (!newVersionAvailable) return;
+    const libre =
+      cart.length === 0 &&
+      !cartOpen && !checkoutOpen && !addToCartColor &&
+      !calcOpen && !wallCalcOpen && !imperCalcOpen && !roomPreviewOpen &&
+      !ordersOpen && !showSiteSettings && !showLoginModal && !showAddColorModal;
+    if (libre) {
+      const t = setTimeout(() => window.location.reload(), 400);
+      return () => clearTimeout(t);
+    }
+  }, [newVersionAvailable, cart.length, cartOpen, checkoutOpen, addToCartColor, calcOpen, wallCalcOpen, imperCalcOpen, roomPreviewOpen, ordersOpen, showSiteSettings, showLoginModal, showAddColorModal]);
 
   // Deep-link ?color=CÓDIGO → busca el color y lo abre (cuando ya cargaron overrides/custom).
   React.useEffect(() => {
