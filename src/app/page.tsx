@@ -966,7 +966,10 @@ function WallPaintCalculator({
       (galPrice != null ? galones * galPrice : 0);
     const cubOnSale = durabilityOnSale.includes(years);
     const galOnSale = galonOnSale.includes(years);
-    return { liters, cubetas, galones, hasGalon, total, cubOnSale, galOnSale };
+    // Litros que sobran: solo se vende en cubetas (19L) y galones (4L) completos.
+    const litrosComprados = cubetas * 19 + galones * 4;
+    const litrosSobrantes = Math.max(0, Math.round((litrosComprados - liters) * 10) / 10);
+    return { liters, cubetas, galones, hasGalon, total, cubOnSale, galOnSale, litrosSobrantes };
   }
 
   return (
@@ -1121,6 +1124,9 @@ function WallPaintCalculator({
                         </span>
                       )}
                     </div>
+                    {r.litrosSobrantes > 0 && (
+                      <p className="text-[10px] text-amber-700 mt-1.5">⚡ Te sobrarán aprox. <span className="font-bold">{r.litrosSobrantes} L</span> (envases completos).</p>
+                    )}
                   </div>
                 );
               })}
