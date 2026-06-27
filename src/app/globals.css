@@ -183,3 +183,7 @@ body {
 
 /* Subtítulos en mayúsculas: menos "grito", más elegante */
 .design-apple .uppercase { letter-spacing: 0.04em; }
+
+/* Tira deslizable de familias sin barra de scroll visible */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

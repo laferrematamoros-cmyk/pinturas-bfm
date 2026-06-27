@@ -3715,13 +3715,13 @@ export default function Home() {
 
             {/* Family selector — círculos grandes (prueba de diseño) o pills (normal) */}
             {designPreview ? (
-              <div className="grid grid-cols-4 gap-x-3 gap-y-4 mb-6 px-4 max-w-md mx-auto justify-items-center">
+              <div className="flex gap-3 sm:gap-4 mb-6 px-4 overflow-x-auto no-scrollbar pb-1 snap-x">
                 {familyDisplayNames.map((name, i) => (
                   <button
                     key={i}
                     onClick={() => { setSelectedFamily(i); setSelectedColor(null); setSearch(""); }}
                     title={name}
-                    className="flex flex-col items-center gap-1.5 group cursor-pointer"
+                    className="flex flex-col items-center gap-1.5 group cursor-pointer shrink-0 snap-start"
                   >
                     <span
                       className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-200 ${
@@ -4195,7 +4195,7 @@ export default function Home() {
                       {familyDisplayNames[selectedFamily] ?? currentFamily.name}
                     </h2>
                     <p className="text-sm text-gray-400 mt-1.5">
-                      {visibleFamilyColors.length} color{visibleFamilyColors.length !== 1 ? "es" : ""}
+                      {displayedColors.length} color{displayedColors.length !== 1 ? "es" : ""}
                     </p>
                   </div>
                 ) : (
