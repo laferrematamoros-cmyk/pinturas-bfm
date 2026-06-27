@@ -2011,7 +2011,7 @@ export default function Home() {
   const [kioskLinkCopied, setKioskLinkCopied] = useState(false);
   const [pendingColorCode, setPendingColorCode] = useState<string | null>(null); // deep-link ?color=CÓDIGO
   const [newVersionAvailable, setNewVersionAvailable] = useState(false); // hay un deploy nuevo
-  const [designPreview, setDesignPreview] = useState(false); // ?diseno=1 → tema Apple (prueba)
+  const designPreview = kioskMode; // diseño Apple automático SOLO en modo kiosko (tablet en tienda)
   const [calcOpen, setCalcOpen] = useState(false);
   const [wallCalcOpen, setWallCalcOpen] = useState(false);
   const [imperCalcOpen, setImperCalcOpen] = useState(false);
@@ -2104,20 +2104,7 @@ export default function Home() {
       try { isKiosk = localStorage.getItem("pinturas_kiosko") === "1"; } catch { isKiosk = false; }
     }
     setKioskMode(isKiosk);
-    // Prueba de diseño (tema Apple): ?diseno=1 lo activa, ?diseno=0 lo apaga.
-    // Se recuerda en localStorage para poder comparar al recargar.
-    const designParam = params.get("diseno");
-    let isDesign: boolean;
-    if (designParam === "1") {
-      isDesign = true;
-      try { localStorage.setItem("pinturas_diseno", "1"); } catch {}
-    } else if (designParam === "0") {
-      isDesign = false;
-      try { localStorage.removeItem("pinturas_diseno"); } catch {}
-    } else {
-      try { isDesign = localStorage.getItem("pinturas_diseno") === "1"; } catch { isDesign = false; }
-    }
-    setDesignPreview(isDesign);
+    // El diseño Apple se aplica automáticamente cuando isKiosk es true (designPreview = kioskMode).
     // Deep-link a un color: ?color=CÓDIGO (lo abre cuando carguen los datos).
     const colorParam = params.get("color");
     if (colorParam) setPendingColorCode(colorParam);
@@ -2930,18 +2917,6 @@ export default function Home() {
 
   return (
     <div className={`flex flex-col min-h-screen overflow-x-hidden${designPreview ? " design-apple" : ""}`}>
-      {/* Banner flotante de "Prueba de diseño" (tema Apple). Solo aparece en ?diseno=1. */}
-      {designPreview && (
-        <button
-          onClick={() => { try { localStorage.removeItem("pinturas_diseno"); } catch {} window.location.href = `${window.location.origin}/?diseno=0`; }}
-          title="Volver al diseño normal"
-          style={{ zIndex: 60 }}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 backdrop-blur text-white text-xs sm:text-sm font-medium px-4 py-2 rounded-full shadow-lg active:scale-95 transition-transform"
-        >
-          <span className="inline-block w-2 h-2 rounded-full bg-[#0071e3]"></span>
-          Prueba de diseño · <span className="underline underline-offset-2">Salir</span>
-        </button>
-      )}
       <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onSecretAccess={handleLogoAccess} onOrdersClick={openOrders} onSayerSecret={handleSayerSecret} editMode={editMode} />
 
       {/* Room preview modal */}
@@ -3715,8 +3690,8 @@ export default function Home() {
 
             {/* Family selector — círculos grandes (prueba de diseño) o pills (normal) */}
             {designPreview ? (
-              <div className="overflow-x-auto no-scrollbar mb-6 px-4">
-                <div className="flex gap-4 sm:gap-5 w-max mx-auto pb-1 snap-x">
+              <div className="overflow-x-auto no-scrollbar mb-6 px-4 py-2">
+                <div className="flex gap-4 sm:gap-5 w-max mx-auto snap-x">
                 {familyDisplayNames.map((name, i) => (
                   <button
                     key={i}
@@ -3727,7 +3702,7 @@ export default function Home() {
                     <span
                       className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full transition-all duration-200 ${
                         selectedFamily === i
-                          ? "ring-2 ring-offset-2 ring-[#0071e3] scale-105"
+                          ? "ring-2 ring-[#0071e3] scale-105"
                           : "ring-1 ring-black/10 group-hover:scale-105"
                       }`}
                       style={{ background: familyDisplayNames[i] === "Rojos/Rosas"
@@ -3764,6 +3739,16 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            )}
+
+            {/* Badge "Más de X colores" (solo prueba de diseño) — debajo de los círculos */}
+            {designPreview && (
+              <div className="flex justify-center mb-6 px-4">
+                <span className="inline-flex items-center gap-2 bg-gray-100 text-gray-600 text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full">
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                  Más de 2,000 colores Sayer disponibles en La Ferre
+                </span>
+              </div>
             )}
 
             {/* Search */}
@@ -3834,8 +3819,8 @@ export default function Home() {
                 </div>
 
                 {/* Combined quality grid */}
-                <div className="mb-1">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                <div className={`mb-1${designPreview ? " max-w-5xl mx-auto" : ""}`}>
+                  <div className={`grid grid-cols-2 sm:grid-cols-4 ${designPreview ? "gap-4 sm:gap-6" : "gap-2 sm:gap-3"}`}>
                     {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]).map((opt) => {
                       const price = durabilityPrices[String(opt.years)];
                       const galon = galonPrices[String(opt.years)];
@@ -3843,6 +3828,10 @@ export default function Home() {
                       const onSale = durabilityOnSale.includes(opt.years) || galonOnSale.includes(opt.years);
                       const neonColor = onSale ? "#f97316" : "#2dd4bf";
                       const neonShadow = `0 0 8px ${neonColor}, 0 0 20px ${neonColor}80`;
+                      // Prueba de diseño: texto más grande y visible
+                      const txtYears = designPreview ? "text-base sm:text-lg" : "text-sm";
+                      const txtPrice = designPreview ? "text-base sm:text-lg" : "text-sm";
+                      const txtUnit = designPreview ? "text-xs" : "text-[10px]";
                       return (
                         <button
                           key={opt.years}
@@ -3861,24 +3850,24 @@ export default function Home() {
                               </svg>
                             </span>
                           )}
-                          <span className="font-bold text-sm mb-1">{opt.years} años</span>
+                          <span className={`font-bold mb-1 ${txtYears}`}>{opt.years} años</span>
                           {galon && (
                             <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                               <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
-                              <span className={`text-sm font-extrabold leading-tight ${active ? (galonOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : galonOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{galon}</span>
-                              <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
+                              <span className={`${txtPrice} font-extrabold leading-tight ${active ? (galonOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : galonOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{galon}</span>
+                              <span className={`${txtUnit} font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
                               {galonOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                             </div>
                           )}
                           {price && (
                             <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
                               <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
-                              <span className={`text-sm font-extrabold leading-tight ${active ? (durabilityOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : durabilityOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{price}</span>
-                              <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
+                              <span className={`${txtPrice} font-extrabold leading-tight ${active ? (durabilityOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : durabilityOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{price}</span>
+                              <span className={`${txtUnit} font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
                               {durabilityOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                             </div>
                           )}
-                          <span className={`text-[10px] leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
+                          <span className={`${txtUnit} leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
                         </button>
                       );
                     })}
@@ -3919,8 +3908,9 @@ export default function Home() {
                   </button>
                 </div>}
 
-                {/* Wall calculator button — solo modo kiosko (tablet en tienda) */}
-                {kioskMode && <div className="mt-3 flex justify-center">
+                {/* Calculadoras kiosko — lado a lado en la prueba de diseño, apiladas en kiosko normal */}
+                {kioskMode && (
+                <div className={`mt-3 flex justify-center ${designPreview ? "flex-row flex-wrap gap-5 sm:gap-8" : "flex-col items-center gap-3"}`}>
                   <button
                     onClick={() => setWallCalcOpen(true)}
                     className="neon-hover flex items-center gap-2 bg-gray-900 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-gray-800"
@@ -3931,10 +3921,7 @@ export default function Home() {
                     </svg>
                     Calcular por paredes
                   </button>
-                </div>}
-
-                {/* Calculadora de impermeabilizante — solo kiosko, si está activada */}
-                {kioskMode && imperConfig.enabled && <div className="mt-3 flex justify-center">
+                  {imperConfig.enabled && (
                   <button
                     onClick={() => setImperCalcOpen(true)}
                     className="neon-hover flex items-center gap-2 bg-gray-900 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-gray-800"
@@ -3943,7 +3930,9 @@ export default function Home() {
                     <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7M3 21h18" /></svg>
                     Calcular {imperConfig.name || "impermeabilizante"}
                   </button>
-                </div>}
+                  )}
+                </div>
+                )}
               </div>
             )}
 
@@ -4169,7 +4158,8 @@ export default function Home() {
               })()
             ) : (
               <>
-                {/* Disclaimer */}
+                {/* Disclaimer / tips — ocultos en la prueba de diseño */}
+                {!designPreview && (
                 <div className="mx-auto max-w-xl px-4 mb-5 text-center">
                   <p className="text-xs text-gray-500 leading-relaxed">
                     Los colores mostrados son aproximados. Para apreciar el tono más real, te invitamos a consultar nuestro catálogo físico en tienda.
@@ -4178,6 +4168,7 @@ export default function Home() {
                     💡 <span className="font-medium">Tip:</span> La iluminación de tu espacio —ya sea amarilla o blanca— puede influir en la percepción del tono final.
                   </p>
                 </div>
+                )}
 
                 {/* Banner — oculto en la prueba de diseño para un look más limpio */}
                 {!designPreview && (
@@ -4196,8 +4187,9 @@ export default function Home() {
                     <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-none">
                       {familyDisplayNames[selectedFamily] ?? currentFamily.name}
                     </h2>
-                    <p className="text-sm text-gray-400 mt-1.5">
-                      {displayedColors.length} color{displayedColors.length !== 1 ? "es" : ""}
+                    <p className="mt-2 text-gray-900 text-sm font-bold">
+                      <span className="font-extrabold text-[#0071e3] text-lg sm:text-xl">{displayedColors.length}</span>{" "}
+                      color{displayedColors.length !== 1 ? "es" : ""} disponibles
                     </p>
                   </div>
                 ) : (
