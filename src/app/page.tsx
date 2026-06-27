@@ -3713,7 +3713,31 @@ export default function Home() {
               Elige tu color favorito
             </h1>
 
-            {/* Family selector dots */}
+            {/* Family selector — círculos grandes (prueba de diseño) o pills (normal) */}
+            {designPreview ? (
+              <div className="grid grid-cols-4 gap-x-3 gap-y-4 mb-6 px-4 max-w-md mx-auto justify-items-center">
+                {familyDisplayNames.map((name, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setSelectedFamily(i); setSelectedColor(null); setSearch(""); }}
+                    title={name}
+                    className="flex flex-col items-center gap-1.5 group cursor-pointer"
+                  >
+                    <span
+                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-200 ${
+                        selectedFamily === i
+                          ? "ring-2 ring-offset-2 ring-[#0071e3] scale-105"
+                          : "ring-1 ring-black/10 group-hover:scale-105"
+                      }`}
+                      style={{ background: familyDisplayNames[i] === "Rojos/Rosas"
+                        ? `linear-gradient(135deg, ${familyColors[i] ?? "#C9464F"} 50%, #e87ca0 50%)`
+                        : (familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888") }}
+                    />
+                    <span className={`text-[11px] leading-none ${selectedFamily === i ? "font-semibold text-gray-900" : "font-medium text-transparent select-none"}`}>{name}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
             <div className="flex justify-center gap-1.5 mb-5 flex-wrap px-4">
               {familyDisplayNames.map((name, i) => (
                 <button
@@ -3738,6 +3762,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            )}
 
             {/* Search */}
             <div className="flex justify-center mb-6 px-4">
@@ -4152,18 +4177,32 @@ export default function Home() {
                   </p>
                 </div>
 
-                {/* Banner */}
+                {/* Banner — oculto en la prueba de diseño para un look más limpio */}
+                {!designPreview && (
                 <div
                   className="w-full h-14 mb-1"
                   style={{
                     background: `linear-gradient(to right, ${bannerGradient})`,
                   }}
                 />
+                )}
 
-                {/* Family name */}
-                <p className="text-center text-sm font-medium text-gray-600 mb-4">
-                  {familyDisplayNames[selectedFamily] ?? currentFamily.name}
-                </p>
+                {/* Family name / encabezado de familia */}
+                {designPreview ? (
+                  <div className="px-4 mb-4 mt-2">
+                    <p className="text-[11px] font-semibold tracking-[0.18em] text-gray-400 uppercase mb-1">Familia</p>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-none">
+                      {familyDisplayNames[selectedFamily] ?? currentFamily.name}
+                    </h2>
+                    <p className="text-sm text-gray-400 mt-1.5">
+                      {visibleFamilyColors.length} color{visibleFamilyColors.length !== 1 ? "es" : ""}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-center text-sm font-medium text-gray-600 mb-4">
+                    {familyDisplayNames[selectedFamily] ?? currentFamily.name}
+                  </p>
+                )}
 
                 {/* Add color button + bulk select toggle — admin only */}
                 {canEdit && (
