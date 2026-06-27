@@ -137,3 +137,49 @@ body {
     -webkit-backdrop-filter: none;
   }
 }
+
+/* ─── Realces MÁS marcados (para que el cambio se note de verdad) ─── */
+
+/* Título tipo "hero" de Apple: grande, con peso y tracking ajustado */
+.design-apple main h1 {
+  font-size: clamp(2rem, 5.5vw, 3.25rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #1d1d1f;
+  margin-bottom: 1.25rem;
+  line-height: 1.05;
+}
+
+/* Acento azul Apple en los botones de acción (reemplaza el teal) */
+.design-apple .bg-teal-500 { background-color: #0071e3; }
+.design-apple .bg-teal-600 { background-color: #0066cc; }
+.design-apple .text-teal-600 { color: #0071e3; }
+.design-apple .text-teal-500 { color: #0071e3; }
+.design-apple .border-teal-500 { border-color: #0071e3; }
+.design-apple .border-teal-400 { border-color: #0071e3; }
+.design-apple .ring-teal-400 { --tw-ring-color: #0071e3; }
+@media (hover: hover) and (pointer: fine) {
+  .design-apple .hover\:bg-teal-600:hover { background-color: #0077ed; }
+}
+.design-apple .focus\:border-teal-400:focus { border-color: #0071e3; }
+
+/* Buscador más grande y limpio (estilo campo Apple) */
+.design-apple input[type="text"] {
+  background-color: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  font-size: 0.95rem;
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Tarjetas de color: borde fino y elevación notoria al pasar el dedo/mouse */
+.design-apple .group.bg-white { border-color: rgba(0, 0, 0, 0.06); }
+@media (hover: hover) and (pointer: fine) {
+  .design-apple .group.bg-white:hover {
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+  }
+}
+
+/* Subtítulos en mayúsculas: menos "grito", más elegante */
+.design-apple .uppercase { letter-spacing: 0.04em; }
