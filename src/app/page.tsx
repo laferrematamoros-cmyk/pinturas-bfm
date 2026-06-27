@@ -3715,7 +3715,8 @@ export default function Home() {
 
             {/* Family selector — círculos grandes (prueba de diseño) o pills (normal) */}
             {designPreview ? (
-              <div className="flex gap-3 sm:gap-4 mb-6 px-4 overflow-x-auto no-scrollbar pb-1 snap-x">
+              <div className="overflow-x-auto no-scrollbar mb-6 px-4">
+                <div className="flex gap-4 sm:gap-5 w-max mx-auto pb-1 snap-x">
                 {familyDisplayNames.map((name, i) => (
                   <button
                     key={i}
@@ -3724,7 +3725,7 @@ export default function Home() {
                     className="flex flex-col items-center gap-1.5 group cursor-pointer shrink-0 snap-start"
                   >
                     <span
-                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-200 ${
+                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full transition-all duration-200 ${
                         selectedFamily === i
                           ? "ring-2 ring-offset-2 ring-[#0071e3] scale-105"
                           : "ring-1 ring-black/10 group-hover:scale-105"
@@ -3733,9 +3734,10 @@ export default function Home() {
                         ? `linear-gradient(135deg, ${familyColors[i] ?? "#C9464F"} 50%, #e87ca0 50%)`
                         : (familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888") }}
                     />
-                    <span className={`text-[11px] leading-none ${selectedFamily === i ? "font-semibold text-gray-900" : "font-medium text-transparent select-none"}`}>{name}</span>
+                    <span className={`text-xs leading-none ${selectedFamily === i ? "font-semibold text-gray-900" : "font-medium text-transparent select-none"}`}>{name}</span>
                   </button>
                 ))}
+                </div>
               </div>
             ) : (
             <div className="flex justify-center gap-1.5 mb-5 flex-wrap px-4">
