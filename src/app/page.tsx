@@ -2011,6 +2011,7 @@ export default function Home() {
   const [kioskLinkCopied, setKioskLinkCopied] = useState(false);
   const [pendingColorCode, setPendingColorCode] = useState<string | null>(null); // deep-link ?color=CÓDIGO
   const [newVersionAvailable, setNewVersionAvailable] = useState(false); // hay un deploy nuevo
+  const [designPreview, setDesignPreview] = useState(false); // ?diseno=1 → tema Apple (prueba)
   const [calcOpen, setCalcOpen] = useState(false);
   const [wallCalcOpen, setWallCalcOpen] = useState(false);
   const [imperCalcOpen, setImperCalcOpen] = useState(false);
@@ -2103,6 +2104,20 @@ export default function Home() {
       try { isKiosk = localStorage.getItem("pinturas_kiosko") === "1"; } catch { isKiosk = false; }
     }
     setKioskMode(isKiosk);
+    // Prueba de diseño (tema Apple): ?diseno=1 lo activa, ?diseno=0 lo apaga.
+    // Se recuerda en localStorage para poder comparar al recargar.
+    const designParam = params.get("diseno");
+    let isDesign: boolean;
+    if (designParam === "1") {
+      isDesign = true;
+      try { localStorage.setItem("pinturas_diseno", "1"); } catch {}
+    } else if (designParam === "0") {
+      isDesign = false;
+      try { localStorage.removeItem("pinturas_diseno"); } catch {}
+    } else {
+      try { isDesign = localStorage.getItem("pinturas_diseno") === "1"; } catch { isDesign = false; }
+    }
+    setDesignPreview(isDesign);
     // Deep-link a un color: ?color=CÓDIGO (lo abre cuando carguen los datos).
     const colorParam = params.get("color");
     if (colorParam) setPendingColorCode(colorParam);
@@ -2914,7 +2929,19 @@ export default function Home() {
       : (familyColors[selectedFamily] ?? "#888888");
 
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden">
+    <div className={`flex flex-col min-h-screen overflow-x-hidden${designPreview ? " design-apple" : ""}`}>
+      {/* Banner flotante de "Prueba de diseño" (tema Apple). Solo aparece en ?diseno=1. */}
+      {designPreview && (
+        <button
+          onClick={() => { try { localStorage.removeItem("pinturas_diseno"); } catch {} window.location.href = `${window.location.origin}/?diseno=0`; }}
+          title="Volver al diseño normal"
+          style={{ zIndex: 60 }}
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 backdrop-blur text-white text-xs sm:text-sm font-medium px-4 py-2 rounded-full shadow-lg active:scale-95 transition-transform"
+        >
+          <span className="inline-block w-2 h-2 rounded-full bg-[#0071e3]"></span>
+          Prueba de diseño · <span className="underline underline-offset-2">Salir</span>
+        </button>
+      )}
       <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onSecretAccess={handleLogoAccess} onOrdersClick={openOrders} onSayerSecret={handleSayerSecret} editMode={editMode} />
 
       {/* Room preview modal */}
