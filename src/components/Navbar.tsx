@@ -83,7 +83,14 @@ export default function Navbar({ isAdmin, siteName, logoUrl, logo2Url, announcem
             {siteName}
           </span>
           {editMode && (
-            <span className="ml-1 text-[10px] font-bold bg-orange-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap animate-pulse">Modo edición</span>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSayerSecret?.(); }}
+              title="Salir del modo edición"
+              className="ml-2 flex items-center gap-1.5 text-sm sm:text-base font-bold bg-orange-500 hover:bg-orange-600 text-white px-3 sm:px-4 py-1.5 rounded-full whitespace-nowrap shadow active:scale-95 transition-colors animate-pulse"
+            >
+              Modo edición
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
           )}
         </Link>
 
