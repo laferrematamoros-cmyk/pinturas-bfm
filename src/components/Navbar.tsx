@@ -15,10 +15,12 @@ interface NavbarProps {
   onCartClick?: () => void;
   onSecretAccess?: () => void;
   onOrdersClick?: () => void;
+  onSayerSecret?: () => void;
+  editMode?: boolean;
 }
 
-export default function Navbar({ isAdmin, siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onSecretAccess, onOrdersClick }: NavbarProps) {
-  // Acceso oculto de administrador: 6 toques seguidos sobre el logo abren el login.
+export default function Navbar({ isAdmin, siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onSecretAccess, onOrdersClick, onSayerSecret, editMode }: NavbarProps) {
+  // Acceso oculto de administrador: 6 toques seguidos sobre el logo (BFM) abren el login.
   // El logo deja de navegar; el contador se reinicia si pasan >2s entre toques.
   const tapCount = useRef(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,6 +34,23 @@ export default function Navbar({ isAdmin, siteName, logoUrl, logo2Url, announcem
       onSecretAccess();
     } else {
       tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 2000);
+    }
+  };
+
+  // 6 toques al logo de Sayer → prende/apaga el modo edición de colores (solo admin).
+  const sayerTapCount = useRef(0);
+  const sayerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSayerTap = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation(); // no cuenta para el gesto del logo BFM
+    if (!onSayerSecret) return;
+    sayerTapCount.current += 1;
+    if (sayerTimer.current) clearTimeout(sayerTimer.current);
+    if (sayerTapCount.current >= 6) {
+      sayerTapCount.current = 0;
+      onSayerSecret();
+    } else {
+      sayerTimer.current = setTimeout(() => { sayerTapCount.current = 0; }, 2000);
     }
   };
 
@@ -56,12 +75,16 @@ export default function Navbar({ isAdmin, siteName, logoUrl, logo2Url, announcem
             <img
               src={logo2Url}
               alt="logo2"
+              onClick={handleSayerTap}
               className="h-20 sm:h-28 w-auto max-w-[180px] sm:max-w-[380px] object-contain"
             />
           )}
           <span className="font-bold text-sm sm:text-xl text-gray-900 hidden sm:block truncate max-w-[200px] lg:max-w-none">
             {siteName}
           </span>
+          {editMode && (
+            <span className="ml-1 text-[10px] font-bold bg-orange-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap animate-pulse">Modo edición</span>
+          )}
         </Link>
 
         {/* Icons */}

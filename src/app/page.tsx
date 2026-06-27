@@ -1999,6 +1999,14 @@ export default function Home() {
 
   // Admin auth
   const [isAdmin, setIsAdmin] = useState(false);
+  // Modo edición de colores: oculto por defecto aunque seas admin; se prende con
+  // 6 toques al logo de Sayer. Se apaga al recargar (no se persiste).
+  const [editMode, setEditMode] = useState(false);
+  const canEdit = isAdmin && editMode;
+  // Al apagar el modo edición, salir de cualquier modo activo (selección/mover).
+  React.useEffect(() => {
+    if (!editMode) { setBulkSelectMode(false); setReorderMode(false); setBulkSelectedCodes(new Set()); }
+  }, [editMode]);
   const [kioskMode, setKioskMode] = useState(false); // tablet en tienda: solo logo + catálogo
   const [kioskLinkCopied, setKioskLinkCopied] = useState(false);
   const [pendingColorCode, setPendingColorCode] = useState<string | null>(null); // deep-link ?color=CÓDIGO
@@ -2249,6 +2257,12 @@ export default function Home() {
     }
   }
 
+  // 6 toques al logo de Sayer → prende/apaga el modo edición de colores (solo admin).
+  function handleSayerSecret() {
+    if (!isAdmin) return;
+    setEditMode((v) => !v);
+  }
+
   async function handleLogin() {
     // La validación ocurre en el servidor; si es correcta, abre una cookie de sesión firmada.
     const ok = await login(loginPassword);
@@ -2270,6 +2284,7 @@ export default function Home() {
   async function handleLogout() {
     await logout();
     setIsAdmin(false);
+    setEditMode(false);
     setShowAdminMenu(false);
   }
 
@@ -2900,7 +2915,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden">
-      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onSecretAccess={handleLogoAccess} onOrdersClick={openOrders} />
+      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onSecretAccess={handleLogoAccess} onOrdersClick={openOrders} onSayerSecret={handleSayerSecret} editMode={editMode} />
 
       {/* Room preview modal */}
       {roomPreviewOpen && selectedColor && (
@@ -3926,7 +3941,7 @@ export default function Home() {
                                 <button onClick={() => setSelectedColor(null)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors">
                                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
-                                {isAdmin ? (
+                                {canEdit ? (
                                   /* ── ADMIN: edit panel ── */
                                   <>
                                     <p className="text-[11px] font-semibold text-gray-700">Editar color</p>
@@ -4124,7 +4139,7 @@ export default function Home() {
                 </p>
 
                 {/* Add color button + bulk select toggle — admin only */}
-                {isAdmin && (
+                {canEdit && (
                   <div className="flex justify-start gap-2 px-3 mb-3 flex-wrap">
                     <button
                       onClick={() => openAddColorModal(familyDisplayNames[selectedFamily])}
@@ -4258,7 +4273,7 @@ export default function Home() {
                                 cardHeight={cardHeight}
                                 isFavorite={favorites.includes(color.code)}
                                 onToggleFavorite={bulkSelectMode ? undefined : () => toggleFavorite(color.code)}
-                                onDelete={isAdmin && !bulkSelectMode ? () => {
+                                onDelete={canEdit && !bulkSelectMode ? () => {
                                   if (window.confirm(`¿Eliminar "${color.name}"? Esta acción no se puede deshacer.`)) {
                                     handleDeleteColor(color);
                                   }
@@ -4289,7 +4304,7 @@ export default function Home() {
                                 </svg>
                               </button>
 
-                              {isAdmin ? (
+                              {canEdit ? (
                                 /* ── ADMIN: edit panel ── */
                                 <>
                                   <p className="text-[11px] font-semibold text-gray-700">Editar color</p>
@@ -4568,7 +4583,7 @@ export default function Home() {
       </main>
 
       {/* Bulk move action bar */}
-      {isAdmin && bulkSelectMode && (
+      {canEdit && bulkSelectMode && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-2xl px-4 py-3 flex flex-col sm:flex-row items-center gap-3">
           <span className="text-sm font-semibold text-gray-700 flex-shrink-0">
             {bulkSelectedCodes.size === 0 ? "Toca colores para seleccionar" : `${bulkSelectedCodes.size} color${bulkSelectedCodes.size !== 1 ? "es" : ""} seleccionado${bulkSelectedCodes.size !== 1 ? "s" : ""}`}
