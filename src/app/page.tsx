@@ -1454,10 +1454,11 @@ function AddToCartModal({ color, colorYears, durabilityPrices, galonPrices, onAd
   );
 }
 
-function CartModal({ cart, durabilityPrices, galonPrices, onRemove, onCheckout, onContinue, onClose }: {
+function CartModal({ cart, durabilityPrices, galonPrices, storeCodes, onRemove, onCheckout, onContinue, onClose }: {
   cart: CartItem[];
   durabilityPrices: Record<string, string>;
   galonPrices: Record<string, string>;
+  storeCodes: StoreCodes;
   onRemove: (uid: string) => void;
   onCheckout: () => void;
   onContinue: () => void;
@@ -1472,35 +1473,45 @@ function CartModal({ cart, durabilityPrices, galonPrices, onRemove, onCheckout, 
 
   return (
     <div className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60" style={{ zIndex: 95 }} onClick={onClose}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[92dvh]" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-            <h2 className="font-bold text-base">Tu carrito {cart.length > 0 && <span className="text-teal-400">({cart.length})</span>}</h2>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92dvh]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <svg className="w-7 h-7 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+            <h2 className="font-bold text-xl" style={{ color: "#2dd4bf" }}>Tu carrito {cart.length > 0 && <span>({cart.length})</span>}</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">✕</button>
         </div>
 
-        <div className="p-4 flex flex-col gap-2 overflow-y-auto">
+        <div className="p-5 flex flex-col gap-3 overflow-y-auto">
           {cart.length === 0 ? (
-            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-8 text-center text-gray-400 text-sm">
+            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-10 text-center text-gray-400 text-base">
               Tu carrito está vacío. Toca un color y luego “Agregar al carrito”.
             </div>
           ) : cart.map((it) => {
             const sub = lineSubtotal(it, durabilityPrices, galonPrices);
             return (
-              <div key={it.uid} className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-3 py-2.5">
-                <div className="w-9 h-9 rounded-lg border-2 border-gray-100 flex-shrink-0" style={{ backgroundColor: it.hex }} />
+              <div key={it.uid} className="flex items-center gap-4 bg-white border border-gray-200 rounded-2xl px-4 py-3.5">
+                <div className="w-14 h-14 rounded-xl border-2 border-gray-100 flex-shrink-0" style={{ backgroundColor: it.hex }} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-800 leading-tight truncate">{it.name}</p>
-                  <p className="text-[10px] text-gray-400 font-mono leading-tight">{it.code}{it.pageNumber ? ` · Pág. ${it.pageNumber}` : ""}</p>
-                  <p className="text-[11px] text-teal-600 font-semibold leading-tight mt-0.5">
+                  <p className="text-lg font-semibold text-gray-800 leading-tight truncate">{it.name}</p>
+                  <p className="text-sm text-gray-400 font-mono leading-tight">{it.code}{it.pageNumber ? ` · Pág. ${it.pageNumber}` : ""}</p>
+                  <p className="text-base text-teal-600 font-semibold leading-tight mt-0.5">
                     {it.years} años · {it.cubetas > 0 && `${it.cubetas} cub.`}{it.cubetas > 0 && it.galones > 0 && " + "}{it.galones > 0 && `${it.galones} gal.`}
                   </p>
+                  {(() => {
+                    const cub = it.cubetas > 0 ? storeCodes.cubeta[String(it.years)] : "";
+                    const gal = it.galones > 0 ? storeCodes.galon[String(it.years)] : "";
+                    const parts: string[] = [];
+                    if (cub) parts.push(`${it.cubetas} pz × ${cub}`);
+                    if (gal) parts.push(`${it.galones} pz × ${gal}`);
+                    return parts.length > 0 ? (
+                      <p className="text-sm font-mono font-bold text-gray-600 leading-tight mt-0.5">Cód: {parts.join(" · ")}</p>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-black text-gray-800">{money(sub)}</p>
-                  <button onClick={() => onRemove(it.uid)} className="text-[11px] text-red-400 hover:text-red-600">Quitar</button>
+                  <p className="text-lg font-black text-gray-800">{money(sub)}</p>
+                  <button onClick={() => onRemove(it.uid)} className="text-sm text-red-400 hover:text-red-600">Quitar</button>
                 </div>
               </div>
             );
@@ -1508,14 +1519,14 @@ function CartModal({ cart, durabilityPrices, galonPrices, onRemove, onCheckout, 
         </div>
 
         {cart.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0 flex flex-col gap-3">
+          <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total</span>
-              <span className="text-2xl font-black text-gray-900">{money(total)}</span>
+              <span className="text-base font-semibold text-gray-500 uppercase tracking-wide">Total</span>
+              <span className="text-3xl font-black text-gray-900">{money(total)}</span>
             </div>
-            <div className="flex gap-2">
-              <button onClick={onContinue} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Seguir agregando</button>
-              <button onClick={onCheckout} className="flex-[2] py-2.5 rounded-xl bg-teal-500 text-white text-sm font-bold hover:bg-teal-600 active:scale-95 transition-all">Realizar pedido</button>
+            <div className="flex gap-3">
+              <button onClick={onContinue} className="flex-1 py-3.5 rounded-2xl border border-gray-200 text-base text-gray-600 hover:bg-gray-50">Seguir agregando</button>
+              <button onClick={onCheckout} className="flex-[2] py-3.5 rounded-2xl bg-teal-500 text-white text-base font-bold hover:bg-teal-600 active:scale-95 transition-all">Realizar pedido</button>
             </div>
           </div>
         )}
@@ -1747,8 +1758,8 @@ function CheckoutModal({ cart, durabilityPrices, galonPrices, storeCodes, onClea
                       {it.pageNumber && <span className="text-gray-400">· Pág. {it.pageNumber}</span>}
                     </p>
                     <p>Calidad {it.years} años</p>
-                    {it.cubetas > 0 && <p>{it.cubetas} × Cubeta 19L</p>}
-                    {it.galones > 0 && <p>{it.galones} × Galón 4L</p>}
+                    {it.cubetas > 0 && <p>{it.cubetas} × Cubeta 19L{storeCodes.cubeta[String(it.years)] ? <span className="ml-1.5 font-mono font-bold text-gray-700">· Cód: {storeCodes.cubeta[String(it.years)]}</span> : null}</p>}
+                    {it.galones > 0 && <p>{it.galones} × Galón 4L{storeCodes.galon[String(it.years)] ? <span className="ml-1.5 font-mono font-bold text-gray-700">· Cód: {storeCodes.galon[String(it.years)]}</span> : null}</p>}
                     <p className="text-right text-gray-600">{money(lineSubtotal(it, durabilityPrices, galonPrices))}</p>
                   </div>
                 ))}
@@ -2989,6 +3000,7 @@ export default function Home() {
           cart={cart}
           durabilityPrices={durabilityPrices}
           galonPrices={galonPrices}
+          storeCodes={storeCodes}
           onRemove={(uid) => setCart((prev) => prev.filter((it) => it.uid !== uid))}
           onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }}
           onContinue={() => setCartOpen(false)}
