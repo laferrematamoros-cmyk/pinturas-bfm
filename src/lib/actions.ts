@@ -152,6 +152,47 @@ export async function saveGalonPrices(prices: Record<string, string>): Promise<v
     .upsert({ key: "galon_prices", value: JSON.stringify(clean) }, { onConflict: "key" });
 }
 
+// ── Códigos de tienda por presentación (SKU interno) ─────────
+// Un código por cada combinación años + tamaño (cubeta 19L / galón 4L),
+// igual para todos los colores. Sirve para que la tienda ubique el producto
+// en el ticket del pedido y en la vista de pedidos del admin.
+type StoreCodes = { cubeta: Record<string, string>; galon: Record<string, string> };
+
+export async function loadStoreCodes(): Promise<StoreCodes> {
+  const empty: StoreCodes = { cubeta: {}, galon: {} };
+  const { data } = await supabaseRead
+    .from("site_settings")
+    .select("value")
+    .eq("key", "store_codes")
+    .single();
+  if (!data?.value) return empty;
+  try {
+    const parsed = JSON.parse(data.value) as Partial<StoreCodes>;
+    return { cubeta: parsed.cubeta ?? {}, galon: parsed.galon ?? {} };
+  } catch {
+    return empty;
+  }
+}
+
+export async function saveStoreCodes(codes: StoreCodes): Promise<void> {
+  await requireAdmin();
+  updateTag(CATALOG_TAG);
+  const cleanGroup = (g: Record<string, string>): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(g || {})) {
+      if (v && v.trim()) out[k] = sanitizeText(v, 40);
+    }
+    return out;
+  };
+  const clean: StoreCodes = {
+    cubeta: cleanGroup(codes?.cubeta ?? {}),
+    galon: cleanGroup(codes?.galon ?? {}),
+  };
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "store_codes", value: JSON.stringify(clean) }, { onConflict: "key" });
+}
+
 export async function loadDurabilityOnSale(): Promise<number[]> {
   const { data } = await supabaseRead
     .from("site_settings")
@@ -814,7 +855,7 @@ export async function loadInitialData() {
   const [
     colorSettings, site, durabilityPrices, galonPrices, durabilityOnSale,
     galonOnSale, customColors, nameOverrides, pageNumbers, deletedColors,
-    familySettings, familyBanners, colorOrders, impermeabilizante,
+    familySettings, familyBanners, colorOrders, impermeabilizante, storeCodes,
   ] = await Promise.all([
     loadColorSettings(),
     loadSiteSettings(),
@@ -830,10 +871,11 @@ export async function loadInitialData() {
     loadFamilyBanners(),
     loadColorOrders(),
     loadImpermeabilizante(),
+    loadStoreCodes(),
   ]);
   return {
     colorSettings, site, durabilityPrices, galonPrices, durabilityOnSale,
     galonOnSale, customColors, nameOverrides, pageNumbers, deletedColors,
-    familySettings, familyBanners, colorOrders, impermeabilizante,
+    familySettings, familyBanners, colorOrders, impermeabilizante, storeCodes,
   };
 }

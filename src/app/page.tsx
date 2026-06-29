@@ -19,6 +19,7 @@ import {
   saveCardHeight,
   saveGalonPrices,
   saveGalonOnSale,
+  saveStoreCodes,
   saveSiteName,
   saveSiteLogoUrl,
   saveSiteLogo2Url,
@@ -49,6 +50,10 @@ import {
 const FERRETERIA_WA = "528682340531";
 
 // Item del carrito (modo kiosko).
+// Códigos de tienda (SKU interno) por presentación: años → código, separados
+// por tamaño. Igual para todos los colores.
+type StoreCodes = { cubeta: Record<string, string>; galon: Record<string, string> };
+
 interface CartItem {
   uid: string;
   name: string;
@@ -1519,10 +1524,11 @@ function CartModal({ cart, durabilityPrices, galonPrices, onRemove, onCheckout, 
   );
 }
 
-function CheckoutModal({ cart, durabilityPrices, galonPrices, onClearCart, onClose }: {
+function CheckoutModal({ cart, durabilityPrices, galonPrices, storeCodes, onClearCart, onClose }: {
   cart: CartItem[];
   durabilityPrices: Record<string, string>;
   galonPrices: Record<string, string>;
+  storeCodes: StoreCodes;
   onClearCart: () => void;
   onClose: () => void;
 }) {
@@ -1569,8 +1575,10 @@ function CheckoutModal({ cart, durabilityPrices, galonPrices, onClearCart, onClo
     cart.forEach((it, i) => {
       lines.push(`*${i + 1}) ${it.name}*  [${it.code}]${it.pageNumber ? `  · Pág. ${it.pageNumber}` : ""}`);
       lines.push(`   • Calidad ${it.years} años`);
-      if (it.cubetas > 0) lines.push(`   • ${it.cubetas} × Cubeta 19L`);
-      if (it.galones > 0) lines.push(`   • ${it.galones} × Galón 4L`);
+      const cubCode = storeCodes.cubeta[String(it.years)];
+      const galCode = storeCodes.galon[String(it.years)];
+      if (it.cubetas > 0) lines.push(`   • ${it.cubetas} × Cubeta 19L${cubCode ? `  ·  Cód: ${cubCode}` : ""}`);
+      if (it.galones > 0) lines.push(`   • ${it.galones} × Galón 4L${galCode ? `  ·  Cód: ${galCode}` : ""}`);
       lines.push(`   • Ver color: ${origin}/?color=${encodeURIComponent(it.code)}`);
     });
     lines.push("————————————————");
@@ -1795,9 +1803,10 @@ function CheckoutModal({ cart, durabilityPrices, galonPrices, onClearCart, onClo
   );
 }
 
-function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: {
+function AdminOrdersModal({ orders, loading, storeCodes, onRefresh, onSetStatus, onClose }: {
   orders: OrderRow[];
   loading: boolean;
+  storeCodes: StoreCodes;
   onRefresh: () => void;
   onSetStatus: (id: number, status: string) => void;
   onClose: () => void;
@@ -1907,8 +1916,8 @@ function AdminOrdersModal({ orders, loading, onRefresh, onSetStatus, onClose }: 
                         <p className="font-bold text-gray-900 leading-tight">{it.name}</p>
                         <p className="text-xs text-gray-400 font-mono flex items-center gap-1.5 flex-wrap">{it.code}{it.pageNumber && <span className="bg-yellow-200 text-yellow-800 font-bold rounded px-1.5 py-0.5 text-[11px]">Pág. {it.pageNumber}</span>}</p>
                         <p className="text-sm text-teal-700 font-semibold mt-1">Calidad {it.years} años</p>
-                        {it.cubetas > 0 && <p className="text-sm text-gray-700">{it.cubetas} × Cubeta 19L</p>}
-                        {it.galones > 0 && <p className="text-sm text-gray-700">{it.galones} × Galón 4L</p>}
+                        {it.cubetas > 0 && <p className="text-sm text-gray-700">{it.cubetas} × Cubeta 19L{storeCodes.cubeta[String(it.years)] ? <span className="ml-2 font-mono text-xs font-bold bg-gray-100 text-gray-700 rounded px-1.5 py-0.5">Cód: {storeCodes.cubeta[String(it.years)]}</span> : null}</p>}
+                        {it.galones > 0 && <p className="text-sm text-gray-700">{it.galones} × Galón 4L{storeCodes.galon[String(it.years)] ? <span className="ml-2 font-mono text-xs font-bold bg-gray-100 text-gray-700 rounded px-1.5 py-0.5">Cód: {storeCodes.galon[String(it.years)]}</span> : null}</p>}
                       </div>
                       {typeof it.subtotal === "number" && it.subtotal > 0 && (
                         <span className="text-sm font-black text-gray-800 flex-shrink-0">{money(it.subtotal)}</span>
@@ -1954,6 +1963,9 @@ export default function Home() {
   const [editDurabilityPrices, setEditDurabilityPrices] = useState<Record<string, string>>({});
   const [galonPrices, setGalonPrices] = useState<Record<string, string>>({});
   const [editGalonPrices, setEditGalonPrices] = useState<Record<string, string>>({});
+  // Códigos de tienda por presentación (años × cubeta/galón). Igual para todos los colores.
+  const [storeCodes, setStoreCodes] = useState<StoreCodes>({ cubeta: {}, galon: {} });
+  const [editStoreCodes, setEditStoreCodes] = useState<StoreCodes>({ cubeta: {}, galon: {} });
   const [galonOnSale, setGalonOnSale] = useState<number[]>([]);
   const [editGalonOnSale, setEditGalonOnSale] = useState<number[]>([]);
   const [durabilityOnSale, setDurabilityOnSale] = useState<number[]>([]);
@@ -2068,6 +2080,7 @@ export default function Home() {
       setEyedropperSupported("EyeDropper" in window);
       const dp = localStorage.getItem("pinturas_durabilityPrices"); if (dp) setDurabilityPrices(JSON.parse(dp));
       const gp = localStorage.getItem("pinturas_galonPrices"); if (gp) { const v = JSON.parse(gp); setGalonPrices(v); setEditGalonPrices(v); }
+      const sc = localStorage.getItem("pinturas_storeCodes"); if (sc) { const v = JSON.parse(sc) as StoreCodes; setStoreCodes(v); setEditStoreCodes(v); }
       const gos = localStorage.getItem("pinturas_galonOnSale"); if (gos) { const v = JSON.parse(gos); setGalonOnSale(v); setEditGalonOnSale(v); }
       const dos = localStorage.getItem("pinturas_durabilityOnSale"); if (dos) setDurabilityOnSale(JSON.parse(dos));
       const fav = localStorage.getItem("pinturas-favorites"); if (fav) setFavorites(JSON.parse(fav));
@@ -2142,6 +2155,7 @@ export default function Home() {
       // Precios y ofertas
       setDurabilityPrices(d.durabilityPrices); localStorage.setItem("pinturas_durabilityPrices", JSON.stringify(d.durabilityPrices));
       setGalonPrices(d.galonPrices); setEditGalonPrices(d.galonPrices); localStorage.setItem("pinturas_galonPrices", JSON.stringify(d.galonPrices));
+      setStoreCodes(d.storeCodes); setEditStoreCodes(d.storeCodes); localStorage.setItem("pinturas_storeCodes", JSON.stringify(d.storeCodes));
       setDurabilityOnSale(d.durabilityOnSale); localStorage.setItem("pinturas_durabilityOnSale", JSON.stringify(d.durabilityOnSale));
       setGalonOnSale(d.galonOnSale); setEditGalonOnSale(d.galonOnSale); localStorage.setItem("pinturas_galonOnSale", JSON.stringify(d.galonOnSale));
 
@@ -2458,6 +2472,7 @@ export default function Home() {
       await saveCardHeight(editCardHeight);
       await saveGalonPrices(editGalonPrices);
       await saveGalonOnSale(editGalonOnSale);
+      await saveStoreCodes(editStoreCodes);
       await saveFamilyColors(editFamilyColors);
       await saveFamilyNames(editFamilyNames);
       await saveFamilyBanners(editFamilyBanners);
@@ -2504,6 +2519,7 @@ export default function Home() {
     setCardHeight(editCardHeight);
     setGalonPrices(editGalonPrices);
     setGalonOnSale(editGalonOnSale);
+    setStoreCodes(editStoreCodes); localStorage.setItem("pinturas_storeCodes", JSON.stringify(editStoreCodes));
     setFamilyColors(editFamilyColors);
     setFamilyDisplayNames(editFamilyNames);
     setFamilyBanners(editFamilyBanners);
@@ -2986,6 +3002,7 @@ export default function Home() {
           cart={cart}
           durabilityPrices={durabilityPrices}
           galonPrices={galonPrices}
+          storeCodes={storeCodes}
           onClearCart={() => setCart([])}
           onClose={() => setCheckoutOpen(false)}
         />
@@ -2996,6 +3013,7 @@ export default function Home() {
         <AdminOrdersModal
           orders={orders}
           loading={ordersLoading}
+          storeCodes={storeCodes}
           onRefresh={openOrders}
           onSetStatus={handleSetOrderStatus}
           onClose={() => setOrdersOpen(false)}
@@ -3151,7 +3169,7 @@ export default function Home() {
       {/* Site settings modal */}
       {showSiteSettings && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-3" style={{ zIndex: 100 }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col" style={{ maxHeight: "92vh" }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto flex flex-col" style={{ maxHeight: "92vh" }}>
             {/* Fixed header */}
             <div className="px-6 pt-6 pb-3 flex-shrink-0">
               <h2 className="text-lg font-semibold text-gray-800 mb-0.5">Configuración del sitio</h2>
@@ -3254,6 +3272,13 @@ export default function Home() {
                       placeholder="ej: $350"
                       className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
                     />
+                    <input
+                      type="text"
+                      value={editStoreCodes.cubeta[String(opt.years)] ?? ""}
+                      onChange={(e) => setEditStoreCodes((prev) => ({ ...prev, cubeta: { ...prev.cubeta, [String(opt.years)]: e.target.value } }))}
+                      placeholder="Código de tienda"
+                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+                    />
                     <label className={`flex items-center gap-1.5 cursor-pointer px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors flex-shrink-0 ${
                       isOnSale ? "bg-orange-50 border-orange-400 text-orange-600" : "bg-white border-gray-200 text-gray-400 hover:border-orange-300"
                     }`}>
@@ -3288,6 +3313,13 @@ export default function Home() {
                       value={editGalonPrices[String(opt.years)] ?? ""}
                       onChange={(e) => setEditGalonPrices((prev) => ({ ...prev, [String(opt.years)]: e.target.value }))}
                       placeholder="ej: $120"
+                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+                    />
+                    <input
+                      type="text"
+                      value={editStoreCodes.galon[String(opt.years)] ?? ""}
+                      onChange={(e) => setEditStoreCodes((prev) => ({ ...prev, galon: { ...prev.galon, [String(opt.years)]: e.target.value } }))}
+                      placeholder="Código de tienda"
                       className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
                     />
                     <label className={`flex items-center gap-1.5 cursor-pointer px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors flex-shrink-0 ${
@@ -3690,17 +3722,16 @@ export default function Home() {
 
             {/* Family selector — círculos grandes (prueba de diseño) o pills (normal) */}
             {designPreview ? (
-              <div className="overflow-x-auto no-scrollbar mb-6 px-4 py-2">
-                <div className="flex gap-4 sm:gap-5 w-max mx-auto snap-x">
+              <div className="flex flex-wrap justify-center gap-3 sm:gap-5 mb-6 px-4 py-2">
                 {familyDisplayNames.map((name, i) => (
                   <button
                     key={i}
                     onClick={() => { setSelectedFamily(i); setSelectedColor(null); setSearch(""); }}
                     title={name}
-                    className="flex flex-col items-center gap-1.5 group cursor-pointer shrink-0 snap-start"
+                    className="flex flex-col items-center gap-1.5 group cursor-pointer shrink-0"
                   >
                     <span
-                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full transition-all duration-200 ${
+                      className={`w-12 h-12 sm:w-20 sm:h-20 rounded-full transition-all duration-200 ${
                         selectedFamily === i
                           ? "ring-2 ring-[#0071e3] scale-105"
                           : "ring-1 ring-black/10 group-hover:scale-105"
@@ -3712,7 +3743,6 @@ export default function Home() {
                     <span className={`text-xs leading-none ${selectedFamily === i ? "font-semibold text-gray-900" : "font-medium text-transparent select-none"}`}>{name}</span>
                   </button>
                 ))}
-                </div>
               </div>
             ) : (
             <div className="flex justify-center gap-1.5 mb-5 flex-wrap px-4">
@@ -3910,13 +3940,13 @@ export default function Home() {
 
                 {/* Calculadoras kiosko — lado a lado en la prueba de diseño, apiladas en kiosko normal */}
                 {kioskMode && (
-                <div className={`mt-3 flex justify-center ${designPreview ? "flex-row flex-wrap gap-5 sm:gap-8" : "flex-col items-center gap-3"}`}>
+                <div className={`mt-3 flex justify-center ${designPreview ? "flex-row items-stretch gap-2 sm:gap-6 px-3" : "flex-col items-center gap-3"}`}>
                   <button
                     onClick={() => setWallCalcOpen(true)}
-                    className="neon-hover flex items-center gap-2 bg-gray-900 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-gray-800"
+                    className={`neon-hover flex items-center justify-center gap-2 bg-gray-900 text-white font-semibold py-2.5 shadow transition-all duration-200 active:scale-95 hover:bg-gray-800 ${designPreview ? "flex-1 min-w-0 px-3 sm:px-5 text-xs sm:text-sm rounded-2xl" : "px-5 text-sm rounded-full hover:scale-110"}`}
                     style={{ ["--neon-hover" as string]: "0 0 10px #2dd4bf, 0 0 25px #0d948880" } as React.CSSProperties}
                   >
-                    <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 shrink-0 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z M4 9h16 M4 14h16 M9 4v16" />
                     </svg>
                     Calcular por paredes
@@ -3924,10 +3954,10 @@ export default function Home() {
                   {imperConfig.enabled && (
                   <button
                     onClick={() => setImperCalcOpen(true)}
-                    className="neon-hover flex items-center gap-2 bg-gray-900 text-white font-semibold px-5 py-2.5 rounded-full shadow transition-all duration-200 active:scale-95 text-sm hover:scale-110 hover:bg-gray-800"
+                    className={`neon-hover flex items-center justify-center gap-2 bg-gray-900 text-white font-semibold py-2.5 shadow transition-all duration-200 active:scale-95 hover:bg-gray-800 ${designPreview ? "flex-1 min-w-0 px-3 sm:px-5 text-xs sm:text-sm rounded-2xl" : "px-5 text-sm rounded-full hover:scale-110"}`}
                     style={{ ["--neon-hover" as string]: "0 0 10px #2dd4bf, 0 0 25px #0d948880" } as React.CSSProperties}
                   >
-                    <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7M3 21h18" /></svg>
+                    <svg className="w-4 h-4 shrink-0 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7M3 21h18" /></svg>
                     Calcular {imperConfig.name || "impermeabilizante"}
                   </button>
                   )}
