@@ -1968,6 +1968,8 @@ export default function Home() {
   const COLORS_BATCH = 60;
   const [visibleCount, setVisibleCount] = useState(COLORS_BATCH);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  // Panel de detalle del color seleccionado: al abrirlo, hacemos scroll para verlo.
+  const selectedDetailRef = useRef<HTMLDivElement | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [durability, setDurability] = useState<Record<string, number[]>>({});
   const [durabilityPrices, setDurabilityPrices] = useState<Record<string, string>>({});
@@ -2214,6 +2216,16 @@ export default function Home() {
     document.addEventListener("visibilitychange", onVis);
     return () => { active = false; clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, []);
+
+  // Al seleccionar un color, desplazamos la vista para que el panel de detalle
+  // quede visible (evita tener que hacer scroll manual si el color está abajo).
+  React.useEffect(() => {
+    if (!selectedColor) return;
+    const raf = requestAnimationFrame(() => {
+      selectedDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [selectedColor]);
 
   // Recarga segura: solo cuando no hay un pedido o edición en curso.
   React.useEffect(() => {
@@ -4015,7 +4027,7 @@ export default function Home() {
                             ))}
                           </div>
                           {selectedRowIdx === rowIndex && selectedColor && (
-                            <div className="flex flex-col sm:flex-row w-full mb-3">
+                            <div ref={selectedDetailRef} className="flex flex-col sm:flex-row w-full mb-3 scroll-mt-28">
                               <div className="relative w-full sm:w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex, minHeight: "80px" }}>
                                 <div>
                                   <p className="text-white text-xs font-semibold drop-shadow leading-tight">{selectedColor.name}</p>
@@ -4385,7 +4397,7 @@ export default function Home() {
                           })}
                         </div>
                         {selectedRowIndex === rowIndex && selectedColor && (
-                          <div className="flex flex-col sm:flex-row w-full mb-1.5">
+                          <div ref={selectedDetailRef} className="flex flex-col sm:flex-row w-full mb-1.5 scroll-mt-28">
                             {/* Top/Left: flat color block */}
                             <div className="relative w-full sm:w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex, minHeight: "80px" }}>
                               <div>
