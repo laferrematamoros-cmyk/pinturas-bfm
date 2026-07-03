@@ -82,6 +82,14 @@ body {
   color: #1d1d1f;
 }
 
+/* Encabezados de modales oscuros (bg-gray-900): mantener el texto claro,
+   si no la regla de arriba los deja oscuros sobre fondo oscuro. */
+.design-apple .bg-gray-900 h1,
+.design-apple .bg-gray-900 h2,
+.design-apple .bg-gray-900 h3 {
+  color: #ffffff;
+}
+
 /* Barra superior esmerilada (frosted glass), el detalle más "Apple".
    Sin línea divisoria inferior para un look más limpio. */
 .design-apple nav.bg-white {

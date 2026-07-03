@@ -40,6 +40,9 @@ import {
   createOrder,
   loadOrders,
   updateOrderStatus,
+  enableKioskOrders,
+  disableKioskOrders,
+  getKioskOrdersToken,
   saveImpermeabilizante,
   type CustomColor,
   type OrderRow,
@@ -1795,9 +1798,36 @@ function CheckoutModal({ cart, durabilityPrices, galonPrices, storeCodes, onClea
               <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mb-1">
                 <svg className="w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
-              <p className="font-bold text-gray-900">Pedido #{result.id} guardado</p>
-              <p className="text-xs text-gray-500">Envía el pedido por WhatsApp. Toca cada botón y presiona enviar.</p>
+              <p className="font-bold text-gray-900 text-lg">Pedido #{result.id} guardado</p>
             </div>
+
+            {/* Aviso: toma una foto de tu pedido */}
+            <div className="flex items-center justify-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl px-4 py-2.5 text-sm font-bold">
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Toma una foto de tu pedido
+            </div>
+
+            {/* Ticket fotografiable (solo este pedido) */}
+            <div className="border border-gray-300 rounded-2xl p-4 text-sm text-gray-700 bg-white">
+              <p className="text-center font-black text-gray-900 tracking-wide">PINTURAS BFM</p>
+              <p className="text-center text-xs text-gray-400 mb-3">Pedido #{result.id}</p>
+              <p><span className="text-gray-400">Cliente:</span> {name.trim()}</p>
+              <div className="border-t border-dashed border-gray-200 my-2" />
+              {cart.map((it, i) => (
+                <div key={it.uid} className="mb-2.5">
+                  <p className="font-semibold text-gray-800">{i + 1}. {it.name} <span className="text-gray-400 font-mono">[{it.code}]</span>{it.pageNumber ? <span className="text-gray-400"> · Pág. {it.pageNumber}</span> : null}</p>
+                  <p className="text-teal-600 font-medium">Calidad {it.years} años</p>
+                  {it.cubetas > 0 && <p>{it.cubetas} × Cubeta 19L{storeCodes.cubeta[String(it.years)] ? <span className="font-mono font-bold text-gray-700"> · Cód: {storeCodes.cubeta[String(it.years)]}</span> : null}</p>}
+                  {it.galones > 0 && <p>{it.galones} × Galón 4L{storeCodes.galon[String(it.years)] ? <span className="font-mono font-bold text-gray-700"> · Cód: {storeCodes.galon[String(it.years)]}</span> : null}</p>}
+                </div>
+              ))}
+              <div className="border-t border-dashed border-gray-200 my-2" />
+              <div className="flex justify-between font-black text-gray-900 text-base"><span>Total</span><span>{money(total)}</span></div>
+              <div className="flex justify-between text-gray-600"><span>Pago ({PAYMENT_LABELS[method]})</span><span>{money(result.deposit)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-600">Saldo</span><span className={result.balance > 0 ? "text-orange-500 font-bold" : "text-teal-600 font-bold"}>{money(result.balance)}</span></div>
+            </div>
+
+            <p className="text-xs text-gray-400 text-center">O envíalo por WhatsApp (toca cada botón y presiona enviar):</p>
             <button onClick={() => sendWhatsApp(FERRETERIA_WA)} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 active:scale-95 transition-all">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z" /></svg>
               Enviar a la ferretería
@@ -1814,10 +1844,11 @@ function CheckoutModal({ cart, durabilityPrices, galonPrices, storeCodes, onClea
   );
 }
 
-function AdminOrdersModal({ orders, loading, storeCodes, onRefresh, onSetStatus, onClose }: {
+function AdminOrdersModal({ orders, loading, storeCodes, readOnly, onRefresh, onSetStatus, onClose }: {
   orders: OrderRow[];
   loading: boolean;
   storeCodes: StoreCodes;
+  readOnly?: boolean;
   onRefresh: () => void;
   onSetStatus: (id: number, status: string) => void;
   onClose: () => void;
@@ -1875,12 +1906,14 @@ function AdminOrdersModal({ orders, loading, storeCodes, onRefresh, onSetStatus,
                 <span className="text-gray-500">{PAYMENT_LABELS[o.payment_method] ?? o.payment_method} · {o.paid_full ? "Pagado" : `Abono ${money(o.deposit)}`}</span>
                 <span className="font-black text-gray-800">{money(o.subtotal)}{o.balance > 0 && <span className="text-orange-500 font-normal ml-1">(saldo {money(o.balance)})</span>}</span>
               </div>
+              {!readOnly && (
               <div className="mt-2 flex gap-1 flex-wrap">
                 {STATUS.map((s) => (
                   <button key={s} onClick={() => { if (window.confirm(`¿Cambiar el pedido #${o.id} a "${s}"?`)) onSetStatus(o.id, s); }} disabled={o.status === s}
                     className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${o.status === s ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"}`}>{s}</button>
                 ))}
               </div>
+              )}
             </div>
           ))}
         </div>
@@ -2033,7 +2066,11 @@ export default function Home() {
     if (!editMode) { setBulkSelectMode(false); setReorderMode(false); setBulkSelectedCodes(new Set()); }
   }, [editMode]);
   const [kioskMode, setKioskMode] = useState(false); // tablet en tienda: solo logo + catálogo
+  const [kioskOrdersToken, setKioskOrdersToken] = useState(""); // token para ver pedidos en kiosko
   const [kioskLinkCopied, setKioskLinkCopied] = useState(false);
+  // Acceso a pedidos en kiosko: token actual (vacío = desactivado) para armar el enlace.
+  const [adminKioskToken, setAdminKioskToken] = useState("");
+  const [kioskOrdersBusy, setKioskOrdersBusy] = useState(false);
   const [pendingColorCode, setPendingColorCode] = useState<string | null>(null); // deep-link ?color=CÓDIGO
   const [newVersionAvailable, setNewVersionAvailable] = useState(false); // hay un deploy nuevo
   const designPreview = kioskMode; // diseño Apple automático SOLO en modo kiosko (tablet en tienda)
@@ -2130,6 +2167,26 @@ export default function Home() {
       try { isKiosk = localStorage.getItem("pinturas_kiosko") === "1"; } catch { isKiosk = false; }
     }
     setKioskMode(isKiosk);
+    // Token permanente para ver pedidos en el kiosko: llega en el FRAGMENTO #pk=TOKEN
+    // (una vez, al configurar la tablet). El fragmento no se envía al servidor (no
+    // aparece en logs); se guarda en el dispositivo y se limpia de la URL.
+    let pkParam = "";
+    try {
+      const m = window.location.hash.match(/(?:^#|&)pk=([^&]+)/);
+      if (m) pkParam = decodeURIComponent(m[1]);
+    } catch {}
+    let kToken = "";
+    if (pkParam) {
+      kToken = pkParam;
+      try { localStorage.setItem("pinturas_kiosk_orders_token", pkParam); } catch {}
+      try {
+        // Quitar el token de la URL (elimina el fragmento, conserva ?kiosko=1)
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      } catch {}
+    } else {
+      try { kToken = localStorage.getItem("pinturas_kiosk_orders_token") || ""; } catch {}
+    }
+    setKioskOrdersToken(kToken);
     // El diseño Apple se aplica automáticamente cuando isKiosk es true (designPreview = kioskMode).
     // Deep-link a un color: ?color=CÓDIGO (lo abre cuando carguen los datos).
     const colorParam = params.get("color");
@@ -2327,8 +2384,38 @@ export default function Home() {
     setShowAdminMenu(false);
   }
 
+  // Al abrir el menú admin, consultamos si el acceso a pedidos en kiosko está activo.
+  React.useEffect(() => {
+    if (showAdminMenu && isAdmin) {
+      getKioskOrdersToken().then(setAdminKioskToken).catch(() => {});
+    }
+  }, [showAdminMenu, isAdmin]);
+
+  async function toggleKioskOrders() {
+    setKioskOrdersBusy(true);
+    try {
+      if (adminKioskToken) {
+        await disableKioskOrders();
+        setAdminKioskToken("");
+      } else {
+        const t = await enableKioskOrders();
+        setAdminKioskToken(t);
+      }
+    } catch {
+      setSaveError("No se pudo cambiar el acceso a pedidos en kiosko.");
+    } finally {
+      setKioskOrdersBusy(false);
+    }
+  }
+
+  function kioskLinkWithToken() {
+    // El token va en el fragmento (#pk=) — el navegador NO lo envía al servidor,
+    // así no queda en los logs. Se lee en la tablet, se guarda y se limpia de la URL.
+    return `${window.location.origin}/?kiosko=1${adminKioskToken ? `#pk=${adminKioskToken}` : ""}`;
+  }
+
   async function copyKioskLink() {
-    const link = `${window.location.origin}/?kiosko=1`;
+    const link = kioskLinkWithToken();
     try {
       await navigator.clipboard.writeText(link);
     } catch {
@@ -2349,7 +2436,7 @@ export default function Home() {
     setOrdersOpen(true);
     setOrdersLoading(true);
     try {
-      const data = await loadOrders();
+      const data = await loadOrders(kioskOrdersToken || undefined);
       setOrders(data);
     } catch {
       setSaveError("No se pudieron cargar los pedidos.");
@@ -2956,7 +3043,7 @@ export default function Home() {
 
   return (
     <div className={`flex flex-col min-h-screen overflow-x-hidden${designPreview ? " design-apple" : ""}`}>
-      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onSecretAccess={handleLogoAccess} onOrdersClick={openOrders} onSayerSecret={handleSayerSecret} editMode={editMode} />
+      <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onSecretAccess={handleLogoAccess} onOrdersClick={openOrders} onSayerSecret={handleSayerSecret} editMode={editMode} kioskOrdersAvailable={kioskMode && !!kioskOrdersToken} />
 
       {/* Room preview modal */}
       {roomPreviewOpen && selectedColor && (
@@ -3038,6 +3125,7 @@ export default function Home() {
           orders={orders}
           loading={ordersLoading}
           storeCodes={storeCodes}
+          readOnly={kioskMode}
           onRefresh={openOrders}
           onSetStatus={handleSetOrderStatus}
           onClose={() => setOrdersOpen(false)}
@@ -3135,6 +3223,20 @@ export default function Home() {
               Actualizar página en todos
             </button>
             <button
+              onClick={toggleKioskOrders}
+              disabled={kioskOrdersBusy}
+              title={adminKioskToken ? "Desactivar ver pedidos en las tablets del kiosko" : "Permitir ver pedidos en las tablets del kiosko"}
+              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <span className={`w-9 h-5 rounded-full flex-shrink-0 relative transition-colors ${adminKioskToken ? "bg-teal-500" : "bg-gray-300"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${adminKioskToken ? "left-4" : "left-0.5"}`} />
+              </span>
+              <span className="text-left flex-1">
+                Ver pedidos en kiosko
+                <span className="block text-[11px] text-gray-400">{kioskOrdersBusy ? "Guardando…" : adminKioskToken ? "Activado — el enlace de tablet ya incluye el acceso" : "Desactivado"}</span>
+              </span>
+            </button>
+            <button
               onClick={copyKioskLink}
               className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
@@ -3150,7 +3252,7 @@ export default function Home() {
               {kioskLinkCopied ? "¡Enlace copiado!" : "Copiar enlace de tablet"}
             </button>
             <button
-              onClick={() => { setShowAdminMenu(false); window.location.href = `${window.location.origin}/?kiosko=1`; }}
+              onClick={() => { setShowAdminMenu(false); window.location.href = kioskLinkWithToken(); }}
               className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-teal-600 hover:bg-teal-50 transition-colors"
             >
               <svg className="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>

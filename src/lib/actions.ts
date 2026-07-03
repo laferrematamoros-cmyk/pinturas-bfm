@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { updateTag } from "next/cache";
 import { headers } from "next/headers";
+import { timingSafeEqual, randomBytes } from "crypto";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "./validation";
 import { requireAdmin, setAdminSession, clearAdminSession, isAdmin, verifyPassword } from "./auth";
 
@@ -772,8 +773,8 @@ export async function createOrder(
 }
 
 /** Lista los pedidos guardados (solo admin). */
-export async function loadOrders(): Promise<OrderRow[]> {
-  await requireAdmin();
+export async function loadOrders(kioskToken?: string): Promise<OrderRow[]> {
+  await authorizeAdminOrKiosk(kioskToken);
   const { data, error } = await supabaseAdmin
     .from("orders")
     .select("*")
@@ -783,13 +784,71 @@ export async function loadOrders(): Promise<OrderRow[]> {
   return (data ?? []) as OrderRow[];
 }
 
-/** Cambia el estado de un pedido (solo admin). */
+/** Cambia el estado de un pedido (SOLO admin — el token de kiosko es de solo lectura). */
 export async function updateOrderStatus(id: number, status: string): Promise<void> {
   await requireAdmin();
   const allowed = ["nuevo", "procesado", "entregado", "cancelado"];
   if (!allowed.includes(status)) throw new Error("Estado inválido");
   const { error } = await supabaseAdmin.from("orders").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+// ── Acceso a pedidos desde el kiosko (token permanente) ──────
+// Los pedidos siguen protegidos: se ven con la cookie de admin (12h) O con un
+// token secreto de kiosko de larga duración que el admin activa/desactiva.
+// El token vive en site_settings (key "kiosk_orders_token") y NUNCA se expone
+// en lecturas públicas (loadInitialData). Internet sin token no puede leerlos.
+
+async function loadKioskOrdersToken(): Promise<string> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("value")
+    .eq("key", "kiosk_orders_token")
+    .single();
+  return (data?.value as string) ?? "";
+}
+
+function tokensMatch(a: string, b: string): boolean {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
+
+async function verifyKioskOrdersToken(token: string): Promise<boolean> {
+  const stored = await loadKioskOrdersToken();
+  if (!stored) return false; // desactivado
+  return tokensMatch(token, stored);
+}
+
+/** Autoriza si hay sesión de admin válida O un token de kiosko válido. */
+async function authorizeAdminOrKiosk(kioskToken?: string): Promise<void> {
+  if (await isAdmin()) return;
+  if (kioskToken && (await verifyKioskOrdersToken(kioskToken))) return;
+  throw new Error("No autorizado");
+}
+
+/** Activa el acceso a pedidos en kiosko: genera (o reutiliza) el token y lo devuelve. */
+export async function enableKioskOrders(): Promise<string> {
+  await requireAdmin();
+  const existing = await loadKioskOrdersToken();
+  const token = existing || randomBytes(24).toString("hex");
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "kiosk_orders_token", value: token }, { onConflict: "key" });
+  return token;
+}
+
+/** Desactiva el acceso a pedidos en kiosko (invalida el token en todas las tablets). */
+export async function disableKioskOrders(): Promise<void> {
+  await requireAdmin();
+  await supabaseAdmin.from("site_settings").delete().eq("key", "kiosk_orders_token");
+}
+
+/** Devuelve el token actual (o "" si está desactivado). Solo admin, para armar el enlace. */
+export async function getKioskOrdersToken(): Promise<string> {
+  await requireAdmin();
+  return loadKioskOrdersToken();
 }
 
 // ── Impermeabilizante (calculadora especial, modo kiosko) ────

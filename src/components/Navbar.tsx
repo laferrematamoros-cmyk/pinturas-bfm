@@ -17,9 +17,10 @@ interface NavbarProps {
   onOrdersClick?: () => void;
   onSayerSecret?: () => void;
   editMode?: boolean;
+  kioskOrdersAvailable?: boolean;
 }
 
-export default function Navbar({ isAdmin, siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onSecretAccess, onOrdersClick, onSayerSecret, editMode }: NavbarProps) {
+export default function Navbar({ isAdmin, siteName, logoUrl, logo2Url, announcementText, kioskMode, cartCount = 0, onCartClick, onSecretAccess, onOrdersClick, onSayerSecret, editMode, kioskOrdersAvailable }: NavbarProps) {
   // Acceso oculto de administrador: 6 toques seguidos sobre el logo (BFM) abren el login.
   // El logo deja de navegar; el contador se reinicia si pasan >2s entre toques.
   const tapCount = useRef(0);
@@ -106,6 +107,18 @@ export default function Navbar({ isAdmin, siteName, logoUrl, logo2Url, announcem
               className="flex items-center gap-1.5 bg-teal-500 hover:bg-teal-600 text-white font-semibold px-4 py-2 rounded-full transition-colors shadow active:scale-95 text-sm"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+              Pedidos
+            </button>
+          )}
+
+          {/* Pedidos en kiosko — solo si el admin activó el acceso en esta tablet */}
+          {kioskMode && kioskOrdersAvailable && (
+            <button
+              onClick={onOrdersClick}
+              title="Ver pedidos"
+              className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white font-semibold px-4 py-2.5 sm:py-3 rounded-full transition-colors shadow active:scale-95 text-sm"
+            >
+              <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
               Pedidos
             </button>
           )}
