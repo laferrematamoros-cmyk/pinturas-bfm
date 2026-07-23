@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import Navbar from "@/components/Navbar";
+import ColorFromPhoto from "@/components/ColorFromPhoto";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import {
   loadInitialData,
@@ -2072,6 +2073,7 @@ export default function Home() {
   const [adminKioskToken, setAdminKioskToken] = useState("");
   const [kioskOrdersBusy, setKioskOrdersBusy] = useState(false);
   const [pendingColorCode, setPendingColorCode] = useState<string | null>(null); // deep-link ?color=CÓDIGO
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [newVersionAvailable, setNewVersionAvailable] = useState(false); // hay un deploy nuevo
   const designPreview = kioskMode; // diseño Apple automático SOLO en modo kiosko (tablet en tienda)
   const [calcOpen, setCalcOpen] = useState(false);
@@ -3033,6 +3035,27 @@ export default function Home() {
     return [...custom, ...builtIn];
   }, [showFavorites, favorites, colorFamilies, deletedColorCodes, nameOverrides, customColors]);
 
+  // Todos los colores visibles del catálogo (base + custom − ocultos), con el HEX
+  // efectivo (aplicando overrides). Para el buscador por foto del kiosko.
+  const allVisibleColors = useMemo(() => {
+    const builtIn = colorFamilies.flatMap((f) =>
+      f.colors
+        .filter((c) => !deletedColorCodes.includes(c.code))
+        .map((c) => {
+          const ov = nameOverrides[c.code];
+          return {
+            name: ov ? ov.name : c.name,
+            code: ov ? ov.code : c.code,
+            hex: overrides[c.code] ?? c.hex,
+          };
+        })
+    );
+    const custom = Object.values(customColors).flat().map((c) => ({
+      name: c.name, code: c.code, hex: overrides[c.code] ?? c.hex,
+    }));
+    return [...custom, ...builtIn];
+  }, [deletedColorCodes, nameOverrides, customColors, overrides]);
+
   // Banner gradient — custom if set, otherwise auto from first 5 colors
   const customBanner = familyBanners[selectedFamily];
   const bannerGradient = customBanner
@@ -3044,6 +3067,24 @@ export default function Home() {
   return (
     <div className={`flex flex-col min-h-screen overflow-x-hidden${designPreview ? " design-apple" : ""}`}>
       <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onSecretAccess={handleLogoAccess} onOrdersClick={openOrders} onSayerSecret={handleSayerSecret} editMode={editMode} kioskOrdersAvailable={kioskMode && !!kioskOrdersToken} />
+      {kioskMode && (
+        <>
+          <button
+            onClick={() => setPhotoOpen(true)}
+            aria-label="Encuentra tu color con una foto"
+            className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-black text-white px-5 py-3 shadow-lg active:scale-95 transition"
+          >
+            <span className="text-xl">📷</span>
+            <span className="text-sm font-medium">Encuentra tu color</span>
+          </button>
+          <ColorFromPhoto
+            open={photoOpen}
+            colors={allVisibleColors}
+            onClose={() => setPhotoOpen(false)}
+            onPickColor={(code) => { setPhotoOpen(false); setPendingColorCode(code); }}
+          />
+        </>
+      )}
 
       {/* Room preview modal */}
       {roomPreviewOpen && selectedColor && (
