@@ -113,9 +113,18 @@ export default function ColorFromPhoto({ open, colors, onClose, onPickColor }: P
     applyAndShow(raw, neutral);
   }
 
-  const onDown = (e: React.PointerEvent) => { draggingRef.current = true; pick(e.clientX, e.clientY, false); };
+  const onDown = (e: React.PointerEvent) => {
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    draggingRef.current = true;
+    pick(e.clientX, e.clientY, false);
+  };
   const onMove = (e: React.PointerEvent) => { if (draggingRef.current) pick(e.clientX, e.clientY, false); };
-  const onUp = (e: React.PointerEvent) => { draggingRef.current = false; pick(e.clientX, e.clientY, true); };
+  const onUp = (e: React.PointerEvent) => {
+    draggingRef.current = false;
+    setLoupePos(null);
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    pick(e.clientX, e.clientY, true);
+  };
 
   const sampleHex = sample
     ? "#" + [sample.r, sample.g, sample.b].map((v) => v.toString(16).padStart(2, "0")).join("")
@@ -128,6 +137,8 @@ export default function ColorFromPhoto({ open, colors, onClose, onPickColor }: P
           <h2 className="text-lg font-semibold">Encuentra tu color con una foto</h2>
           <button onClick={() => { reset(); onClose(); }} aria-label="Cerrar" className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
         </div>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
         {!hasImage && (
           <label className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400">
@@ -164,8 +175,6 @@ export default function ColorFromPhoto({ open, colors, onClose, onPickColor }: P
             >
               {wbMode ? "Ahora toca algo blanco de la foto…" : (neutral ? "Luz corregida ✓ — corregir de nuevo" : "¿La foto se ve con luz rara? Corregir luz")}
             </button>
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
 
             {candidates.length > 0 && (
               <div className="flex flex-col gap-2">
