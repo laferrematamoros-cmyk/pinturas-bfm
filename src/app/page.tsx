@@ -2293,12 +2293,12 @@ export default function Home() {
       cart.length === 0 &&
       !cartOpen && !checkoutOpen && !addToCartColor &&
       !calcOpen && !wallCalcOpen && !imperCalcOpen && !roomPreviewOpen &&
-      !ordersOpen && !showSiteSettings && !showLoginModal && !showAddColorModal;
+      !ordersOpen && !showSiteSettings && !showLoginModal && !showAddColorModal && !photoOpen;
     if (libre) {
       const t = setTimeout(() => window.location.reload(), 400);
       return () => clearTimeout(t);
     }
-  }, [newVersionAvailable, cart.length, cartOpen, checkoutOpen, addToCartColor, calcOpen, wallCalcOpen, imperCalcOpen, roomPreviewOpen, ordersOpen, showSiteSettings, showLoginModal, showAddColorModal]);
+  }, [newVersionAvailable, cart.length, cartOpen, checkoutOpen, addToCartColor, calcOpen, wallCalcOpen, imperCalcOpen, roomPreviewOpen, ordersOpen, showSiteSettings, showLoginModal, showAddColorModal, photoOpen]);
 
   // Deep-link ?color=CÓDIGO → busca el color y lo abre (cuando ya cargaron overrides/custom).
   React.useEffect(() => {
