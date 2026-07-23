@@ -18,12 +18,25 @@ console.log("rgbToLab (anclas conocidas):");
   near(white.L, 100, 0.5, "blanco L=100"); near(white.a, 0, 1, "blanco a=0"); near(white.b, 0, 1, "blanco b=0");
   const black = rgbToLab({ r: 0, g: 0, b: 0 });
   near(black.L, 0, 0.5, "negro L=0");
+  const red = rgbToLab({ r: 255, g: 0, b: 0 });
+  near(red.L, 53.24, 0.6, "rojo L≈53.24");
+  near(red.a, 80.09, 1.5, "rojo a≈80.09");
+  near(red.b, 67.20, 1.5, "rojo b≈67.20");
 }
 
 console.log("deltaE:");
 {
   const lab = rgbToLab({ r: 100, g: 120, b: 140 });
   near(deltaE(lab, lab), 0, 1e-9, "color consigo mismo = 0");
+}
+
+console.log("deltaE (distancia real):");
+{
+  const red = rgbToLab({ r: 255, g: 0, b: 0 });
+  const green = rgbToLab({ r: 0, g: 255, b: 0 });
+  const d = deltaE(red, green);
+  ok(d > 100, "rojo vs verde es una distancia grande");
+  near(d, 171.2, 8, "rojo vs verde ΔE≈171");
 }
 
 console.log("matchPercent:");
