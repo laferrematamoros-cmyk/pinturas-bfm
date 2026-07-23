@@ -1,5 +1,5 @@
 import {
-  hexToRgb, rgbToLab, deltaE, matchPercent, nearestColors, applyWhiteBalance, EXACT_DELTA_E,
+  hexToRgb, rgbToLab, deltaE, matchPercent, nearestColors, applyWhiteBalance,
 } from "../src/lib/colorMatch.ts";
 
 let fail = 0;
