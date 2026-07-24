@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   nearestColors, applyWhiteBalance,
   type CatalogColor, type Candidate, type Rgb,
@@ -32,6 +32,17 @@ export default function ColorFromPhoto({ open, colors, onClose, onPickColor }: P
   const [neutral, setNeutral] = useState<Rgb | null>(null);
   const [wbMode, setWbMode] = useState(false);
   const [error, setError] = useState("");
+  const [srcCanvas, setSrcCanvas] = useState<HTMLCanvasElement | null>(null);
+
+  // Dibuja la imagen en el canvas visible una vez que está montado (hasImage=true).
+  // No se puede dibujar dentro de handleFile porque ahí el canvas todavía no existe.
+  useEffect(() => {
+    if (!srcCanvas || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    canvas.width = srcCanvas.width;
+    canvas.height = srcCanvas.height;
+    canvas.getContext("2d")!.drawImage(srcCanvas, 0, 0);
+  }, [srcCanvas]);
 
   if (!open) return null;
 
@@ -39,6 +50,7 @@ export default function ColorFromPhoto({ open, colors, onClose, onPickColor }: P
     imgDataRef.current = null;
     setHasImage(false); setSample(null); setCandidates([]); setMarker(null);
     setLoupePos(null); setLastRaw(null); setNeutral(null); setWbMode(false); setError("");
+    setSrcCanvas(null);
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -47,11 +59,10 @@ export default function ColorFromPhoto({ open, colors, onClose, onPickColor }: P
     reset();
     try {
       const off = await loadImageToCanvas(file, MAX_DIM);
-      const canvas = canvasRef.current!;
-      canvas.width = off.width; canvas.height = off.height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(off, 0, 0);
-      imgDataRef.current = ctx.getImageData(0, 0, off.width, off.height);
+      // Muestreamos desde el canvas offscreen (ya tiene la imagen dibujada); el canvas
+      // visible se dibuja en el useEffect de arriba cuando se monta.
+      imgDataRef.current = off.getContext("2d")!.getImageData(0, 0, off.width, off.height);
+      setSrcCanvas(off);
       setHasImage(true);
     } catch {
       setError("No se pudo cargar la imagen. Intenta con otra.");
