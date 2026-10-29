@@ -47,17 +47,16 @@ para ver los tonos. Una animación corta les enseña qué hacer.
 - `src/components/PistaCirculos.tsx` (cliente): recibe el contenedor de los círculos y si
   está activa; mide los círculos 2º y 4º, dibuja el 👆 y los anillos con las posiciones
   medidas y el texto. No sabe nada del catálogo.
-- `src/lib/pista.ts` (lógica pura, con pruebas): decide si la pista se ve
-  (`activa` = no se ha tocado una familia, o es kiosko y pasaron 60 s sin interacción)
-  y calcula el recorrido a partir de las posiciones de los círculos.
+- `src/lib/pista.ts` (lógica pura, con pruebas): el tiempo de espera del kiosko (60 s) y
+  el cálculo del recorrido a partir de las posiciones de los círculos.
 - `Catalogo.tsx`: guarda `pistaActiva`; la apaga al tocar un círculo de familia; en
   kiosko escucha `pointerdown`/`keydown` para el temporizador de 60 s.
 - `globals.css`: keyframes del dedito y del anillo, y la regla de reducir movimiento.
 
 ## 6. Pruebas
 
-- `tests/pista.test.mjs`: cuándo se ve la pista (primer toque, kiosko a los 60 s, toques
-  que reinician el tiempo) y el recorrido calculado.
+- `tests/pista.test.mjs`: el recorrido calculado (una fila, dos filas, sin círculos).
+- El cuándo (primer toque, kiosko a los 60 s) se prueba en el navegador con reloj simulado.
 - Navegador (build de producción en local), **con fotos**: teléfono (dos filas), PC y
   kiosko; el primer toque la apaga; en kiosko vuelve al minuto; con reducir movimiento
   no se mueve; la página no brinca (CLS 0).
