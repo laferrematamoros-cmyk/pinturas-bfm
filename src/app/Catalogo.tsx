@@ -3989,6 +3989,9 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
 
                 {/* Todos los colores + Mis favoritos */}
                 <div className="flex justify-center gap-3 mb-4 flex-wrap">
+                  {/* Con una sola calidad a la venta, "Todos los colores" muestra lo mismo: se esconde.
+                      Favoritos y la tarjeta de calidad se apagan tocándolos otra vez. */}
+                  {qualityCards.length > 1 && (
                   <button
                     onClick={() => { setSelectedQuality(null); setSelectedColor(null); setShowFavorites(false); }}
                     className={`flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
@@ -4005,6 +4008,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                     )}
                     Todos los colores
                   </button>
+                  )}
                   <button
                     onClick={() => { setShowFavorites(!showFavorites); setSelectedQuality(null); setSelectedColor(null); }}
                     className={`flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
