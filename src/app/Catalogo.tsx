@@ -6,7 +6,7 @@ import ColorFromPhoto from "@/components/ColorFromPhoto";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import { withoutPaused, colorHasActiveQuality, colorCountLabel } from "@/lib/durability";
 import { soloCubetas, soloGalones, combinado, masBarato } from "@/lib/paintCalc";
-import type { loadInitialData } from "@/lib/actions";
+import type { DatosCatalogo } from "@/lib/catalogData";
 import {
   saveColorHex,
   deleteColorHex,
@@ -1989,23 +1989,15 @@ function AdminOrdersModal({ orders, loading, storeCodes, readOnly, onRefresh, on
   );
 }
 
-export type InitialData = Awaited<ReturnType<typeof loadInitialData>>;
+// Lo que manda el servidor, ya recortado (src/lib/catalogData.ts).
+type InitialData = DatosCatalogo;
 
 // Convierte lo que manda el servidor en el estado inicial de la página.
 function prepararDatos(d: InitialData) {
-  const overrides: Record<string, string> = {};
-  const durability: Record<string, number[]> = {};
-  for (const [code, val] of Object.entries(d.colorSettings)) {
-    if (val.hex) overrides[code] = val.hex;
-    if (val.durability_years?.length) durability[code] = val.durability_years;
-  }
-  const customColors: Record<string, Color[]> = {};
-  for (const [family, colors] of Object.entries(d.customColors)) {
-    customColors[family] = colors.map((c) => ({ name: c.name, hex: c.hex, code: c.code, id: c.id, pageNumber: c.page_number != null ? String(c.page_number) : null }));
-  }
+  const customColors: Record<string, Color[]> = d.customColors;
   const familyColors = d.familySettings.colors.length > 0 ? d.familySettings.colors : DEFAULT_FAMILY_COLORS;
   const familyNames = d.familySettings.names.length > 0 ? d.familySettings.names : colorFamilies.map((f) => f.name);
-  return { overrides, durability, customColors, familyColors, familyNames };
+  return { overrides: d.overrides, durability: d.durability, customColors, familyColors, familyNames };
 }
 
 // La página llega del servidor YA armada con los datos reales (ver page.tsx):
