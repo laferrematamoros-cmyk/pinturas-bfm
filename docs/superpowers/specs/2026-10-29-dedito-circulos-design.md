@@ -36,8 +36,10 @@ para ver los tonos. Una animación corta les enseña qué hacer.
 - **Mide los círculos reales:** las posiciones del recorrido se calculan con la posición
   de los círculos en pantalla (en teléfono van en dos filas; en tablet y PC en una) y se
   recalculan al cambiar el tamaño de la ventana.
-- **Reducir movimiento:** con `prefers-reduced-motion: reduce` no hay animación; solo se
-  ve el texto.
+- **Reducir movimiento:** con `prefers-reduced-motion: reduce` no hay animación: el 👆
+  se queda **quieto** sobre Naranjas con su anillo azul, más el texto. (Cambio del
+  2026-10-29: al principio se escondía, pero Windows con las animaciones apagadas —muy
+  común— lo pide, y en la PC de la tienda no se veía la pista.)
 - **Sin dependencias nuevas:** CSS (keyframes con variables) + un componente de React.
 - **Sin brinco al cargar:** el texto sale en el HTML del servidor (ocupa su lugar desde el
   primer cuadro); el dedito se agrega al montar, en posición absoluta.

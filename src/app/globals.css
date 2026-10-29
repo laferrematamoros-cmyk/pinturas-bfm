@@ -245,6 +245,13 @@ body {
   0%, 54%, 64%, 100% { box-shadow: 0 0 0 3px rgba(0, 113, 227, 0); transform: scale(1); }
   58% { box-shadow: 0 0 0 3px rgba(0, 113, 227, 1), 0 0 14px rgba(0, 113, 227, 0.55); transform: scale(1.12); }
 }
+/* Aparatos que piden "no mover nada" (p. ej. Windows con las animaciones apagadas, que
+   viene así en muchas PC y tablets): el dedito se queda QUIETO sobre el primer círculo,
+   con su anillo, para que se entienda igual qué hay que hacer. */
 @media (prefers-reduced-motion: reduce) {
-  .pista { display: none; }
+  .pista-dedo,
+  .pista-anillo { animation: none; }
+  .pista-dedo { transform: translate(var(--x1), var(--y1)); }
+  .pista-anillo-1 { box-shadow: 0 0 0 3px rgba(0, 113, 227, 1), 0 0 14px rgba(0, 113, 227, 0.55); }
+  .pista-anillo-2 { display: none; }
 }
