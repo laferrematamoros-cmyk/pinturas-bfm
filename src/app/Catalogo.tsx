@@ -2157,7 +2157,13 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
     } catch {}
   }, []);
 
-  // Load data from Supabase on mount; restore admin session
+  // Kiosko: en cuanto el diseño del kiosko ya está en el DOM (y antes de pintar),
+  // se muestra la página que layout.tsx ocultó. Así la tablet nunca ve el diseño normal.
+  React.useLayoutEffect(() => {
+    if (kioskMode) document.documentElement.classList.remove("kiosk-boot");
+  }, [kioskMode]);
+
+  // Modo kiosko, token de pedidos, deep-link y sesión de admin (al montar)
   React.useEffect(() => {
     // Modo kiosko (tablet en tienda): ?kiosko=1 oculta info bar + admin y bloquea login.
     // Se PERSISTE en el dispositivo (localStorage) para que la app instalada (PWA),
@@ -2175,6 +2181,8 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
       try { isKiosk = localStorage.getItem("pinturas_kiosko") === "1"; } catch { isKiosk = false; }
     }
     setKioskMode(isKiosk);
+    // Si no es kiosko, mostrar la página ya (layout.tsx la oculta cuando cree que sí lo es).
+    if (!isKiosk) document.documentElement.classList.remove("kiosk-boot");
     // Token permanente para ver pedidos en el kiosko: llega en el FRAGMENTO #pk=TOKEN
     // (una vez, al configurar la tablet). El fragmento no se envía al servidor (no
     // aparece en logs); se guarda en el dispositivo y se limpia de la URL.
