@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import ColorFromPhoto from "@/components/ColorFromPhoto";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
+import { withoutPaused, colorHasActiveQuality, colorCountLabel } from "@/lib/durability";
 import {
   loadInitialData,
   saveColorHex,
@@ -11,6 +12,7 @@ import {
   saveColorDurability,
   saveDurabilityPrices,
   saveDurabilityOnSale,
+  saveDurabilityPaused,
   saveRoomPreviewEnabled,
   saveCalcButtonEnabled,
   savePwaIconUrl,
@@ -543,6 +545,13 @@ const DURABILITY_OPTIONS: { years: number; yield: string }[] = [
   { years: 7, yield: "7 a 9 m²/L" },
 ];
 
+// Columnas de las tarjetas de calidad según cuántas hay a la venta (centradas si son pocas).
+const QUALITY_GRID_COLS: Record<number, string> = {
+  1: "grid-cols-1 max-w-xs mx-auto",
+  2: "grid-cols-2 max-w-xl mx-auto",
+  3: "grid-cols-2 sm:grid-cols-3 max-w-4xl mx-auto",
+};
+
 // ── Room preview ──────────────────────────────────────────────
 
 const ROOM_TABS = [
@@ -948,6 +957,15 @@ function WallPaintCalculator({
 
   const availableOptions = DURABILITY_OPTIONS.filter((o) => durabilityPrices[String(o.years)]);
 
+  // Consejo de manos solo con las calidades a la venta (7 años = 1 mano; las demás, 2).
+  const yearsList = (ys: number[]) => ys.length > 1 ? `${ys.slice(0, -1).join(", ")} y ${ys[ys.length - 1]}` : String(ys[0]);
+  const twoCoatYears = availableOptions.map((o) => o.years).filter((y) => y !== 7);
+  const oneCoatYears = availableOptions.map((o) => o.years).filter((y) => y === 7);
+  const coatTip = [
+    twoCoatYears.length ? `2 manos para ${yearsList(twoCoatYears)} años` : "",
+    oneCoatYears.length ? `1 mano para ${yearsList(oneCoatYears)} años` : "",
+  ].filter(Boolean).join(" · ");
+
   function computeForYears(years: number) {
     const yieldPerLiter = YIELD_MAP[years];
     const liters = Math.ceil(totalArea / yieldPerLiter);
@@ -1099,7 +1117,7 @@ function WallPaintCalculator({
               ))}
             </div>
             <div className="mt-2 text-[11px] text-gray-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-snug">
-              <span className="font-bold text-amber-700">💡 Recomendado:</span> 2 manos para 2, 3 y 4 años · 1 mano para 7 años. Si el color es muy oscuro, considera de 2 a 3 manos.
+              <span className="font-bold text-amber-700">💡 Recomendado:</span> {coatTip ? `${coatTip}. ` : ""}Si el color es muy oscuro, considera de 2 a 3 manos.
             </div>
           </div>
 
@@ -1379,7 +1397,9 @@ function AddToCartModal({ color, colorYears, durabilityPrices, galonPrices, onAd
   // Si el color no tiene calidades configuradas, se permiten todas las que tengan precio.
   const colorPriced = DURABILITY_OPTIONS.filter((o) => colorYears.includes(o.years) && (durabilityPrices[String(o.years)] || galonPrices[String(o.years)]));
   const allPriced = DURABILITY_OPTIONS.filter((o) => durabilityPrices[String(o.years)] || galonPrices[String(o.years)]);
-  const pricedYears = colorPriced.length > 0 ? colorPriced : allPriced;
+  // Ojo: si el color SÍ tiene calidades pero ninguna tiene precio (p. ej. están pausadas),
+  // no se le ofrece otra que no trae.
+  const pricedYears = colorYears.length > 0 ? colorPriced : allPriced;
   const [years, setYears] = useState<number | null>(() => pricedYears[0]?.years ?? null);
   const [cubetas, setCubetas] = useState(0);
   const [galones, setGalones] = useState(0);
@@ -1416,6 +1436,9 @@ function AddToCartModal({ color, colorYears, durabilityPrices, galonPrices, onAd
           {/* Calidad */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">¿Qué calidad quieres?</label>
+            {pricedYears.length === 0 && (
+              <p className="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">Este color no está disponible por ahora. Pregunta en tienda.</p>
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {pricedYears.map((o) => (
                 <button
@@ -2017,6 +2040,9 @@ export default function Home() {
   const [editGalonOnSale, setEditGalonOnSale] = useState<number[]>([]);
   const [durabilityOnSale, setDurabilityOnSale] = useState<number[]>([]);
   const [editDurabilityOnSale, setEditDurabilityOnSale] = useState<number[]>([]);
+  // Calidades pausadas (no se ven en la página ni en el kiosko; sus precios se conservan)
+  const [durabilityPaused, setDurabilityPaused] = useState<number[]>([]);
+  const [editDurabilityPaused, setEditDurabilityPaused] = useState<number[]>([]);
   const [customColors, setCustomColors] = useState<Record<string, Color[]>>({});
   const [showAddColorModal, setShowAddColorModal] = useState(false);
   const [addColorFamily, setAddColorFamily] = useState("");
@@ -2135,6 +2161,7 @@ export default function Home() {
       const sc = localStorage.getItem("pinturas_storeCodes"); if (sc) { const v = JSON.parse(sc) as StoreCodes; setStoreCodes(v); setEditStoreCodes(v); }
       const gos = localStorage.getItem("pinturas_galonOnSale"); if (gos) { const v = JSON.parse(gos); setGalonOnSale(v); setEditGalonOnSale(v); }
       const dos = localStorage.getItem("pinturas_durabilityOnSale"); if (dos) setDurabilityOnSale(JSON.parse(dos));
+      const dpa = localStorage.getItem("pinturas_durabilityPaused"); if (dpa) setDurabilityPaused(JSON.parse(dpa));
       const fav = localStorage.getItem("pinturas-favorites"); if (fav) setFavorites(JSON.parse(fav));
       const sn = localStorage.getItem("pinturas_siteName"); if (sn) setSiteName(sn);
       const lu = localStorage.getItem("pinturas_logoUrl"); if (lu) setLogoUrl(lu);
@@ -2230,6 +2257,7 @@ export default function Home() {
       setStoreCodes(d.storeCodes); setEditStoreCodes(d.storeCodes); localStorage.setItem("pinturas_storeCodes", JSON.stringify(d.storeCodes));
       setDurabilityOnSale(d.durabilityOnSale); localStorage.setItem("pinturas_durabilityOnSale", JSON.stringify(d.durabilityOnSale));
       setGalonOnSale(d.galonOnSale); setEditGalonOnSale(d.galonOnSale); localStorage.setItem("pinturas_galonOnSale", JSON.stringify(d.galonOnSale));
+      setDurabilityPaused(d.durabilityPaused); localStorage.setItem("pinturas_durabilityPaused", JSON.stringify(d.durabilityPaused));
 
       // Colores personalizados
       const mapped: Record<string, Color[]> = {};
@@ -2521,6 +2549,7 @@ export default function Home() {
     setEditAnnouncementText(announcementText);
     setEditDurabilityPrices({ ...durabilityPrices });
     setEditDurabilityOnSale([...durabilityOnSale]);
+    setEditDurabilityPaused([...durabilityPaused]);
     setEditCalcButtonEnabled(calcButtonEnabled);
     setEditRoomButtonLabel(roomButtonLabel);
     setEditPwaIconUrl(pwaIconUrl);
@@ -2569,6 +2598,7 @@ export default function Home() {
       await saveAnnouncementText(editAnnouncementText);
       await saveDurabilityPrices(editDurabilityPrices);
       await saveDurabilityOnSale(editDurabilityOnSale);
+      await saveDurabilityPaused(editDurabilityPaused);
       await saveRoomPreviewEnabled(editRoomPreviewEnabled);
       await saveCalcButtonEnabled(editCalcButtonEnabled);
       if (editPwaIconUrl && editPwaIconUrl.startsWith("data:")) {
@@ -2623,6 +2653,8 @@ export default function Home() {
     setAnnouncementText(editAnnouncementText);
     setDurabilityPrices(editDurabilityPrices);
     setDurabilityOnSale(editDurabilityOnSale);
+    setDurabilityPaused(editDurabilityPaused); localStorage.setItem("pinturas_durabilityPaused", JSON.stringify(editDurabilityPaused));
+    if (selectedQuality !== null && editDurabilityPaused.includes(selectedQuality)) setSelectedQuality(null);
     setRoomPreviewEnabled(editRoomPreviewEnabled);
     setCalcButtonEnabled(editCalcButtonEnabled);
     setPwaIconUrl(editPwaIconUrl);
@@ -2922,6 +2954,18 @@ export default function Home() {
 
   const currentFamily = colorFamilies[selectedFamily] ?? { name: familyDisplayNames[selectedFamily] ?? `Familia ${selectedFamily + 1}`, colors: [] };
 
+  // Lo que ve el cliente: sin las calidades pausadas. Los precios guardados no se tocan
+  // (el editor de Ajustes y el carrito siguen usando los completos).
+  const pubDurabilityPrices = useMemo(() => withoutPaused(durabilityPrices, durabilityPaused), [durabilityPrices, durabilityPaused]);
+  const pubGalonPrices = useMemo(() => withoutPaused(galonPrices, durabilityPaused), [galonPrices, durabilityPaused]);
+  const qualityCards = DURABILITY_OPTIONS.filter((opt) => pubDurabilityPrices[String(opt.years)] || pubGalonPrices[String(opt.years)]);
+  // Con calidades pausadas, el público no ve los colores que solo vienen en ellas.
+  // El admin los sigue viendo todos para poder editarlos.
+  const colorVisible = React.useCallback(
+    (code: string) => isAdmin || colorHasActiveQuality(durability[code], durabilityPaused),
+    [isAdmin, durability, durabilityPaused]
+  );
+
   const displayedColors = useMemo(() => {
     const builtInName = currentFamily.name;
     const displayName = familyDisplayNames[selectedFamily];
@@ -2939,7 +2983,7 @@ export default function Home() {
         ...(pg != null ? { pageNumber: pg } : {}),
       };
     });
-    let all = [...custom, ...builtInWithOverrides];
+    let all = [...custom, ...builtInWithOverrides].filter((c) => colorVisible(origCode(c)));
     const familyKey = familyDisplayNames[selectedFamily] ?? currentFamily.name;
     const savedOrder = colorOrders[familyKey];
     if (savedOrder && savedOrder.length > 0) {
@@ -2964,7 +3008,7 @@ export default function Home() {
     return all.filter(
       (c) => normalize(c.name).includes(q) || normalize(c.code).includes(q)
     );
-  }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, pageNumbers, selectedQuality, durability, showFavorites, favorites, colorOrders, familyDisplayNames, selectedFamily]);
+  }, [search, currentFamily, customColors, deletedColorCodes, nameOverrides, pageNumbers, selectedQuality, durability, showFavorites, favorites, colorOrders, familyDisplayNames, selectedFamily, colorVisible]);
 
   // Reiniciar la carga progresiva al cambiar de familia o filtro
   useEffect(() => {
@@ -3007,18 +3051,20 @@ export default function Home() {
           return ov ? { ...c, name: ov.name, code: ov.code, originalCode: c.code } : c;
         })
         .filter((c) => {
+          if (!colorVisible(origCode(c))) return false;
           if (selectedQuality !== null && !(durability[origCode(c)] ?? []).includes(selectedQuality)) return false;
           return normalize(c.name).includes(q) || normalize(c.code).includes(q);
         })
     );
 
     const customResults = Object.values(customColors).flat().filter((c) => {
+      if (!colorVisible(c.code)) return false;
       if (selectedQuality !== null && !(durability[c.code] ?? []).includes(selectedQuality)) return false;
       return normalize(c.name).includes(q) || normalize(c.code).includes(q);
     });
 
     return [...customResults, ...builtInResults];
-  }, [search, selectedQuality, durability, deletedColorCodes, nameOverrides, customColors]);
+  }, [search, selectedQuality, durability, deletedColorCodes, nameOverrides, customColors, colorVisible]);
 
   const allFavoriteColors = useMemo(() => {
     if (!showFavorites || favorites.length === 0) return [];
@@ -3029,18 +3075,18 @@ export default function Home() {
           const ov = nameOverrides[c.code];
           return ov ? { ...c, name: ov.name, code: ov.code, originalCode: c.code } : c;
         })
-        .filter((c) => favorites.includes(origCode(c)))
+        .filter((c) => favorites.includes(origCode(c)) && colorVisible(origCode(c)))
     );
-    const custom = Object.values(customColors).flat().filter((c) => favorites.includes(c.code));
+    const custom = Object.values(customColors).flat().filter((c) => favorites.includes(c.code) && colorVisible(c.code));
     return [...custom, ...builtIn];
-  }, [showFavorites, favorites, colorFamilies, deletedColorCodes, nameOverrides, customColors]);
+  }, [showFavorites, favorites, colorFamilies, deletedColorCodes, nameOverrides, customColors, colorVisible]);
 
   // Todos los colores visibles del catálogo (base + custom − ocultos), con el HEX
   // efectivo (aplicando overrides). Para el buscador por foto del kiosko.
   const allVisibleColors = useMemo(() => {
     const builtIn = colorFamilies.flatMap((f) =>
       f.colors
-        .filter((c) => !deletedColorCodes.includes(c.code))
+        .filter((c) => !deletedColorCodes.includes(c.code) && colorVisible(c.code))
         .map((c) => {
           const ov = nameOverrides[c.code];
           return {
@@ -3050,11 +3096,11 @@ export default function Home() {
           };
         })
     );
-    const custom = Object.values(customColors).flat().map((c) => ({
+    const custom = Object.values(customColors).flat().filter((c) => colorVisible(c.code)).map((c) => ({
       name: c.name, code: c.code, hex: overrides[c.code] ?? c.hex,
     }));
     return [...custom, ...builtIn];
-  }, [deletedColorCodes, nameOverrides, customColors, overrides]);
+  }, [deletedColorCodes, nameOverrides, customColors, overrides, colorVisible]);
 
   // Banner gradient — custom if set, otherwise auto from first 5 colors
   const customBanner = familyBanners[selectedFamily];
@@ -3098,9 +3144,9 @@ export default function Home() {
       {/* Paint calculator modal */}
       {calcOpen && (
         <PaintCalculator
-          durabilityPrices={durabilityPrices}
+          durabilityPrices={pubDurabilityPrices}
           durabilityOnSale={durabilityOnSale}
-          galonPrices={galonPrices}
+          galonPrices={pubGalonPrices}
           galonOnSale={galonOnSale}
           onClose={() => setCalcOpen(false)}
         />
@@ -3109,9 +3155,9 @@ export default function Home() {
       {/* Wall-by-wall calculator (solo modo kiosko) */}
       {wallCalcOpen && (
         <WallPaintCalculator
-          durabilityPrices={durabilityPrices}
+          durabilityPrices={pubDurabilityPrices}
           durabilityOnSale={durabilityOnSale}
-          galonPrices={galonPrices}
+          galonPrices={pubGalonPrices}
           galonOnSale={galonOnSale}
           onClose={() => setWallCalcOpen(false)}
         />
@@ -3127,8 +3173,8 @@ export default function Home() {
         <AddToCartModal
           color={addToCartColor}
           colorYears={durability[origCode(addToCartColor)] ?? []}
-          durabilityPrices={durabilityPrices}
-          galonPrices={galonPrices}
+          durabilityPrices={pubDurabilityPrices}
+          galonPrices={pubGalonPrices}
           onAdd={(item) => { setCart((prev) => [...prev, item]); setAddToCartColor(null); setCartOpen(true); }}
           onClose={() => setAddToCartColor(null)}
         />
@@ -3423,6 +3469,35 @@ export default function Home() {
               placeholder="Ej: ¡Nuevos colores disponibles! Visítanos en tienda."
               maxLength={120}
             />
+
+            {/* Calidades a la venta (pausar sin borrar precios) */}
+            <p className="text-xs font-semibold text-gray-600 mb-1">Calidades a la venta</p>
+            <p className="text-[11px] text-gray-400 mb-2">
+              Las pausadas no se ven en la página ni en el kiosko, y se esconden los colores que solo vienen en ellas. Sus precios se quedan guardados.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {DURABILITY_OPTIONS.map((opt) => {
+                const paused = editDurabilityPaused.includes(opt.years);
+                const lastActive = !paused && editDurabilityPaused.length >= DURABILITY_OPTIONS.length - 1;
+                return (
+                  <button
+                    key={opt.years}
+                    type="button"
+                    disabled={lastActive}
+                    title={lastActive ? "Debe quedar al menos una calidad a la venta" : undefined}
+                    onClick={() => setEditDurabilityPaused((prev) =>
+                      prev.includes(opt.years) ? prev.filter((y) => y !== opt.years) : [...prev, opt.years].sort((a, b) => a - b)
+                    )}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
+                      paused ? "bg-gray-100 border-gray-200 text-gray-400" : "bg-teal-50 border-teal-400 text-teal-700"
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${paused ? "bg-gray-300" : "bg-teal-500"}`} />
+                    {opt.years} años · {paused ? "Pausada" : "Activa"}
+                  </button>
+                );
+              })}
+            </div>
 
             {/* Precios por cubeta 19L */}
             <p className="text-xs font-semibold text-gray-600 mb-2">Precios por cubeta (19 L)</p>
@@ -3943,7 +4018,7 @@ export default function Home() {
               <div className="flex justify-center mb-6 px-4">
                 <span className="inline-flex items-center gap-2 bg-gray-100 text-gray-600 text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full">
                   <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-                  Más de 2,000 colores Sayer disponibles en La Ferre
+                  {colorCountLabel(allVisibleColors.length)} colores Sayer disponibles en La Ferre
                 </span>
               </div>
             )}
@@ -3969,7 +4044,7 @@ export default function Home() {
             </div>
 
             {/* Quality / price selector */}
-            {DURABILITY_OPTIONS.some((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]) && (
+            {qualityCards.length > 0 && (
               <div className="px-4 mb-6">
                 <p className="text-center text-base text-gray-900 mb-3 uppercase tracking-widest font-bold">
                   Filtra por calidad y precio
@@ -4017,10 +4092,10 @@ export default function Home() {
 
                 {/* Combined quality grid */}
                 <div className={`mb-1${designPreview ? " max-w-5xl mx-auto" : ""}`}>
-                  <div className={`grid grid-cols-2 sm:grid-cols-4 ${designPreview ? "gap-4 sm:gap-6" : "gap-2 sm:gap-3"}`}>
-                    {DURABILITY_OPTIONS.filter((opt) => durabilityPrices[String(opt.years)] || galonPrices[String(opt.years)]).map((opt) => {
-                      const price = durabilityPrices[String(opt.years)];
-                      const galon = galonPrices[String(opt.years)];
+                  <div className={`grid ${QUALITY_GRID_COLS[qualityCards.length] ?? "grid-cols-2 sm:grid-cols-4"} ${designPreview ? "gap-4 sm:gap-6" : "gap-2 sm:gap-3"}`}>
+                    {qualityCards.map((opt) => {
+                      const price = pubDurabilityPrices[String(opt.years)];
+                      const galon = pubGalonPrices[String(opt.years)];
                       const active = selectedQuality === opt.years;
                       const onSale = durabilityOnSale.includes(opt.years) || galonOnSale.includes(opt.years);
                       const neonColor = onSale ? "#f97316" : "#2dd4bf";
@@ -4241,6 +4316,7 @@ export default function Home() {
                                               <div className="flex items-center gap-2">
                                                 <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDurability(origCode(selectedColor), opt.years)} />
                                                 <span className="font-semibold">{opt.years} años</span>
+                                                {durabilityPaused.includes(opt.years) && <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${checked ? "bg-white/25 text-white" : "bg-gray-100 text-gray-500"}`}>Pausada</span>}
                                               </div>
                                               <div className="flex items-center gap-2 flex-wrap justify-end">
                                                 {price && <span className={checked ? "text-white font-bold" : "text-teal-700 font-bold"}>{price}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/19L</span></span>}
@@ -4300,7 +4376,10 @@ export default function Home() {
                                       )}
                                     </div>
                                     {(() => {
-                                      const sel = DURABILITY_OPTIONS.filter((opt) => (durability[origCode(selectedColor)] ?? []).includes(opt.years));
+                                      const sel = DURABILITY_OPTIONS.filter((opt) =>
+                                        (durability[origCode(selectedColor)] ?? []).includes(opt.years) &&
+                                        (pubDurabilityPrices[String(opt.years)] || pubGalonPrices[String(opt.years)])
+                                      );
                                       return sel.length > 0 ? (
                                         <div className="flex flex-col gap-3">
                                           <p className="text-base font-extrabold text-gray-800 mb-0">{rendimientoLabel}</p>
@@ -4315,8 +4394,8 @@ export default function Home() {
                                             {/* Rows */}
                                             <div className="flex flex-col gap-1.5">
                                               {sel.map((opt) => {
-                                                const price = durabilityPrices[String(opt.years)];
-                                                const galon = galonPrices[String(opt.years)];
+                                                const price = pubDurabilityPrices[String(opt.years)];
+                                                const galon = pubGalonPrices[String(opt.years)];
                                                 const cubSale = durabilityOnSale.includes(opt.years);
                                                 const galSale = galonOnSale.includes(opt.years);
                                                 if (!price && !galon) return null;
@@ -4707,6 +4786,7 @@ export default function Home() {
                                             <div className="flex items-center gap-2">
                                               <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDurability(origCode(selectedColor), opt.years)} />
                                               <span className="font-semibold">{opt.years} años</span>
+                                                {durabilityPaused.includes(opt.years) && <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${checked ? "bg-white/25 text-white" : "bg-gray-100 text-gray-500"}`}>Pausada</span>}
                                             </div>
                                             <div className="flex items-center gap-2 flex-wrap justify-end">
                                               {price && <span className={checked ? "text-white font-bold" : "text-teal-700 font-bold"}>{price}<span className="font-normal opacity-70 ml-0.5 text-[9px]">/19L</span></span>}
@@ -4775,7 +4855,8 @@ export default function Home() {
 
                                   {(() => {
                                     const selected = DURABILITY_OPTIONS.filter((opt) =>
-                                      (durability[origCode(selectedColor)] ?? []).includes(opt.years)
+                                      (durability[origCode(selectedColor)] ?? []).includes(opt.years) &&
+                                      (pubDurabilityPrices[String(opt.years)] || pubGalonPrices[String(opt.years)])
                                     );
                                     return selected.length > 0 ? (
                                       <div className="flex flex-col gap-3">
@@ -4791,8 +4872,8 @@ export default function Home() {
                                           {/* Rows */}
                                           <div className="flex flex-col gap-1.5">
                                             {selected.map((opt) => {
-                                              const price = durabilityPrices[String(opt.years)];
-                                              const galon = galonPrices[String(opt.years)];
+                                              const price = pubDurabilityPrices[String(opt.years)];
+                                              const galon = pubGalonPrices[String(opt.years)];
                                               const cubSale = durabilityOnSale.includes(opt.years);
                                               const galSale = galonOnSale.includes(opt.years);
                                               if (!price && !galon) return null;

@@ -5,6 +5,7 @@ import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import { timingSafeEqual, randomBytes } from "crypto";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "./validation";
+import { sanitizePaused, DURABILITY_YEARS } from "./durability";
 import { requireAdmin, setAdminSession, clearAdminSession, isAdmin, verifyPassword } from "./auth";
 
 // ── Rate limit anti-spam para createOrder (público) ─────────
@@ -214,6 +215,32 @@ export async function saveDurabilityOnSale(years: number[]): Promise<void> {
   await supabaseAdmin
     .from("site_settings")
     .upsert({ key: "durability_on_sale", value: JSON.stringify(years) }, { onConflict: "key" });
+}
+
+// Calidades pausadas: el público no las ve, pero sus precios se conservan.
+export async function loadDurabilityPaused(): Promise<number[]> {
+  const { data } = await supabaseRead
+    .from("site_settings")
+    .select("value")
+    .eq("key", "durability_paused")
+    .single();
+  if (!data?.value) return [];
+  try {
+    return sanitizePaused(JSON.parse(data.value));
+  } catch {
+    return [];
+  }
+}
+
+export async function saveDurabilityPaused(years: number[]): Promise<void> {
+  await requireAdmin();
+  const clean = sanitizePaused(years);
+  // Al menos una calidad debe quedar a la venta.
+  if (clean.length >= DURABILITY_YEARS.length) throw new Error("Debe quedar al menos una calidad activa.");
+  updateTag(CATALOG_TAG);
+  await supabaseAdmin
+    .from("site_settings")
+    .upsert({ key: "durability_paused", value: JSON.stringify(clean) }, { onConflict: "key" });
 }
 
 export async function loadGalonOnSale(): Promise<number[]> {
@@ -915,6 +942,7 @@ export async function loadInitialData() {
     colorSettings, site, durabilityPrices, galonPrices, durabilityOnSale,
     galonOnSale, customColors, nameOverrides, pageNumbers, deletedColors,
     familySettings, familyBanners, colorOrders, impermeabilizante, storeCodes,
+    durabilityPaused,
   ] = await Promise.all([
     loadColorSettings(),
     loadSiteSettings(),
@@ -931,10 +959,12 @@ export async function loadInitialData() {
     loadColorOrders(),
     loadImpermeabilizante(),
     loadStoreCodes(),
+    loadDurabilityPaused(),
   ]);
   return {
     colorSettings, site, durabilityPrices, galonPrices, durabilityOnSale,
     galonOnSale, customColors, nameOverrides, pageNumbers, deletedColors,
     familySettings, familyBanners, colorOrders, impermeabilizante, storeCodes,
+    durabilityPaused,
   };
 }
