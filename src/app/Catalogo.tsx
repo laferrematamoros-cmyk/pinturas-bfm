@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import ColorFromPhoto from "@/components/ColorFromPhoto";
+import PistaCirculos from "@/components/PistaCirculos";
+import { KIOSKO_INACTIVO_MS } from "@/lib/pista";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import { withoutPaused, colorHasActiveQuality, colorCountLabel } from "@/lib/durability";
 import { soloCubetas, soloGalones, combinado, masBarato } from "@/lib/paintCalc";
@@ -2090,6 +2092,23 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
   // Diseño moderno ("Apple") para todos: público y kiosko se ven igual. Solo cambia la
   // apariencia; lo exclusivo del kiosko (carrito, calculadoras, foto) va con kioskMode.
   const designPreview = true;
+  // Pista "el dedito" sobre los círculos de familias: se ve hasta el primer toque de una
+  // familia; en el kiosko vuelve tras 60 s sin interacción, para el siguiente cliente.
+  const circulosRef = useRef<HTMLDivElement | null>(null);
+  const [pistaActiva, setPistaActiva] = useState(true);
+  useEffect(() => {
+    if (!kioskMode) return;
+    let t: ReturnType<typeof setTimeout>;
+    const reiniciar = () => { clearTimeout(t); t = setTimeout(() => setPistaActiva(true), KIOSKO_INACTIVO_MS); };
+    reiniciar();
+    window.addEventListener("pointerdown", reiniciar);
+    window.addEventListener("keydown", reiniciar);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("pointerdown", reiniciar);
+      window.removeEventListener("keydown", reiniciar);
+    };
+  }, [kioskMode]);
   const [calcOpen, setCalcOpen] = useState(false);
   const [wallCalcOpen, setWallCalcOpen] = useState(false);
   const [imperCalcOpen, setImperCalcOpen] = useState(false);
@@ -3902,15 +3921,17 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
 
             {/* Family selector — círculos grandes (prueba de diseño) o pills (normal) */}
             {designPreview ? (
-              <div className="flex flex-wrap justify-center gap-3 sm:gap-5 mb-6 px-4 py-2">
+              <>
+              <div ref={circulosRef} className="relative flex flex-wrap justify-center gap-3 sm:gap-5 mb-6 px-4 py-2">
                 {familyDisplayNames.map((name, i) => (
                   <button
                     key={i}
-                    onClick={() => { setSelectedFamily(i); setSelectedColor(null); setSearch(""); }}
+                    onClick={() => { setSelectedFamily(i); setSelectedColor(null); setSearch(""); setPistaActiva(false); }}
                     title={name}
                     className="flex flex-col items-center gap-1.5 group cursor-pointer shrink-0"
                   >
                     <span
+                      data-circulo
                       className={`w-12 h-12 sm:w-20 sm:h-20 rounded-full transition-all duration-200 ${
                         selectedFamily === i
                           ? "ring-2 ring-[#0071e3] scale-105"
@@ -3923,7 +3944,16 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                     <span className={`text-xs leading-none ${selectedFamily === i ? "font-semibold text-gray-900" : "font-medium text-transparent select-none"}`}>{name}</span>
                   </button>
                 ))}
+                <PistaCirculos contenedor={circulosRef} activa={pistaActiva} />
               </div>
+              {/* Texto de la pista: conserva su lugar y solo se desvanece (la página no brinca) */}
+              <p
+                aria-hidden={!pistaActiva}
+                className={`-mt-4 mb-4 text-center text-xs font-semibold text-[#0071e3] transition-opacity duration-300 ${pistaActiva ? "opacity-100" : "opacity-0"}`}
+              >
+                Toca un color para ver sus tonos
+              </p>
+              </>
             ) : (
             <div className="flex justify-center gap-1.5 mb-5 flex-wrap px-4">
               {familyDisplayNames.map((name, i) => (
