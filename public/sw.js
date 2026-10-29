@@ -1,5 +1,7 @@
 // Subir VERSION en cada cambio del SW para purgar cachés viejas en clientes.
-const VERSION = "v4";
+// v5: ya no se guardan respuestas con error (404/500) ni descargas rotas; al
+// estrenar versión se tiran las copias viejas por si alguna quedó dañada.
+const VERSION = "v5";
 const CACHE = `pinturas-bfm-${VERSION}`;
 
 self.addEventListener("install", () => {
@@ -18,6 +20,15 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Solo se guarda lo que llegó bien y completo: una respuesta 404/500 guardada en
+// "cache-first" se serviría para siempre (p. ej. la hoja de estilos → página sin diseño).
+// Si la descarga se corta a medias, cache.put falla y no se guarda nada.
+function guardar(req, res) {
+  if (!res || !res.ok || res.type !== "basic") return;
+  const clone = res.clone();
+  caches.open(CACHE).then((cache) => cache.put(req, clone)).catch(() => {});
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -33,8 +44,7 @@ self.addEventListener("fetch", (event) => {
         (cached) =>
           cached ||
           fetch(req).then((res) => {
-            const clone = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, clone));
+            guardar(req, res);
             return res;
           })
       )
@@ -47,8 +57,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(req, { cache: "no-store" })
       .then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE).then((cache) => cache.put(req, clone));
+        guardar(req, res);
         return res;
       })
       .catch(() => caches.match(req))

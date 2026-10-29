@@ -45,6 +45,20 @@ export default function RootLayout({
             __html: `(function(){try{var p=new URLSearchParams(location.search).get('kiosko');var k=p==='1'||(p!=='0'&&localStorage.getItem('pinturas_kiosko')==='1');if(k)document.documentElement.classList.add('kiosk-boot');}catch(e){}})();`,
           }}
         />
+        {/* Recuperación: si se cortó el internet a media carga, la página llega incompleta
+            o sin estilos. Se revisa unos segundos después de cargar y, si algo falló,
+            se recarga UNA vez (no más de una por minuto; sin internet, espera a que vuelva). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if(location.pathname!=='/')return;var K='pinturas_autorecarga',hecho=false;
+function estilosOk(){var ls=document.querySelectorAll('link[rel="stylesheet"]');if(!ls.length)return false;for(var i=0;i<ls.length;i++){try{if(!ls[i].sheet||!ls[i].sheet.cssRules.length)return false;}catch(e){return false;}}return true;}
+function rota(){return !estilosOk()||document.documentElement.getAttribute('data-listo')!=='1';}
+function recargar(){try{var t=+sessionStorage.getItem(K)||0;if(Date.now()-t<60000)return;sessionStorage.setItem(K,String(Date.now()));}catch(e){return;}
+if(navigator.onLine===false){window.addEventListener('online',function(){location.reload();},{once:true});return;}location.reload();}
+function revisar(){if(hecho)return;hecho=true;if(rota())recargar();}
+window.addEventListener('load',function(){setTimeout(revisar,5000);});setTimeout(revisar,20000);})();`,
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col bg-white text-gray-900">
         {children}

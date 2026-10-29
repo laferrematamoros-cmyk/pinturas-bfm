@@ -2143,6 +2143,8 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
   // llegan del servidor; antes se copiaban aquí y el cliente que regresaba veía
   // brincar la página al restaurarlos.
   React.useEffect(() => {
+    // Marca para layout.tsx: la página arrancó (si no aparece, la carga llegó rota y se recarga sola).
+    document.documentElement.setAttribute("data-listo", "1");
     try {
       setEyedropperSupported("EyeDropper" in window);
       const fav = localStorage.getItem("pinturas-favorites"); if (fav) setFavorites(JSON.parse(fav));
