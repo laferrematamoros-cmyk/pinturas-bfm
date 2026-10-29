@@ -2087,7 +2087,9 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
   const [pendingColorCode, setPendingColorCode] = useState<string | null>(null); // deep-link ?color=CÓDIGO
   const [photoOpen, setPhotoOpen] = useState(false);
   const [newVersionAvailable, setNewVersionAvailable] = useState(false); // hay un deploy nuevo
-  const designPreview = kioskMode; // diseño Apple automático SOLO en modo kiosko (tablet en tienda)
+  // Diseño moderno ("Apple") para todos: público y kiosko se ven igual. Solo cambia la
+  // apariencia; lo exclusivo del kiosko (carrito, calculadoras, foto) va con kioskMode.
+  const designPreview = true;
   const [calcOpen, setCalcOpen] = useState(false);
   const [wallCalcOpen, setWallCalcOpen] = useState(false);
   const [imperCalcOpen, setImperCalcOpen] = useState(false);
@@ -2197,7 +2199,6 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
       try { kToken = localStorage.getItem("pinturas_kiosk_orders_token") || ""; } catch {}
     }
     setKioskOrdersToken(kToken);
-    // El diseño Apple se aplica automáticamente cuando isKiosk es true (designPreview = kioskMode).
     // Deep-link a un color: ?color=CÓDIGO (lo abre cuando carguen los datos).
     const colorParam = params.get("color");
     if (colorParam) setPendingColorCode(colorParam);
