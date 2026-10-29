@@ -14,11 +14,13 @@ export function withoutPaused(prices: Record<string, string>, paused: number[]):
 }
 
 /**
- * ¿El público puede ver un color? Sí cuando no tiene calidades asignadas
- * (comportamiento de siempre) o cuando al menos una de las suyas sigue activa.
+ * ¿El público puede ver un color? Sin calidades pausadas, todos (como siempre).
+ * Con alguna pausada, solo los que traen marcada al menos una calidad activa:
+ * un color sin calidades marcadas se esconde, porque no se sabe si se puede igualar.
  */
 export function colorHasActiveQuality(colorYears: number[] | undefined, paused: number[]): boolean {
-  if (paused.length === 0 || !colorYears || colorYears.length === 0) return true;
+  if (paused.length === 0) return true;
+  if (!colorYears || colorYears.length === 0) return false;
   return colorYears.some((y) => !paused.includes(y));
 }
 

@@ -18,8 +18,10 @@ ok(colorHasActiveQuality([7], []), "sin pausadas todo se ve");
 ok(!colorHasActiveQuality([7], [2, 4, 7]), "color solo de 7 años se esconde");
 ok(!colorHasActiveQuality([4, 7], [2, 4, 7]), "color de 4 y 7 se esconde");
 ok(colorHasActiveQuality([3, 4, 7], [2, 4, 7]), "color que trae 3 años se ve");
-ok(colorHasActiveQuality([], [2, 4, 7]), "color sin calidades asignadas se sigue viendo");
-ok(colorHasActiveQuality(undefined, [2, 4, 7]), "color sin registro se sigue viendo");
+ok(!colorHasActiveQuality([], [2, 4, 7]), "con pausadas, color sin calidades marcadas se esconde");
+ok(!colorHasActiveQuality(undefined, [2, 4, 7]), "con pausadas, color sin registro se esconde");
+ok(colorHasActiveQuality([], []), "sin pausadas, color sin calidades se ve (como siempre)");
+ok(colorHasActiveQuality(undefined, []), "sin pausadas, color sin registro se ve (como siempre)");
 
 console.log("sanitizePaused:");
 same(sanitizePaused([7, "4", 2, 2, 99, "x"]), [2, 4, 7], "filtra, quita repetidos y ordena");
