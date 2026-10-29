@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import ColorFromPhoto from "@/components/ColorFromPhoto";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import { withoutPaused, colorHasActiveQuality, colorCountLabel } from "@/lib/durability";
+import { soloCubetas, soloGalones, combinado, masBarato } from "@/lib/paintCalc";
 import {
   loadInitialData,
   saveColorHex,
@@ -565,7 +566,7 @@ type RoomTab = typeof ROOM_TABS[number]["id"];
 function SalaRoom({ hex }: { hex: string }) {
   return (
     <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img src="/sala-sofa.png" alt="Sala" className="w-full block" />
+      <img src="/sala-sofa.webp" alt="Sala" className="w-full block" />
     </div>
   );
 }
@@ -573,7 +574,7 @@ function SalaRoom({ hex }: { hex: string }) {
 function RecamaraRoom({ hex }: { hex: string }) {
   return (
     <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img src="/recamara.png" alt="Recámara" className="w-full block" />
+      <img src="/recamara.webp" alt="Recámara" className="w-full block" />
     </div>
   );
 }
@@ -581,7 +582,7 @@ function RecamaraRoom({ hex }: { hex: string }) {
 function CocinaRoom({ hex }: { hex: string }) {
   return (
     <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img src="/cocina.png" alt="Cocina" className="w-full block" />
+      <img src="/cocina.webp" alt="Cocina" className="w-full block" />
     </div>
   );
 }
@@ -589,7 +590,7 @@ function CocinaRoom({ hex }: { hex: string }) {
 function FachadaRoom({ hex }: { hex: string }) {
   return (
     <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img src="/fachada.png" alt="Fachada" className="w-full block" />
+      <img src="/fachada.webp" alt="Fachada" className="w-full block" />
     </div>
   );
 }
@@ -617,7 +618,7 @@ function RoomPreviewModal({ color, hex, onClose }: {
               <p className="text-xs text-gray-400 font-mono">{color.code}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+          <button aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
         </div>
         {/* Tabs */}
         <div className="flex bg-gray-900 gap-1 p-1.5 flex-shrink-0">
@@ -657,11 +658,6 @@ function RoomPreviewModal({ color, hex, onClose }: {
 // ── Paint yield (conservative lower bound per durability tier) ──
 const YIELD_MAP: Record<number, number> = { 2: 4, 3: 6, 4: 7, 7: 7 };
 
-// 1 litro = 0.055 cubetas de 19L, redondeado a 1 decimal
-function calcCubetas19(liters: number): number {
-  return Math.round(liters * 0.055 * 10) / 10;
-}
-
 function parsePrice(priceStr: string): number | null {
   const n = parseFloat(priceStr.replace(/[^0-9.]/g, ""));
   return isNaN(n) ? null : n;
@@ -695,17 +691,12 @@ function PaintCalculator({
   const litersNeeded = yieldPerLiter && totalArea > 0 ? Math.ceil(totalArea / yieldPerLiter) : null;
   const hasGalonPrice = quality ? !!galonPrices[String(quality)] : false;
 
-  // 0.055 factor: 1 liter = 0.055 container-units (0.055×19≈1 cubeta, 0.055×4≈1 galón scaled)
-  const FACTOR = 0.055;
-  const totalUnits = litersNeeded ? litersNeeded * FACTOR : null;
-  // Only cubetas
-  const onlyCubetas = totalUnits !== null ? Math.ceil(totalUnits) : null;
-  // Only galones
-  const onlyGalones = litersNeeded ? Math.ceil(litersNeeded * FACTOR / (4 * FACTOR)) : null; // = ceil(liters/4)
-  // Combined: full cubetas + galones for remainder
-  const fullCubetas = totalUnits !== null ? Math.floor(totalUnits) : null;
-  const remainingUnits = (totalUnits !== null && fullCubetas !== null) ? totalUnits - fullCubetas : 0;
-  const galonsForRemainder = remainingUnits > 0 ? Math.ceil(remainingUnits / (4 * FACTOR)) : 0;
+  // Tamaños reales: cubeta = 19 L, galón = 4 L (misma cuenta que la calculadora por paredes).
+  const onlyCubetas = litersNeeded ? soloCubetas(litersNeeded) : null;
+  const onlyGalones = litersNeeded ? soloGalones(litersNeeded) : null;
+  const combo = litersNeeded ? combinado(litersNeeded) : null;
+  const fullCubetas = combo ? combo.cubetas : null;
+  const galonsForRemainder = combo ? combo.galones : 0;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -724,7 +715,7 @@ function PaintCalculator({
             </svg>
             <h2 className="font-bold text-base">Calculadora de Pintura</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+          <button aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col gap-4 sm:gap-5 overflow-y-auto">
@@ -802,7 +793,7 @@ function PaintCalculator({
                     <span className="font-bold text-sm mb-1">{opt.years} años</span>
                     {galon && (
                       <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
-                        <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
+                        <img src="/galon.webp" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
                         <span className={`text-sm font-extrabold leading-tight ${active ? (galSale ? "text-white oferta-pulse" : "text-white") : galSale ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{galon}</span>
                         <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
                         {galSale && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
@@ -810,7 +801,7 @@ function PaintCalculator({
                     )}
                     {price && (
                       <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
-                        <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
+                        <img src="/cubeta.webp" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
                         <span className={`text-sm font-extrabold leading-tight ${active ? (cubSale ? "text-white oferta-pulse" : "text-white") : cubSale ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{price}</span>
                         <span className={`text-[10px] font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
                         {cubSale && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
@@ -846,7 +837,7 @@ function PaintCalculator({
                 {onlyCubetas !== null && (
                   <div className="flex items-center justify-between bg-white border border-teal-200 rounded-xl px-4 py-2.5">
                     <div className="flex items-center gap-2">
-                      <img src="/cubeta.png" alt="cubeta" className="w-5 h-5 object-contain flex-shrink-0" />
+                      <img src="/cubeta.webp" alt="cubeta" className="w-5 h-5 object-contain flex-shrink-0" />
                       <span className="text-xs text-gray-500">Solo cubetas</span>
                     </div>
                     <div className="text-right">
@@ -861,22 +852,23 @@ function PaintCalculator({
                 {hasGalonPrice && onlyGalones !== null && (
                   <div className="flex items-center justify-between bg-white border border-teal-200 rounded-xl px-4 py-2.5">
                     <div className="flex items-center gap-2">
-                      <img src="/galon.png" alt="galón" className="w-5 h-5 object-contain flex-shrink-0" />
+                      <img src="/galon.webp" alt="galón" className="w-5 h-5 object-contain flex-shrink-0" />
                       <span className="text-xs text-gray-500">Solo galones</span>
                     </div>
                     <div className="text-right">
                       <span className="text-base font-black text-gray-800">{onlyGalones}</span>
-                      <span className="text-[10px] text-gray-400 ml-1">galón{onlyGalones !== 1 ? "es" : ""} de 4 L</span>
+                      <span className="text-[10px] text-gray-400 ml-1">{onlyGalones !== 1 ? "galones" : "galón"} de 4 L</span>
                       <span className="text-[10px] text-teal-400 ml-1">({onlyGalones * 4} L)</span>
                     </div>
                   </div>
                 )}
 
                 {/* Combinado */}
-                {hasGalonPrice && fullCubetas !== null && (fullCubetas > 0 || galonsForRemainder > 0) && (
+                {/* Solo cuando de verdad combina (si no, repite "Solo cubetas" o "Solo galones") */}
+                {hasGalonPrice && fullCubetas !== null && fullCubetas > 0 && galonsForRemainder > 0 && (
                   <div className="flex items-center justify-between bg-teal-100 border border-teal-300 rounded-xl px-4 py-2.5">
                     <div className="flex items-center gap-1.5">
-                      <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0 opacity-60" />
+                      <img src="/cubeta.webp" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0 opacity-60" />
                       <span className="text-xs text-teal-700 font-semibold">Combinado</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-right">
@@ -888,7 +880,7 @@ function PaintCalculator({
                       {fullCubetas > 0 && galonsForRemainder > 0 && <span className="text-teal-500 font-bold">+</span>}
                       {galonsForRemainder > 0 && (
                         <span className="text-sm font-black text-gray-800">
-                          {galonsForRemainder} <span className="text-[10px] font-normal text-gray-500">galón{galonsForRemainder !== 1 ? "es" : ""} 4L</span>
+                          {galonsForRemainder} <span className="text-[10px] font-normal text-gray-500">{galonsForRemainder !== 1 ? "galones" : "galón"} 4L</span>
                         </span>
                       )}
                       <span className="text-[10px] text-teal-500 ml-1">({fullCubetas * 19 + galonsForRemainder * 4} L)</span>
@@ -972,28 +964,8 @@ function WallPaintCalculator({
     const cubPrice = parsePrice(durabilityPrices[String(years)] ?? "");
     const galPrice = parsePrice(galonPrices[String(years)] ?? "");
     const hasGalon = !!galonPrices[String(years)];
-    let cubetas: number;
-    let galones: number;
-    if (hasGalon && cubPrice != null && galPrice != null) {
-      // Tamaños REALES: cubeta = 19 L, galón = 4 L. Llena con cubetas completas
-      // y, para el resto, elige lo MÁS BARATO: galones o una cubeta más.
-      const cubBase = Math.floor(liters / 19);
-      const restante = liters - cubBase * 19;
-      if (restante <= 0) {
-        cubetas = Math.max(1, cubBase); galones = 0;
-      } else {
-        const galRest = Math.ceil(restante / 4);
-        if (galRest * galPrice < cubPrice) {
-          cubetas = cubBase; galones = galRest;       // más barato con galones
-        } else {
-          cubetas = cubBase + 1; galones = 0;          // más barato una cubeta más
-        }
-      }
-    } else {
-      // Solo cubetas (redondeo hacia arriba)
-      cubetas = Math.max(1, Math.ceil(liters / 19));
-      galones = 0;
-    }
+    // Cubetas completas y, para el resto, lo MÁS BARATO: galones o una cubeta más.
+    const { cubetas, galones } = masBarato(liters, cubPrice, hasGalon ? galPrice : null);
     const total =
       (cubPrice != null ? cubetas * cubPrice : 0) +
       (galPrice != null ? galones * galPrice : 0);
@@ -1016,7 +988,7 @@ function WallPaintCalculator({
             </svg>
             <h2 className="font-bold text-base">Calcular por paredes</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+          <button aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto">
@@ -1143,7 +1115,7 @@ function WallPaintCalculator({
                     <div className="flex items-center gap-3 flex-wrap">
                       {r.cubetas > 0 && (
                         <span className="flex items-center gap-1.5">
-                          <img src="/cubeta.png" alt="cubeta" className="w-5 h-5 object-contain" />
+                          <img src="/cubeta.webp" alt="cubeta" className="w-5 h-5 object-contain" />
                           <span className="text-base font-black text-gray-800">{r.cubetas}</span>
                           <span className="text-[10px] text-gray-500">cubeta{r.cubetas !== 1 ? "s" : ""} 19L</span>
                         </span>
@@ -1151,9 +1123,9 @@ function WallPaintCalculator({
                       {r.cubetas > 0 && r.galones > 0 && <span className="text-teal-500 font-bold">+</span>}
                       {r.galones > 0 && (
                         <span className="flex items-center gap-1.5">
-                          <img src="/galon.png" alt="galón" className="w-5 h-5 object-contain" />
+                          <img src="/galon.webp" alt="galón" className="w-5 h-5 object-contain" />
                           <span className="text-base font-black text-gray-800">{r.galones}</span>
-                          <span className="text-[10px] text-gray-500">galón{r.galones !== 1 ? "es" : ""} 4L</span>
+                          <span className="text-[10px] text-gray-500">{r.galones !== 1 ? "galones" : "galón"} 4L</span>
                         </span>
                       )}
                       {r.total > 0 && (
@@ -1234,7 +1206,7 @@ function ImpermeabilizanteCalculator({ config, onClose }: { config: ImperConfig;
             <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7M3 21h18" /></svg>
             <h2 className="font-bold text-base">{config.name || "Impermeabilizante"}</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+          <button aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto">
@@ -1362,7 +1334,7 @@ function Stepper({ label, value, unit, price, onChange, disabled }: { label: str
   return (
     <div className={`flex items-center justify-between rounded-xl border px-3 py-2.5 ${disabled ? "bg-gray-50 border-gray-100 opacity-60" : "bg-white border-gray-200"}`}>
       <div className="flex items-center gap-2 min-w-0">
-        <img src={label === "Cubetas" ? "/cubeta.png" : "/galon.png"} alt="" className="w-6 h-6 object-contain flex-shrink-0" />
+        <img src={label === "Cubetas" ? "/cubeta.webp" : "/galon.webp"} alt="" className="w-6 h-6 object-contain flex-shrink-0" />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-800 leading-tight">{label}</p>
           <p className="text-[10px] text-gray-400 leading-tight">{unit}{price > 0 ? ` · ${money(price)} c/u` : ""}</p>
@@ -1429,7 +1401,7 @@ function AddToCartModal({ color, colorYears, durabilityPrices, galonPrices, onAd
               <p className="text-[11px] text-gray-400 font-mono leading-tight">{color.code}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+          <button aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto">
@@ -1506,7 +1478,7 @@ function CartModal({ cart, durabilityPrices, galonPrices, storeCodes, onRemove, 
             <svg className="w-7 h-7 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             <h2 className="font-bold text-xl" style={{ color: "#2dd4bf" }}>Tu carrito {cart.length > 0 && <span>({cart.length})</span>}</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">✕</button>
+          <button aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none">✕</button>
         </div>
 
         <div className="p-5 flex flex-col gap-3 overflow-y-auto">
@@ -1665,7 +1637,7 @@ function CheckoutModal({ cart, durabilityPrices, galonPrices, storeCodes, onClea
           <h2 className="font-bold text-base">
             {step === "form" ? "Datos del pedido" : step === "review" ? "Revisa tu pedido" : "¡Pedido generado!"}
           </h2>
-          {step !== "sent" && <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>}
+          {step !== "sent" && <button aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>}
         </div>
 
         {/* ── Paso FORM ── */}
@@ -1893,7 +1865,7 @@ function AdminOrdersModal({ orders, loading, storeCodes, readOnly, onRefresh, on
           <h2 className="font-bold text-base">Pedidos {orders.length > 0 && <span className="text-teal-400">({orders.length})</span>}</h2>
           <div className="flex items-center gap-3">
             <button onClick={onRefresh} className="text-gray-300 hover:text-white text-xs">Actualizar</button>
-            <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+            <button aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
           </div>
         </div>
         <div className="p-4 flex flex-col gap-3 overflow-y-auto">
@@ -1958,7 +1930,7 @@ function AdminOrdersModal({ orders, loading, storeCodes, readOnly, onRefresh, on
               </div>
               <div className="flex items-center gap-3">
                 <span className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_COLOR[o.status] ?? "bg-gray-100 text-gray-700"}`}>{o.status}</span>
-                <button onClick={() => setDetailOrder(null)} className="text-gray-300 hover:text-white text-2xl leading-none">✕</button>
+                <button aria-label="Cerrar" onClick={() => setDetailOrder(null)} className="text-gray-300 hover:text-white text-2xl leading-none">✕</button>
               </div>
             </div>
 
@@ -2133,6 +2105,7 @@ export default function Home() {
   const [announcementText, setAnnouncementText] = useState("");
   const [editAnnouncementText, setEditAnnouncementText] = useState("");
   const [logoSaveError, setLogoSaveError] = useState("");
+  const [savingSite, setSavingSite] = useState(false);
   const [roomPreviewEnabled, setRoomPreviewEnabled] = useState(true);
   const [editRoomPreviewEnabled, setEditRoomPreviewEnabled] = useState(true);
   const [calcButtonEnabled, setCalcButtonEnabled] = useState(true);
@@ -2587,67 +2560,71 @@ export default function Home() {
   }
 
   async function saveSiteSettings() {
+    if (savingSite) return; // evita el doble clic
     const cleanSiteName = sanitizeText(editSiteName, LIMITS.SITE_NAME);
     if (!cleanSiteName) { setLogoSaveError("El nombre del sitio es obligatorio."); return; }
     for (const [k, v] of Object.entries(editDurabilityPrices)) {
       if (!isValidPrice(v)) { setLogoSaveError(`Precio inválido para ${k} años. Solo se permiten números, $, comas y puntos.`); return; }
     }
     setLogoSaveError("");
+    setSavingSite(true);
+    // Solo se manda lo que cambió: casi siempre son 1 o 2 llamadas en vez de 23
+    // (las acciones del servidor van una tras otra, así que cada una suma espera).
+    const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
+    let finalPwaIcon = editPwaIconUrl;
+    let finalLogo = editLogoUrl;
+    let finalLogo2 = editLogo2Url;
     try {
-      await saveSiteName(cleanSiteName);
-      await saveAnnouncementText(editAnnouncementText);
-      await saveDurabilityPrices(editDurabilityPrices);
-      await saveDurabilityOnSale(editDurabilityOnSale);
-      await saveDurabilityPaused(editDurabilityPaused);
-      await saveRoomPreviewEnabled(editRoomPreviewEnabled);
-      await saveCalcButtonEnabled(editCalcButtonEnabled);
-      if (editPwaIconUrl && editPwaIconUrl.startsWith("data:")) {
-        const publicUrl = await uploadLogoData(editPwaIconUrl);
-        await savePwaIconUrl(publicUrl);
-        setEditPwaIconUrl(publicUrl);
-        setPwaIconUrl(publicUrl);
-      } else {
-        await savePwaIconUrl(editPwaIconUrl);
+      if (changed(cleanSiteName, siteName)) await saveSiteName(cleanSiteName);
+      if (changed(editAnnouncementText, announcementText)) await saveAnnouncementText(editAnnouncementText);
+      if (changed(editDurabilityPrices, durabilityPrices)) await saveDurabilityPrices(editDurabilityPrices);
+      if (changed(editDurabilityOnSale, durabilityOnSale)) await saveDurabilityOnSale(editDurabilityOnSale);
+      if (changed(editDurabilityPaused, durabilityPaused)) await saveDurabilityPaused(editDurabilityPaused);
+      if (changed(editRoomPreviewEnabled, roomPreviewEnabled)) await saveRoomPreviewEnabled(editRoomPreviewEnabled);
+      if (changed(editCalcButtonEnabled, calcButtonEnabled)) await saveCalcButtonEnabled(editCalcButtonEnabled);
+      if (finalPwaIcon && finalPwaIcon.startsWith("data:")) {
+        finalPwaIcon = await uploadLogoData(finalPwaIcon);
+        await savePwaIconUrl(finalPwaIcon);
+        setEditPwaIconUrl(finalPwaIcon);
+      } else if (changed(finalPwaIcon, pwaIconUrl)) {
+        await savePwaIconUrl(finalPwaIcon);
       }
-      await saveRendimientoLabel(editRendimientoLabel);
-      await saveRoomButtonLabel(editRoomButtonLabel);
-      await saveCardHeight(editCardHeight);
-      await saveGalonPrices(editGalonPrices);
-      await saveGalonOnSale(editGalonOnSale);
-      await saveStoreCodes(editStoreCodes);
-      await saveFamilyColors(editFamilyColors);
-      await saveFamilyNames(editFamilyNames);
-      await saveFamilyBanners(editFamilyBanners);
-      await saveImpermeabilizante(editImper);
+      if (changed(editRendimientoLabel, rendimientoLabel)) await saveRendimientoLabel(editRendimientoLabel);
+      if (changed(editRoomButtonLabel, roomButtonLabel)) await saveRoomButtonLabel(editRoomButtonLabel);
+      if (changed(editCardHeight, cardHeight)) await saveCardHeight(editCardHeight);
+      if (changed(editGalonPrices, galonPrices)) await saveGalonPrices(editGalonPrices);
+      if (changed(editGalonOnSale, galonOnSale)) await saveGalonOnSale(editGalonOnSale);
+      if (changed(editStoreCodes, storeCodes)) await saveStoreCodes(editStoreCodes);
+      if (changed(editFamilyColors, familyColors)) await saveFamilyColors(editFamilyColors);
+      if (changed(editFamilyNames, familyDisplayNames)) await saveFamilyNames(editFamilyNames);
+      if (changed(editFamilyBanners, familyBanners)) await saveFamilyBanners(editFamilyBanners);
+      if (changed(editImper, imperConfig)) await saveImpermeabilizante(editImper);
       setImperConfig(editImper);
 
-      // Logo 1
-      if (editLogoUrl && editLogoUrl.startsWith("data:")) {
-        const publicUrl = await uploadLogoData(editLogoUrl);
-        await saveSiteLogoUrl(publicUrl);
-        setLogoUrl(publicUrl);
-        localStorage.setItem("pinturas_logoUrl", publicUrl);
-      } else {
-        await saveSiteLogoUrl(editLogoUrl);
-        setLogoUrl(editLogoUrl);
-        if (editLogoUrl) localStorage.setItem("pinturas_logoUrl", editLogoUrl);
+      // Logos: si viene uno nuevo (data:) se sube primero
+      if (finalLogo && finalLogo.startsWith("data:")) {
+        finalLogo = await uploadLogoData(finalLogo);
+        await saveSiteLogoUrl(finalLogo);
+      } else if (changed(finalLogo, logoUrl)) {
+        await saveSiteLogoUrl(finalLogo);
       }
+      setLogoUrl(finalLogo);
+      if (finalLogo) localStorage.setItem("pinturas_logoUrl", finalLogo);
 
-      // Logo 2
-      if (editLogo2Url && editLogo2Url.startsWith("data:")) {
-        const publicUrl = await uploadLogoData(editLogo2Url);
-        await saveSiteLogo2Url(publicUrl);
-        setLogo2Url(publicUrl);
-        localStorage.setItem("pinturas_logo2Url", publicUrl);
-      } else {
-        await saveSiteLogo2Url(editLogo2Url);
-        setLogo2Url(editLogo2Url);
-        if (editLogo2Url) localStorage.setItem("pinturas_logo2Url", editLogo2Url);
+      if (finalLogo2 && finalLogo2.startsWith("data:")) {
+        finalLogo2 = await uploadLogoData(finalLogo2);
+        await saveSiteLogo2Url(finalLogo2);
+      } else if (changed(finalLogo2, logo2Url)) {
+        await saveSiteLogo2Url(finalLogo2);
       }
+      setLogo2Url(finalLogo2);
+      if (finalLogo2) localStorage.setItem("pinturas_logo2Url", finalLogo2);
     } catch (err) {
       console.error("Error al guardar configuración:", err);
       setLogoSaveError("No se pudo guardar. Verificá tu conexión e intentá de nuevo.");
       return;
+    } finally {
+      setSavingSite(false);
     }
     setSiteName(editSiteName);
     setAnnouncementText(editAnnouncementText);
@@ -2657,7 +2634,7 @@ export default function Home() {
     if (selectedQuality !== null && editDurabilityPaused.includes(selectedQuality)) setSelectedQuality(null);
     setRoomPreviewEnabled(editRoomPreviewEnabled);
     setCalcButtonEnabled(editCalcButtonEnabled);
-    setPwaIconUrl(editPwaIconUrl);
+    setPwaIconUrl(finalPwaIcon);
     setRendimientoLabel(editRendimientoLabel);
     setRoomButtonLabel(editRoomButtonLabel);
     setCardHeight(editCardHeight);
@@ -3818,6 +3795,7 @@ export default function Home() {
                           onClick={() => setEditFamilyBanners(prev => { const next = [...prev]; next[i] = null; return next; })}
                           className="text-[10px] text-gray-400 hover:text-red-400"
                           title="Usar degradado automático"
+                          aria-label="Usar degradado automático"
                         >✕</button>
                       )}
                     </div>
@@ -3873,9 +3851,10 @@ export default function Home() {
                 </button>
                 <button
                   onClick={saveSiteSettings}
-                  className="flex-1 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold transition-colors"
+                  disabled={savingSite}
+                  className="flex-1 py-2 rounded-lg bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-wait"
                 >
-                  Guardar
+                  {savingSite ? "Guardando…" : "Guardar"}
                 </button>
               </div>
             </div>
@@ -4125,7 +4104,7 @@ export default function Home() {
                           <span className={`font-bold mb-1 ${txtYears}`}>{opt.years} años</span>
                           {galon && (
                             <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
-                              <img src="/galon.png" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
+                              <img src="/galon.webp" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
                               <span className={`${txtPrice} font-extrabold leading-tight ${active ? (galonOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : galonOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{galon}</span>
                               <span className={`${txtUnit} font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
                               {galonOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
@@ -4133,7 +4112,7 @@ export default function Home() {
                           )}
                           {price && (
                             <div className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0.5">
-                              <img src="/cubeta.png" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
+                              <img src="/cubeta.webp" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
                               <span className={`${txtPrice} font-extrabold leading-tight ${active ? (durabilityOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : durabilityOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{price}</span>
                               <span className={`${txtUnit} font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
                               {durabilityOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
@@ -4387,8 +4366,8 @@ export default function Home() {
                                             {/* Header */}
                                             <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 mb-1">
                                               <span />
-                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/galon.png" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
-                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
+                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/galon.webp" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
+                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/cubeta.webp" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
                                               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-20 text-right">Rendimiento</span>
                                             </div>
                                             {/* Rows */}
@@ -4865,8 +4844,8 @@ export default function Home() {
                                           {/* Header */}
                                           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 px-3 mb-1">
                                             <span />
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/galon.png" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/cubeta.png" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/galon.webp" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/cubeta.webp" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
                                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-16 sm:w-20 text-right">Rend.</span>
                                           </div>
                                           {/* Rows */}

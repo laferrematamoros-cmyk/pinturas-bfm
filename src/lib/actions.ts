@@ -748,16 +748,21 @@ export async function createOrder(
   if (!PAYMENT_METHODS.includes(method)) throw new Error("Método de pago inválido");
 
   // Precios vigentes para recomputar el total en el servidor.
-  const [durPrices, galPrices] = await Promise.all([loadDurabilityPrices(), loadGalonPrices()]);
+  const [durPrices, galPrices, paused] = await Promise.all([loadDurabilityPrices(), loadGalonPrices(), loadDurabilityPaused()]);
 
   const items = input.items.map((it) => {
     const years = Number(it.years);
     if (!VALID_YEARS.includes(years)) throw new Error("Calidad inválida en uno de los colores");
+    if (paused.includes(years)) throw new Error(`La pintura de ${years} años no está a la venta por ahora`);
     const cubetas = Math.max(0, Math.floor(Number(it.cubetas) || 0));
     const galones = Math.max(0, Math.floor(Number(it.galones) || 0));
     if (cubetas + galones === 0) throw new Error("Cada color debe llevar al menos una cubeta o galón");
     const cubP = priceToNumber(durPrices[String(years)]);
     const galP = priceToNumber(galPrices[String(years)]);
+    // Nada entra en $0: si una presentación no tiene precio, no se vende.
+    if ((cubetas > 0 && cubP <= 0) || (galones > 0 && galP <= 0)) {
+      throw new Error(`Una presentación de ${years} años no tiene precio; pregunta en tienda`);
+    }
     const subtotal = cubetas * cubP + galones * galP;
     return {
       name: sanitizeText(it.name ?? "", 80),
