@@ -204,3 +204,47 @@ body {
 /* Tira deslizable de familias sin barra de scroll visible */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Pista "el dedito" en los círculos de familias (ver PistaCirculos.tsx) ──
+   El dedo y los anillos van encima de los círculos sin estorbar los toques.
+   Las posiciones llegan como variables CSS (--x0…--y2) medidas en el navegador.
+   Sin .pista-on: invisible y con la animación en pausa (no gasta). */
+.pista { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 300ms ease; }
+.pista.pista-on { opacity: 1; }
+.pista-dedo {
+  position: absolute; left: 0; top: 0; font-size: 28px; line-height: 1;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+  animation: pista-dedo 6s ease-in-out infinite; animation-play-state: paused;
+}
+.pista-anillo {
+  position: absolute; border-radius: 9999px; box-shadow: 0 0 0 3px rgba(0, 113, 227, 0);
+  animation-duration: 6s; animation-timing-function: ease-in-out; animation-iteration-count: infinite;
+  animation-play-state: paused;
+}
+.pista-anillo-1 { animation-name: pista-anillo-1; }
+.pista-anillo-2 { animation-name: pista-anillo-2; }
+.pista-on .pista-dedo,
+.pista-on .pista-anillo { animation-play-state: running; }
+
+@keyframes pista-dedo {
+  0%       { transform: translate(var(--x0), var(--y0)) scale(1); opacity: 0; }
+  8%       { opacity: 1; }
+  22%      { transform: translate(var(--x1), var(--y1)) scale(1); }
+  27%      { transform: translate(var(--x1), var(--y1)) scale(0.85); }
+  32%      { transform: translate(var(--x1), var(--y1)) scale(1); }
+  52%      { transform: translate(var(--x2), var(--y2)) scale(1); }
+  57%      { transform: translate(var(--x2), var(--y2)) scale(0.85); }
+  62%      { transform: translate(var(--x2), var(--y2)) scale(1); opacity: 1; }
+  80%, 100% { transform: translate(var(--x2), var(--y2)) scale(1); opacity: 0; }
+}
+@keyframes pista-anillo-1 {
+  0%, 24%, 34%, 100% { box-shadow: 0 0 0 3px rgba(0, 113, 227, 0); transform: scale(1); }
+  28% { box-shadow: 0 0 0 3px rgba(0, 113, 227, 1), 0 0 14px rgba(0, 113, 227, 0.55); transform: scale(1.12); }
+}
+@keyframes pista-anillo-2 {
+  0%, 54%, 64%, 100% { box-shadow: 0 0 0 3px rgba(0, 113, 227, 0); transform: scale(1); }
+  58% { box-shadow: 0 0 0 3px rgba(0, 113, 227, 1), 0 0 14px rgba(0, 113, 227, 0.55); transform: scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pista { display: none; }
+}
