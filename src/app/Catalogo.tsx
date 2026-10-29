@@ -4381,14 +4381,13 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
               })()
             ) : (
               <>
-                {/* Disclaimer / tips — ocultos en la prueba de diseño */}
-                {!designPreview && (
-                <div className="mx-auto max-w-xl px-4 mb-5 text-center">
-                  <p className="text-xs text-gray-500 leading-relaxed">
+                {/* Aviso de colores aproximados — en letra chica, solo en la página pública
+                    (en el kiosko el cliente ya está frente al catálogo físico) */}
+                {!kioskMode && (
+                <div className="mx-auto max-w-xl px-4 mb-4 text-center">
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
                     Los colores mostrados son aproximados. Para apreciar el tono más real, te invitamos a consultar nuestro catálogo físico en tienda.
-                  </p>
-                  <p className="text-xs text-gray-500 leading-relaxed mt-1">
-                    💡 <span className="font-medium">Tip:</span> La iluminación de tu espacio —ya sea amarilla o blanca— puede influir en la percepción del tono final.
+                    {" "}💡 La iluminación de tu espacio —amarilla o blanca— puede influir en cómo se ve el tono final.
                   </p>
                 </div>
                 )}
