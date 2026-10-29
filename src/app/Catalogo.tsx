@@ -2949,23 +2949,6 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
     setVisibleCount(COLORS_BATCH);
   }, [selectedFamily, selectedQuality, showFavorites, search]);
 
-  // Cargar más colores automáticamente al hacer scroll hasta el centinela
-  useEffect(() => {
-    if (visibleCount >= displayedColors.length) return;
-    const sentinel = loadMoreRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => Math.min(prev + COLORS_BATCH, displayedColors.length));
-        }
-      },
-      { rootMargin: "600px" }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [visibleCount, displayedColors.length]);
-
   // Subconjunto visible de la familia actual (carga progresiva)
   const visibleFamilyColors = useMemo(
     () => displayedColors.slice(0, visibleCount),
@@ -3014,6 +2997,30 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
     const custom = Object.values(customColors).flat().filter((c) => favorites.includes(c.code) && colorVisible(c.code));
     return [...custom, ...builtIn];
   }, [showFavorites, favorites, colorFamilies, deletedColorCodes, nameOverrides, customColors, colorVisible]);
+
+  // Búsqueda o favoritos: lista de todas las familias. También se dibuja por lotes;
+  // antes salía completa y la primera letra (casi mil coincidencias) trababa la pantalla.
+  const modoGlobal = !!search.trim() || showFavorites;
+  const globalList = showFavorites && !search.trim() ? allFavoriteColors : allSearchResults;
+  const visibleGlobal = useMemo(() => globalList.slice(0, visibleCount), [globalList, visibleCount]);
+  const largoActivo = modoGlobal ? globalList.length : displayedColors.length;
+
+  // Cargar más colores automáticamente al hacer scroll hasta el centinela
+  useEffect(() => {
+    if (visibleCount >= largoActivo) return;
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + COLORS_BATCH, largoActivo));
+        }
+      },
+      { rootMargin: "600px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [visibleCount, largoActivo]);
 
   // Todos los colores visibles del catálogo (base + custom − ocultos), con el HEX
   // efectivo (aplicando overrides). Para el buscador por foto del kiosko.
@@ -4144,10 +4151,9 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
               </div>
             )}
 
-            {(search.trim() || showFavorites) ? (
+            {modoGlobal ? (
               /* Search results or favorites - show all matching colors across families */
               (() => {
-                const globalList = showFavorites && !search.trim() ? allFavoriteColors : allSearchResults;
                 const emptyMsg = showFavorites && !search.trim()
                   ? "Aún no tienes favoritos. Toca el ❤️ en cualquier color para guardarlo."
                   : `No se encontraron colores para "${search}"`;
@@ -4163,8 +4169,8 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                     <p className="text-sm text-gray-500 mb-4 text-center">{countMsg}</p>
                     {(() => {
                       const rows: Color[][] = [];
-                      for (let i = 0; i < globalList.length; i += 3) rows.push(globalList.slice(i, i + 3));
-                      const selectedRowIdx = selectedColor ? Math.floor(globalList.findIndex(c => c.code === selectedColor.code) / 3) : -1;
+                      for (let i = 0; i < visibleGlobal.length; i += 3) rows.push(visibleGlobal.slice(i, i + 3));
+                      const selectedRowIdx = selectedColor ? Math.floor(visibleGlobal.findIndex(c => c.code === selectedColor.code) / 3) : -1;
                       return rows.map((rowColors, rowIndex) => (
                         <React.Fragment key={rowIndex}>
                           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
@@ -4363,6 +4369,12 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                         </React.Fragment>
                       ));
                     })()}
+                    {visibleGlobal.length < globalList.length && (
+                      <div ref={loadMoreRef} className="flex flex-col items-center gap-2 py-6">
+                        <div className="w-6 h-6 border-2 border-teal-300 border-t-teal-600 rounded-full animate-spin" />
+                        <span className="text-xs text-gray-400">Mostrando {visibleGlobal.length} de {globalList.length} colores…</span>
+                      </div>
+                    )}
                   </>
                   )}
               </div>
