@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Muestras de las sesiones de diseño (brainstorming)
+.superpowers/
