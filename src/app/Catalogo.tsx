@@ -4,7 +4,9 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import ColorFromPhoto from "@/components/ColorFromPhoto";
 import PistaCirculos from "@/components/PistaCirculos";
-import { KIOSKO_INACTIVO_MS } from "@/lib/pista";
+import HeroAurora from "@/components/HeroAurora";
+import { tonosDeFamilia } from "@/lib/tonos";
+import { KIOSKO_INACTIVO_MS, ENTRADA_GOTAS_MS } from "@/lib/pista";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import { withoutPaused, colorHasActiveQuality, colorCountLabel } from "@/lib/durability";
 import { soloCubetas, soloGalones, combinado, masBarato } from "@/lib/paintCalc";
@@ -462,16 +464,20 @@ const colorFamilies: ColorFamily[] = [
   },
 ];
 
-function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFavorite, onToggleFavorite, bulkSelectMode, bulkSelected, reorderMode }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number; isFavorite?: boolean; onToggleFavorite?: () => void; bulkSelectMode?: boolean; bulkSelected?: boolean; reorderMode?: boolean }) {
+function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFavorite, onToggleFavorite, bulkSelectMode, bulkSelected, reorderMode, indice }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number; isFavorite?: boolean; onToggleFavorite?: () => void; bulkSelectMode?: boolean; bulkSelected?: boolean; reorderMode?: boolean; indice?: number }) {
   return (
     <div
       onClick={onClick}
-      className={`flex flex-col ${reorderMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} group relative z-0 hover:z-10 hover:-translate-y-1 hover:shadow-xl hover:border-gray-400 transition-all duration-150 rounded-lg overflow-hidden border bg-white shadow-sm ${bulkSelected ? "border-teal-500 ring-2 ring-teal-400" : reorderMode ? "border-orange-200" : "border-gray-200"}`}
+      className={`tarjeta-color tarjeta-salta flex flex-col ${reorderMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} group relative z-0 hover:z-10 hover:-translate-y-1 hover:shadow-xl hover:border-gray-400 transition-all duration-150 rounded-lg overflow-hidden border bg-white shadow-sm ${bulkSelected ? "border-teal-500 ring-2 ring-teal-400" : reorderMode ? "border-orange-200" : "border-gray-200"}`}
+      style={{ ["--i" as string]: Math.min(indice ?? 0, 12) }}
     >
       <div
         className="w-full transition-all duration-150 relative"
         style={{ backgroundColor: color.hex, height: `${cardHeight}px` }}
       >
+        {color.pageNumber != null && (
+          <span className="absolute bottom-1.5 right-1.5 text-[9px] font-bold text-gray-800 bg-white/85 rounded-full px-1.5 py-0.5 leading-none">{color.pageNumber}</span>
+        )}
         {reorderMode && (
           <div className="absolute top-1 left-1/2 -translate-x-1/2 w-5 h-5 rounded-md bg-black/40 flex items-center justify-center">
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -520,16 +526,11 @@ function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFa
           </button>
         )}
       </div>
-      <div className="bg-white px-2 py-1.5 group-hover:bg-gray-50 transition-colors duration-150" style={{ minHeight: "38px" }}>
-        <p className="text-[8px] font-semibold text-gray-800 leading-tight line-clamp-2">
+      <div className="bg-white px-2.5 py-2 group-hover:bg-gray-50 transition-colors duration-150" style={{ minHeight: "44px" }}>
+        <p className="text-[11px] sm:text-xs font-bold text-gray-900 leading-tight line-clamp-2">
           {color.name}
         </p>
-        <div className="flex items-center justify-between mt-0.5">
-          <p className="text-[7px] text-gray-400 leading-tight">{color.code}</p>
-          {color.pageNumber != null && (
-            <span className="text-[7px] font-semibold text-teal-500 leading-tight">{color.pageNumber}</span>
-          )}
-        </div>
+        <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{color.code}</p>
       </div>
     </div>
   );
@@ -2096,10 +2097,22 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
   // familia; en el kiosko vuelve tras 60 s sin interacción, para el siguiente cliente.
   const circulosRef = useRef<HTMLDivElement | null>(null);
   const [pistaActiva, setPistaActiva] = useState(true);
+  // Entrada "Gotas de pintura": se repite cambiando la key de los círculos (kiosko).
+  // La pista aparece cuando terminan de caer.
+  const [entradaKey, setEntradaKey] = useState(0);
+  const [entradaLista, setEntradaLista] = useState(false);
+  useEffect(() => {
+    setEntradaLista(false);
+    const t = setTimeout(() => setEntradaLista(true), ENTRADA_GOTAS_MS);
+    return () => clearTimeout(t);
+  }, [entradaKey]);
   useEffect(() => {
     if (!kioskMode) return;
     let t: ReturnType<typeof setTimeout>;
-    const reiniciar = () => { clearTimeout(t); t = setTimeout(() => setPistaActiva(true), KIOSKO_INACTIVO_MS); };
+    const reiniciar = () => {
+      clearTimeout(t);
+      t = setTimeout(() => { setPistaActiva(true); setEntradaKey((k) => k + 1); }, KIOSKO_INACTIVO_MS);
+    };
     reiniciar();
     window.addEventListener("pointerdown", reiniciar);
     window.addEventListener("keydown", reiniciar);
@@ -2907,6 +2920,11 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
   const pubDurabilityPrices = useMemo(() => withoutPaused(durabilityPrices, durabilityPaused), [durabilityPrices, durabilityPaused]);
   const pubGalonPrices = useMemo(() => withoutPaused(galonPrices, durabilityPaused), [galonPrices, durabilityPaused]);
   const qualityCards = DURABILITY_OPTIONS.filter((opt) => pubDurabilityPrices[String(opt.years)] || pubGalonPrices[String(opt.years)]);
+  // Tonos de la familia elegida para la aurora y la barra de color.
+  const tonosFamilia = useMemo(() => tonosDeFamilia(
+    familyColors[selectedFamily] ?? DEFAULT_FAMILY_COLORS[selectedFamily] ?? "#888888",
+    familyDisplayNames[selectedFamily] === "Rojos/Rosas" ? "#e87ca0" : undefined,
+  ), [familyColors, familyDisplayNames, selectedFamily]);
   // Con calidades pausadas, el público no ve los colores que solo vienen en ellas.
   // El admin los sigue viendo todos para poder editarlos.
   const colorVisible = React.useCallback(
@@ -3914,15 +3932,29 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
 
       <main className="flex-1 pt-6">
         <>
-            {/* Title */}
-            <h1 className="text-center text-2xl sm:text-3xl font-light text-gray-800 mb-4 px-4">
-              Elige tu color favorito
-            </h1>
+            {/* Aurora: título, familia y buscador sobre manchas de color de la familia elegida */}
+            <HeroAurora
+              tonos={tonosFamilia}
+              titulo={<>Elige tu <span className="whitespace-nowrap">color favorito</span></>}
+              subtitulo={<>{colorCountLabel(allVisibleColors.length)} tonos Sayer · <b>{familyDisplayNames[selectedFamily] ?? currentFamily.name}</b></>}
+            >
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Buscar color por nombre o código"
+                aria-label="Buscar color"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="aurora-input"
+              />
+            </HeroAurora>
 
             {/* Family selector — círculos grandes (prueba de diseño) o pills (normal) */}
             {designPreview ? (
               <>
-              <div ref={circulosRef} className="relative flex flex-wrap justify-center gap-3 sm:gap-5 mb-6 px-4 py-2">
+              <div key={entradaKey} ref={circulosRef} className="relative flex flex-wrap justify-center gap-3 sm:gap-5 mb-6 px-4 pt-5 pb-2">
                 {familyDisplayNames.map((name, i) => (
                   <button
                     key={i}
@@ -3932,24 +3964,28 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                   >
                     <span
                       data-circulo
-                      className={`w-12 h-12 sm:w-20 sm:h-20 rounded-full transition-all duration-200 ${
+                      className={`circulo-gota gota-entra w-12 h-12 sm:w-20 sm:h-20 rounded-full transition-all duration-200 ${
                         selectedFamily === i
                           ? "ring-2 ring-[#0071e3] scale-105"
                           : "ring-1 ring-black/10 group-hover:scale-105"
                       }`}
-                      style={{ background: familyDisplayNames[i] === "Rojos/Rosas"
-                        ? `linear-gradient(135deg, ${familyColors[i] ?? "#C9464F"} 50%, #e87ca0 50%)`
-                        : (familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888") }}
+                      style={{
+                        ["--i" as string]: i,
+                        ["--col" as string]: familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888",
+                        background: familyDisplayNames[i] === "Rojos/Rosas"
+                          ? `linear-gradient(135deg, ${familyColors[i] ?? "#C9464F"} 50%, #e87ca0 50%)`
+                          : (familyColors[i] ?? DEFAULT_FAMILY_COLORS[i] ?? "#888888"),
+                      }}
                     />
                     <span className={`text-xs leading-none ${selectedFamily === i ? "font-semibold text-gray-900" : "font-medium text-transparent select-none"}`}>{name}</span>
                   </button>
                 ))}
-                <PistaCirculos contenedor={circulosRef} activa={pistaActiva} />
+                <PistaCirculos contenedor={circulosRef} activa={pistaActiva && entradaLista} />
               </div>
               {/* Texto de la pista: conserva su lugar y solo se desvanece (la página no brinca) */}
               <p
-                aria-hidden={!pistaActiva}
-                className={`-mt-4 mb-4 text-center text-xs font-semibold text-[#0071e3] transition-opacity duration-300 ${pistaActiva ? "opacity-100" : "opacity-0"}`}
+                aria-hidden={!(pistaActiva && entradaLista)}
+                className={`-mt-4 mb-4 text-center text-xs font-semibold text-[#0071e3] transition-opacity duration-300 ${pistaActiva && entradaLista ? "opacity-100" : "opacity-0"}`}
               >
                 Toca un color para ver sus tonos
               </p>
@@ -3980,36 +4016,6 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
               ))}
             </div>
             )}
-
-            {/* Badge "Más de X colores" (solo prueba de diseño) — debajo de los círculos */}
-            {designPreview && (
-              <div className="flex justify-center mb-6 px-4">
-                <span className="inline-flex items-center gap-2 bg-gray-100 text-gray-600 text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full">
-                  <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-                  {colorCountLabel(allVisibleColors.length)} colores Sayer disponibles en La Ferre
-                </span>
-              </div>
-            )}
-
-            {/* Search */}
-            <div className="flex justify-center mb-6 px-4">
-              <div className="relative w-full max-w-lg">
-                <svg
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Buscar color"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-gray-400 text-gray-700"
-                />
-              </div>
-            </div>
 
             {/* Quality / price selector */}
             {qualityCards.length > 0 && (
@@ -4080,7 +4086,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                         <button
                           key={opt.years}
                           onClick={() => { setSelectedQuality(active ? null : opt.years); setSelectedColor(null); }}
-                          className={`neon-hover relative flex flex-col items-center py-2.5 px-2 rounded-2xl border transition-all duration-200 shadow-sm ${
+                          className={`tarjeta-precio neon-hover relative flex flex-col items-center py-2.5 px-2 rounded-2xl border transition-all duration-200 shadow-sm ${
                             active
                               ? "bg-teal-500 border-teal-400 text-white shadow-md scale-105"
                               : "bg-white text-gray-700 border-gray-200 hover:scale-105 hover:border-teal-400"
@@ -4100,7 +4106,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                               <img src="/galon.webp" alt="galón" className="w-4 h-4 object-contain flex-shrink-0" />
                               <span className={`${txtPrice} font-extrabold leading-tight ${active ? (galonOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : galonOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{galon}</span>
                               <span className={`${txtUnit} font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Gal. 4L</span>
-                              {galonOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
+                              {galonOnSale.includes(opt.years) && <span className={`oferta-degradado oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                             </div>
                           )}
                           {price && (
@@ -4108,7 +4114,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                               <img src="/cubeta.webp" alt="cubeta" className="w-4 h-4 object-contain flex-shrink-0" />
                               <span className={`${txtPrice} font-extrabold leading-tight ${active ? (durabilityOnSale.includes(opt.years) ? "text-white oferta-pulse" : "text-white") : durabilityOnSale.includes(opt.years) ? "text-orange-500 oferta-pulse" : "text-teal-700"}`}>{price}</span>
                               <span className={`${txtUnit} font-semibold ${active ? "text-white/80" : "text-gray-500"}`}>Cub. 19L</span>
-                              {durabilityOnSale.includes(opt.years) && <span className={`oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
+                              {durabilityOnSale.includes(opt.years) && <span className={`oferta-degradado oferta-pulse text-[9px] font-extrabold px-1.5 py-0.5 rounded-full whitespace-nowrap ${active ? "bg-white text-orange-500" : "bg-orange-500 text-white"}`}>🔥 Oferta</span>}
                             </div>
                           )}
                           <span className={`${txtUnit} leading-tight mt-0.5 ${active ? "text-white/70" : "text-gray-400"}`}>{opt.yield}</span>
@@ -4443,6 +4449,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                       <span className="font-extrabold text-[#0071e3] text-lg sm:text-xl">{displayedColors.length}</span>{" "}
                       color{displayedColors.length !== 1 ? "es" : ""} disponibles
                     </p>
+                    <div aria-hidden className="barra-tonos" style={{ background: `linear-gradient(90deg, ${tonosFamilia.join(", ")})` }} />
                   </div>
                 ) : (
                   <p className="text-center text-sm font-medium text-gray-600 mb-4">
@@ -4561,11 +4568,12 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                     return (
                       <React.Fragment key={rowIndex}>
                         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
-                          {rowColors.map((color) => {
+                          {rowColors.map((color, ci) => {
                             const swatchKey = color.id ? String(color.id) : color.code;
                             return (
                               <ColorSwatch
                                 key={color.id ?? color.code}
+                                indice={rowIndex * 3 + ci}
                                 color={{ ...color, hex: getEffectiveHex(color) }}
                                 onClick={() => {
                                   if (bulkSelectMode) {
