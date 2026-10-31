@@ -42,6 +42,31 @@ se sientan profesionales, sin cambiar información ni funciones.
 - **Entran con un saltito** (de abajo hacia arriba con leve rebote) al cambiar de familia;
   escalonadas, con el retraso tope en la tarjeta 12 para no hacer esperar.
 
+### 2.4b Cuadrícula "color protagonista" + tira de tonos (agregado 2026-10-31, opción C)
+Reemplaza las tarjetas de 2.4 (en pantalla ancha quedaban 3 tarjetas enormes por fila).
+- **Tarjeta:** toda la tarjeta es el color (4:5); nombre y código encima, abajo a la
+  izquierda. La letra es negra o blanca según el **contraste WCAG** más alto contra el color.
+  Brillo fijo de pintura arriba a la izquierda. Con mouse: se inclina en 3D siguiendo el
+  puntero y le cruza un destello; en teléfono se hunde un poco al tocar. Página arriba a la
+  derecha (se recorre si hay botón de borrar o casilla); corazón arriba a la izquierda.
+  Elegida: anillo azul + palomita. Aplica en familia, búsqueda/favoritos y "Mover colores".
+- **Ajuste "Altura de las tarjetas de color"** deja de aplicar (la forma la da la tarjeta) y
+  se esconde en Ajustes; el valor guardado no se borra.
+- **Columnas:** una sola cuadrícula CSS: 3 (teléfono), 4 (≥640 px), 6 (≥1024 px), con ancho
+  máximo de 1152 px centrado (como la isla). La ficha se inserta como renglón completo
+  (`grid-column: 1 / -1`) después del último color de la fila elegida; las columnas se leen
+  de la cuadrícula (`grid-template-columns`) con un ResizeObserver. El HTML del servidor no
+  depende de eso: sin brincos al cargar.
+- **Tira de tonos** (solo vista de familia, con 12 colores o más, no en "Mover colores"):
+  reemplaza la barra de 5 px. Todos los colores de la familia en el orden de la cuadrícula,
+  pintados con un solo degradado de cortes duros. Se queda pegada bajo la isla al bajar;
+  una ventanita marca qué colores están en pantalla. Tocar/arrastrar (o mover el mouse)
+  muestra una burbuja con el color y su nombre; al soltar/clic la página salta a ese color
+  y lo hace brillar 1.6 s (no abre la ficha). Si el color no se ha cargado (lotes de 60),
+  primero amplía la carga. Teclado: flechas, Inicio/Fin, Enter. Arrastrar vertical sigue
+  desplazando la página (`touch-action: pan-y`).
+- **Reducir movimiento:** sin inclinación, destello, saltito ni pulso; el salto es directo.
+
 ### 2.5 Lo demás
 Ficha del color, calculadoras, carrito y ventanas conservan su estructura; el estilo
 redondeado ya lo da `.design-apple`. La barra de arriba (`Navbar.tsx`) **no se toca**

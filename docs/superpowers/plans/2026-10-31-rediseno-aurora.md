@@ -424,3 +424,11 @@ En la cuadrícula de familias, `rowColors.map((color) => {` → `rowColors.map((
 - [ ] `Navbar.tsx`: reescribir el marcado conservando props y gestos (6 toques BFM/Sayer, modo edición, Pedidos admin, Pedidos/carrito kiosko); devolver `<>` con la isla sticky y, si no es kiosko, la fila de pastillas (estado en vivo con `useEffect` + intervalo de 60 s; ancho fijo antes de montar).
 - [ ] `Catalogo.tsx`: `main` de `pt-6` a `pt-2`.
 - [ ] Build, fotos (teléfono, PC, kiosko, admin no aplica), CLS, y reiniciar `next start -p 3002 -H 0.0.0.0`.
+
+### Task 7: Cuadrícula "color protagonista" + tira de tonos (agregada 2026-10-31)
+
+- [ ] `src/lib/tira.ts` + `tests/tira.test.mjs` (TDD): `luminanciaRelativa`, `contraste`, `letraSobre(fondo) → "negra" | "blanca"`, `indiceEnTira(x, ancho, total)` (con tope en los bordes), `finDeFila(indice, columnas, total)`, `cargaParaVer(indice, lote, total)` (múltiplo del lote, tope en total), `degradadoTira(colores)` (cortes duros, un color = un tramo).
+- [ ] `globals.css`: quitar `.barra-tonos` y `.design-apple .group.bg-white.tarjeta-color`; agregar `.tarjeta-color` (perspectiva), `.tarjeta-cara` (color, 4:5, radio 16, brillo `::before`, destello `::after` solo con mouse, inclinación con `--rx/--ry`), `.tarjeta-negra/.tarjeta-blanca`, `.tarjeta-elegida`, `.tarjeta-marcada`, `.tarjeta-brilla` (pulso), `.tira-*` (sticky con `--alto-isla`, vidrio, ventanita, burbuja); reducir movimiento.
+- [ ] `src/components/TiraTonos.tsx`: props `colores` ({hex,name}[]), `cargados`, `contenedor` (ref de la cuadrícula), `onElegir(i)`; puntero con captura, burbuja, teclado (`role="slider"`), ventanita con IntersectionObserver sobre `[data-indice]`, alto de la isla medido con ResizeObserver.
+- [ ] `Catalogo.tsx`: `ColorSwatch` nuevo (sin `cardHeight`, con `brilla`, `data-indice`, inclinación con puntero de mouse); cuadrículas de familia y búsqueda como una sola grid con la ficha `gridColumn: 1 / -1`; `columnas` medidas; `max-w-6xl`; tira en la familia; salto (ampliar carga → scroll → brillo); "Mover colores" con las mismas columnas; esconder el ajuste de altura; `scroll-mt` mayor por la tira pegada.
+- [ ] Build, pruebas, fotos (teléfono, PC 1920, kiosko, reducir movimiento, admin con borrar/selección), CLS, y reiniciar `next start -p 3002 -H 0.0.0.0`.
