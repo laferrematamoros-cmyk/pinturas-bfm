@@ -414,3 +414,13 @@ En la cuadrícula de familias, `rowColors.map((color) => {` → `rowColors.map((
 - [ ] Reducir movimiento: `getAnimations()` vacío en manchas y círculos; la página se ve completa.
 - [ ] El dedito toca el centro de Naranjas/Verdes (posición del dedo vs círculo) tras la entrada.
 - [ ] Si el navegador de Playwright del MCP está ocupado por otra sesión, decirlo y pedir a José que revise él en `http://localhost:3002`.
+
+---
+
+### Task 6: Barra "isla flotante" (agregada 2026-10-31)
+
+- [ ] `src/lib/horario.ts` + `tests/horario.test.mjs` (TDD): `HORARIO`, `HORARIO_CORTO`, `HORARIO_LARGO`, `horaLocal(fecha)` con `Intl` y zona `America/Matamoros`, `hora12(min)`, `estadoTienda(fecha) → { abierta, texto }`. Casos con fechas de enero (CST) y uno de julio (CDT): abierta, "cierra en N min", "abre hoy", "abre mañana", sábado tarde → "abre el lunes", domingo → "abre mañana".
+- [ ] `globals.css`: `.isla-envoltura` (sticky, `pointer-events: none`), `.isla` (vidrio, redonda, sombra), `.isla-boton`, `.isla-chips` (desliza en teléfono), `.isla-chip`, `.estado-*` con punto que late y regla de reducir movimiento.
+- [ ] `Navbar.tsx`: reescribir el marcado conservando props y gestos (6 toques BFM/Sayer, modo edición, Pedidos admin, Pedidos/carrito kiosko); devolver `<>` con la isla sticky y, si no es kiosko, la fila de pastillas (estado en vivo con `useEffect` + intervalo de 60 s; ancho fijo antes de montar).
+- [ ] `Catalogo.tsx`: `main` de `pt-6` a `pt-2`.
+- [ ] Build, fotos (teléfono, PC, kiosko, admin no aplica), CLS, y reiniciar `next start -p 3002 -H 0.0.0.0`.

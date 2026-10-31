@@ -47,6 +47,20 @@ Ficha del color, calculadoras, carrito y ventanas conservan su estructura; el es
 redondeado ya lo da `.design-apple`. La barra de arriba (`Navbar.tsx`) **no se toca**
 (tiene un cambio a medias de José y ya trae los botones de WhatsApp y Cómo llegar).
 
+### 2.5b Barra de arriba: "isla flotante" (agregado 2026-10-31, opción C)
+- Barra redonda de vidrio blanco, separada de las orillas, con sombra; **se queda arriba**
+  al bajar (sticky). Logos más chicos (se conservan los 6 toques de BFM y de Sayer);
+  "BFM PINTURAS" solo en computadora.
+- Derecha: público → botones redondos WhatsApp y Cómo llegar (40 px); admin → Pedidos;
+  kiosko → Ver carrito (+ Pedidos si está activado). Absorbe el cambio a medias de la barra
+  compacta del kiosko que había en `Navbar.tsx`.
+- Debajo (solo público, no sticky): pastillas con el **estado en vivo** ("Abierta ahora ·
+  cierra 6:00 pm", "Abierta · cierra en 25 min", "Cerrada · abre mañana 9:00 am / el
+  lunes"), el horario y el texto de anuncio (dirección). En teléfono se deslizan de lado.
+- El estado se calcula en el navegador con la hora de Matamoros (`America/Matamoros`) y
+  se actualiza cada minuto; su pastilla tiene ancho fijo desde el HTML (sin brincos). El
+  punto verde late (no con "reducir movimiento"). El horario vive en `src/lib/horario.ts`.
+
 ### 2.6 Kiosko
 Mismo diseño. A los 60 s sin uso, además de volver el dedito, **las gotas vuelven a caer**.
 
