@@ -409,7 +409,93 @@ body {
 .tira-burbuja i { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08); }
 .tira-burbuja small { font-size: 10.5px; font-weight: 500; color: #6b6b6b; }
 
+/* ── Ficha del color (ver FichaColor.tsx). --color-ficha es el color elegido: pinta la pared
+   y tiñe el fondo de la información. (No es --c: esa la registra la aurora sin herencia.) ── */
+.ficha-color {
+  display: flex; flex-direction: column; margin: 6px 0 10px; border-radius: 24px; overflow: hidden; background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 24px 60px rgba(0, 0, 0, 0.14);
+  animation: ficha-entra 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (min-width: 640px) { .ficha-color { display: grid; grid-template-columns: 2fr 3fr; min-height: 360px; } }
+@keyframes ficha-entra { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: none; } }
+.ficha-pared { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background-color: var(--color-ficha); transition: background-color 0.5s ease; }
+@media (min-width: 640px) { .ficha-pared { aspect-ratio: auto; min-height: 360px; } }
+.ficha-pared img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ficha-liso::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 80% at 20% 0%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 55%);
+}
+.ficha-escenas { position: absolute; top: 12px; left: 12px; right: 56px; display: flex; flex-wrap: wrap; gap: 6px; }
+.ficha-escena {
+  font-size: 11.5px; font-weight: 600; color: #1d1d1f; padding: 7px 12px; border-radius: 999px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); transition: background-color 0.2s, color 0.2s;
+}
+.ficha-escena[aria-pressed="true"] { background: #1d1d1f; color: #fff; }
+.ficha-ampliar {
+  position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; color: #1d1d1f; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.ficha-ampliar svg { width: 16px; height: 16px; }
+.ficha-etiqueta {
+  position: absolute; left: 12px; bottom: 12px; max-width: calc(100% - 24px); display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px 8px 8px; border-radius: 16px; color: #1d1d1f;
+  background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+.ficha-etiqueta i { width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08); transition: background-color 0.5s ease; }
+.ficha-etiqueta b { display: block; font-size: 14px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; }
+.ficha-etiqueta small { display: block; font-size: 11px; color: #6b6b6b; margin-top: 1px; }
+.ficha-info {
+  position: relative; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 22px 20px 20px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--color-ficha) 10%, #fff), #fff 60%);
+}
+@media (min-width: 640px) { .ficha-info { padding: 26px 28px; } }
+.ficha-cerrar {
+  position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; color: #6b6b6b;
+  display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.05); transition: background-color 0.2s;
+}
+.ficha-cerrar:hover { background: rgba(0, 0, 0, 0.1); color: #1d1d1f; }
+.ficha-cerrar svg { width: 16px; height: 16px; }
+.ficha-eti { font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a93; margin-bottom: 8px; }
+.ficha-titulo { font-size: 15px; font-weight: 800; color: #1d1d1f; padding-right: 40px; }
+.ficha-vecinos { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ficha-vecinos small { font-size: 11px; font-weight: 700; color: #8a8a93; }
+.ficha-vecino {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.1); transition: transform 0.15s ease;
+}
+button.ficha-vecino:hover { transform: scale(1.12); }
+.ficha-vecino-actual { width: 44px; height: 44px; cursor: default; box-shadow: 0 0 0 3px #fff, 0 0 0 5px #0071e3; margin: 0 4px; transition: background-color 0.5s ease; }
+@media (min-width: 640px) { .ficha-vecino { width: 38px; height: 38px; } .ficha-vecino-actual { width: 48px; height: 48px; } }
+.ficha-precios { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.ficha-precio {
+  position: relative; display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 18px; background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+.ficha-precio img { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+.ficha-precio span { display: block; font-size: 11.5px; font-weight: 600; color: #6b6b6b; }
+.ficha-precio b { display: block; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: #1d1d1f; }
+.ficha-precio b.oferta { color: #ea580c; }
+.ficha-precio em {
+  position: absolute; top: -8px; right: 12px; font-style: normal; font-size: 9.5px; font-weight: 800; text-transform: uppercase;
+  color: #fff; background: linear-gradient(90deg, #f97316, #ef4444); padding: 3px 8px; border-radius: 999px;
+}
+.ficha-rinde { font-size: 12px; color: #6b6b6b; margin-top: 8px; }
+.ficha-rinde b { color: #1d1d1f; }
+.ficha-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.ficha-boton {
+  display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 999px; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: #1d1d1f; background: #fff; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease, background-color 0.2s;
+}
+.ficha-boton:active { transform: scale(0.97); }
+.ficha-boton svg { width: 16px; height: 16px; }
+.ficha-boton-favorito { color: #ef4444; box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.4); background: #fef2f2; }
+.ficha-boton-principal { color: #fff; background: #1d1d1f; box-shadow: none; }
+
 @media (prefers-reduced-motion: reduce) {
+  .ficha-color { animation: none; }
   .aurora-mancha, .gota-entra, .gota-entra::after, .tarjeta-salta, .tarjeta-color.tarjeta-brilla .tarjeta-cara { animation: none; }
   .tarjeta-color, .tarjeta-cara, .tira-ventana { transition: none; }
   .tarjeta-color:hover { translate: none; }

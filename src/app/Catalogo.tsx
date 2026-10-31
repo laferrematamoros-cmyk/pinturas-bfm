@@ -6,8 +6,10 @@ import ColorFromPhoto from "@/components/ColorFromPhoto";
 import PistaCirculos from "@/components/PistaCirculos";
 import HeroAurora from "@/components/HeroAurora";
 import TiraTonos from "@/components/TiraTonos";
+import { ParedColor, FichaPublica, type Escena, type Calidad } from "@/components/FichaColor";
 import { tonosDeFamilia } from "@/lib/tonos";
 import { letraSobre, finDeFila, cargaParaVer } from "@/lib/tira";
+import { tonosVecinos } from "@/lib/vecinos";
 import { KIOSKO_INACTIVO_MS, ENTRADA_GOTAS_MS } from "@/lib/pista";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import { withoutPaused, colorHasActiveQuality, colorCountLabel } from "@/lib/durability";
@@ -621,12 +623,13 @@ function FachadaRoom({ hex }: { hex: string }) {
   );
 }
 
-function RoomPreviewModal({ color, hex, onClose }: {
+function RoomPreviewModal({ color, hex, inicial, onClose }: {
   color: { name: string; code: string };
   hex: string;
+  inicial?: RoomTab;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<RoomTab>("sala");
+  const [tab, setTab] = useState<RoomTab>(inicial ?? "sala");
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", h);
@@ -2033,6 +2036,10 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
   const [selectedFamily, setSelectedFamily] = useState(0);
   const [search, setSearch] = useState("");
   const [selectedColor, setSelectedColor] = useState<Color | null>(null);
+  // Ficha del color: escena de la pared (se recuerda entre colores) y el color en cuya fila se
+  // abrió. Al tocar "más claro / más oscuro" cambia el color pero la ficha se queda en su fila.
+  const [escena, setEscena] = useState<Escena>("sala");
+  const [anclaFicha, setAnclaFicha] = useState<string | null>(null);
   // Carga progresiva: cuántos colores mostrar de la familia actual (se renderiza por lotes)
   const COLORS_BATCH = 60;
   const [visibleCount, setVisibleCount] = useState(COLORS_BATCH);
@@ -2288,13 +2295,15 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
 
   // Al seleccionar un color, desplazamos la vista para que el panel de detalle
   // quede visible (evita tener que hacer scroll manual si el color está abajo).
+  // Con un vecino elegido (anclaFicha) la ficha no se mueve: no hay que bajar.
   React.useEffect(() => {
-    if (!selectedColor) return;
+    if (!selectedColor) { setAnclaFicha(null); return; }
+    if (anclaFicha) return;
     const raf = requestAnimationFrame(() => {
       selectedDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
     return () => cancelAnimationFrame(raf);
-  }, [selectedColor]);
+  }, [selectedColor, anclaFicha]);
 
   // Recarga segura: solo cuando no hay un pedido o edición en curso.
   React.useEffect(() => {
@@ -3103,6 +3112,19 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
   const visibleGlobal = useMemo(() => globalList.slice(0, visibleCount), [globalList, visibleCount]);
   const largoActivo = modoGlobal ? globalList.length : displayedColors.length;
 
+  // "¿Más claro o más oscuro?": tonos parecidos de la familia (no en búsqueda ni favoritos).
+  const vecinosFicha = useMemo(() => {
+    if (!selectedColor || modoGlobal) return undefined;
+    const actual = tonosTira.find((t) => t.code === selectedColor.code);
+    return actual ? tonosVecinos(actual, tonosTira) : undefined;
+  }, [selectedColor, modoGlobal, tonosTira]);
+  const elegirVecino = (code: string) => {
+    const c = displayedColors.find((x) => x.code === code);
+    if (!c || !selectedColor) return;
+    setAnclaFicha((a) => a ?? selectedColor.code);
+    setSelectedColor(c);
+  };
+
   // Cargar más colores automáticamente al hacer scroll hasta el centinela
   useEffect(() => {
     if (visibleCount >= largoActivo) return;
@@ -3149,6 +3171,51 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
       ? currentFamily.colors.slice(0, 5).map((c) => c.hex).join(", ")
       : (familyColors[selectedFamily] ?? "#888888");
 
+  // Partes de la ficha del color que comparten la vista de familia y la de búsqueda.
+  const calidadesFicha: Calidad[] = selectedColor
+    ? DURABILITY_OPTIONS
+        .filter((opt) => (durability[origCode(selectedColor)] ?? []).includes(opt.years) && (pubDurabilityPrices[String(opt.years)] || pubGalonPrices[String(opt.years)]))
+        .map((opt) => ({
+          years: opt.years,
+          galon: pubGalonPrices[String(opt.years)] || undefined,
+          cubeta: pubDurabilityPrices[String(opt.years)] || undefined,
+          galonOferta: galonOnSale.includes(opt.years),
+          cubetaOferta: durabilityOnSale.includes(opt.years),
+          rinde: opt.yield,
+        }))
+    : [];
+  const paredFicha = selectedColor && (
+    <ParedColor
+      hex={editHex}
+      nombre={selectedColor.name}
+      codigo={selectedColor.code}
+      pagina={selectedColor.pageNumber}
+      conEscenas={roomPreviewEnabled}
+      escena={escena}
+      onEscena={setEscena}
+      etiquetaAmpliar={roomButtonLabel}
+      onAmpliar={() => setRoomPreviewOpen(true)}
+    />
+  );
+  const fichaPublica = selectedColor && (
+    <FichaPublica
+      hex={editHex}
+      nombre={selectedColor.name}
+      vecinos={vecinosFicha}
+      onVecino={elegirVecino}
+      tituloPrecios={rendimientoLabel}
+      calidades={calidadesFicha}
+      esFavorito={favorites.includes(origCode(selectedColor))}
+      onFavorito={() => toggleFavorite(origCode(selectedColor))}
+      onCarrito={kioskMode ? () => setAddToCartColor({ ...selectedColor, hex: editHex }) : undefined}
+    />
+  );
+  const botonCerrarFicha = (
+    <button type="button" onClick={() => setSelectedColor(null)} className="ficha-cerrar" aria-label="Cerrar">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+    </button>
+  );
+
   return (
     // overflow-x-clip (no hidden): corta igual lo que se sale por los lados, pero sin volverse
     // contenedor de scroll, así la barra de arriba (sticky) sí se queda pegada al bajar.
@@ -3178,6 +3245,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
         <RoomPreviewModal
           color={selectedColor}
           hex={editHex}
+          inicial={escena}
           onClose={() => setRoomPreviewOpen(false)}
         />
       )}
@@ -4265,23 +4333,16 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                         <React.Fragment key={`${color.id ?? color.code}-${i}`}>
                               <ColorSwatch
                                 color={{ ...color, hex: getEffectiveHex(color) }}
-                                onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setRoomPreviewOpen(false); }}
+                                onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setAnclaFicha(null); setRoomPreviewOpen(false); }}
                                 selected={selectedColor?.code === color.code}
                                 isFavorite={favorites.includes(color.code)}
                                 onToggleFavorite={() => toggleFavorite(color.code)}
                               />
                           {i === finFila && selectedColor && (
-                            <div ref={selectedDetailRef} className="flex flex-col sm:flex-row w-full mb-3 scroll-mt-28" style={{ gridColumn: "1 / -1" }}>
-                              <div className="relative w-full sm:w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex, minHeight: "80px" }}>
-                                <div>
-                                  <p className={`text-xs font-semibold leading-tight ${letraSobre(editHex) === "negra" ? "text-gray-900" : "text-white drop-shadow"}`}>{selectedColor.name}</p>
-                                  <p className={`text-[10px] mt-0.5 ${letraSobre(editHex) === "negra" ? "text-gray-900/70" : "text-white/80 drop-shadow"}`}>{selectedColor.code}</p>
-                                </div>
-                              </div>
-                              <div className="relative flex-1 bg-white flex flex-col justify-center gap-3 px-5 py-4 border-t sm:border-t-0 sm:border-l border-gray-100">
-                                <button onClick={() => setSelectedColor(null)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors">
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
+                            <div ref={selectedDetailRef} className="ficha-color scroll-mt-28" style={{ gridColumn: "1 / -1", ["--color-ficha" as string]: editHex }}>
+                              {paredFicha}
+                              <div className="ficha-info">
+                                {botonCerrarFicha}
                                 {canEdit ? (
                                   /* ── ADMIN: edit panel ── */
                                   <>
@@ -4356,96 +4417,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                                     </div>
                                   </>
                                 ) : (
-                                  /* ── PÚBLICO: solo lectura ── */
-                                  <>
-                                    <div>
-                                      <p className="text-xl font-extrabold text-gray-800 leading-tight">{selectedColor.name}</p>
-                                      <p className="text-sm text-gray-400 mt-0.5 font-mono">
-                                        {selectedColor.code}
-                                        {selectedColor.pageNumber != null && (
-                                          <span className="ml-2 text-xs font-semibold bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded">{selectedColor.pageNumber}</span>
-                                        )}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-3 flex-wrap">
-                                      <div className="w-12 h-12 rounded-full border-4 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: editHex }} />
-                                      {roomPreviewEnabled && (
-                                        <button onClick={() => setRoomPreviewOpen(true)} className="neon-hover flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
-                                          style={{ ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d948880" } as React.CSSProperties}>
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                                          {roomButtonLabel}
-                                        </button>
-                                      )}
-                                      <button
-                                        onClick={() => toggleFavorite(origCode(selectedColor))}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all duration-200 hover:scale-110 active:scale-95 ${
-                                          favorites.includes(origCode(selectedColor))
-                                            ? "bg-red-50 border-red-300 text-red-500"
-                                            : "bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-400"
-                                        }`}
-                                      >
-                                        <svg className={`w-3.5 h-3.5 ${favorites.includes(origCode(selectedColor)) ? "fill-red-500 text-red-500 heart-beat" : "fill-none text-gray-400"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                        </svg>
-                                        Favorito
-                                      </button>
-                                      {/* Agregar al carrito — solo modo kiosko (tablet en tienda) */}
-                                      {kioskMode && (
-                                        <button
-                                          onClick={() => setAddToCartColor({ ...selectedColor, hex: editHex })}
-                                          className="neon-hover flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500 text-white text-xs font-bold transition-all duration-200 hover:scale-110 hover:bg-teal-600 active:scale-95"
-                                          style={{ ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d948880" } as React.CSSProperties}
-                                        >
-                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                                          Agregar al carrito
-                                        </button>
-                                      )}
-                                    </div>
-                                    {(() => {
-                                      const sel = DURABILITY_OPTIONS.filter((opt) =>
-                                        (durability[origCode(selectedColor)] ?? []).includes(opt.years) &&
-                                        (pubDurabilityPrices[String(opt.years)] || pubGalonPrices[String(opt.years)])
-                                      );
-                                      return sel.length > 0 ? (
-                                        <div className="flex flex-col gap-3">
-                                          <p className="text-base font-extrabold text-gray-800 mb-0">{rendimientoLabel}</p>
-                                          <div>
-                                            {/* Header */}
-                                            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 mb-1">
-                                              <span />
-                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/galon.webp" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
-                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-24 justify-end"><img src="/cubeta.webp" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
-                                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-20 text-right">Rendimiento</span>
-                                            </div>
-                                            {/* Rows */}
-                                            <div className="flex flex-col gap-1.5">
-                                              {sel.map((opt) => {
-                                                const price = pubDurabilityPrices[String(opt.years)];
-                                                const galon = pubGalonPrices[String(opt.years)];
-                                                const cubSale = durabilityOnSale.includes(opt.years);
-                                                const galSale = galonOnSale.includes(opt.years);
-                                                if (!price && !galon) return null;
-                                                return (
-                                                  <div key={opt.years} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2 rounded-lg text-[11px] bg-teal-50 border border-teal-200">
-                                                    <span className="font-semibold text-teal-700">{opt.years} años</span>
-                                                    <div className="flex flex-col items-end w-20 sm:w-24">
-                                                      {galSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                      <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
-                                                    </div>
-                                                    <div className="flex flex-col items-end w-20 sm:w-24">
-                                                      {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                      <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
-                                                    </div>
-                                                    <span className="text-xs text-right w-16 sm:w-20 text-teal-500">{opt.yield}</span>
-                                                  </div>
-                                                );
-                                              })}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ) : null;
-                                    })()}
-                                  </>
+                                  /* ── Público ── */ fichaPublica
                                 )}
                               </div>
                             </div>
@@ -4618,7 +4590,8 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                 <div key={selectedFamily} className="pb-10 px-3 max-w-6xl mx-auto">
                   <div ref={medirCuadricula} className={CUADRICULA}>
                   {(() => {
-                    const selIdx = selectedColor ? visibleFamilyColors.findIndex(c => c.code === selectedColor.code) : -1;
+                    const idxAncla = anclaFicha ? visibleFamilyColors.findIndex(c => c.code === anclaFicha) : -1;
+                    const selIdx = !selectedColor ? -1 : idxAncla >= 0 ? idxAncla : visibleFamilyColors.findIndex(c => c.code === selectedColor.code);
                     const finFila = selIdx >= 0 ? finDeFila(selIdx, columnas, visibleFamilyColors.length) : -1;
                     return visibleFamilyColors.map((color, i) => {
                             const swatchKey = color.id ? String(color.id) : color.code;
@@ -4637,6 +4610,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                                     });
                                   } else {
                                     setSelectedColor(selectedColor?.code === color.code ? null : color);
+                                    setAnclaFicha(null);
                                     setRoomPreviewOpen(false);
                                   }
                                 }}
@@ -4652,26 +4626,12 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                                 } : undefined}
                               />
                         {i === finFila && selectedColor && (
-                          <div ref={selectedDetailRef} className="flex flex-col sm:flex-row w-full mb-1.5 scroll-mt-28" style={{ gridColumn: "1 / -1" }}>
-                            {/* Top/Left: flat color block */}
-                            <div className="relative w-full sm:w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex, minHeight: "80px" }}>
-                              <div>
-                                <p className={`text-xs font-semibold leading-tight ${letraSobre(editHex) === "negra" ? "text-gray-900" : "text-white drop-shadow"}`}>{selectedColor.name}</p>
-                                <p className={`text-[10px] mt-0.5 ${letraSobre(editHex) === "negra" ? "text-gray-900/70" : "text-white/80 drop-shadow"}`}>{selectedColor.code}</p>
-                              </div>
-                            </div>
+                          <div ref={selectedDetailRef} className="ficha-color scroll-mt-28" style={{ gridColumn: "1 / -1", ["--color-ficha" as string]: editHex }}>
+                            {paredFicha}
 
-                            {/* Bottom/Right: admin editor OR public read-only */}
-                            <div className="relative flex-1 bg-white flex flex-col justify-center gap-3 px-5 py-4 border-t sm:border-t-0 sm:border-l border-gray-100">
-                              {/* Close button — always visible */}
-                              <button
-                                onClick={() => setSelectedColor(null)}
-                                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
-                              >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
+                            {/* Derecha/abajo: editor de admin o la parte pública */}
+                            <div className="ficha-info">
+                              {botonCerrarFicha}
 
                               {canEdit ? (
                                 /* ── ADMIN: edit panel ── */
@@ -4833,106 +4793,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                                   </div>
                                 </>
                               ) : (
-                                /* ── PÚBLICO: solo lectura ── */
-                                <>
-                                  <div>
-                                    <p className="text-xl font-extrabold text-gray-800 leading-tight">{selectedColor.name}</p>
-                                    <p className="text-sm text-gray-400 mt-0.5 font-mono">
-                                      {selectedColor.code}
-                                      {selectedColor.pageNumber != null && (
-                                        <span className="ml-2 text-xs font-semibold bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded">{selectedColor.pageNumber}</span>
-                                      )}
-                                    </p>
-                                  </div>
-
-                                  {/* Color circle + room preview + favorite */}
-                                  <div className="flex items-center gap-3 flex-wrap">
-                                    <div className="w-12 h-12 rounded-full border-4 border-gray-100 shadow-inner flex-shrink-0" style={{ backgroundColor: editHex }} />
-                                    {roomPreviewEnabled && (
-                                      <button
-                                        onClick={() => setRoomPreviewOpen(true)}
-                                        className="neon-hover flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-semibold transition-all duration-200 hover:scale-110 hover:bg-teal-100 hover:border-teal-400 active:scale-95"
-                                        style={{ ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d948880" } as React.CSSProperties}
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                        </svg>
-                                        {roomButtonLabel}
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() => toggleFavorite(origCode(selectedColor))}
-                                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all duration-200 hover:scale-110 active:scale-95 ${
-                                        favorites.includes(origCode(selectedColor))
-                                          ? "bg-red-50 border-red-300 text-red-500"
-                                          : "bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-400"
-                                      }`}
-                                    >
-                                      <svg className={`w-3.5 h-3.5 ${favorites.includes(origCode(selectedColor)) ? "fill-red-500 text-red-500" : "fill-none text-gray-400"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                      </svg>
-                                      {favorites.includes(origCode(selectedColor)) ? "Favorito" : "Favorito"}
-                                    </button>
-                                    {/* Agregar al carrito — solo modo kiosko (tablet en tienda) */}
-                                    {kioskMode && (
-                                      <button
-                                        onClick={() => setAddToCartColor({ ...selectedColor, hex: editHex })}
-                                        className="neon-hover flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500 text-white text-xs font-bold transition-all duration-200 hover:scale-110 hover:bg-teal-600 active:scale-95"
-                                        style={{ ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d948880" } as React.CSSProperties}
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                                        Agregar al carrito
-                                      </button>
-                                    )}
-                                  </div>
-
-                                  {(() => {
-                                    const selected = DURABILITY_OPTIONS.filter((opt) =>
-                                      (durability[origCode(selectedColor)] ?? []).includes(opt.years) &&
-                                      (pubDurabilityPrices[String(opt.years)] || pubGalonPrices[String(opt.years)])
-                                    );
-                                    return selected.length > 0 ? (
-                                      <div className="flex flex-col gap-3">
-                                        <p className="text-base font-extrabold text-gray-800 mb-0">{rendimientoLabel}</p>
-                                        <div>
-                                          {/* Header */}
-                                          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 px-3 mb-1">
-                                            <span />
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/galon.webp" alt="" className="w-3 h-3 object-contain" />Gal. 4L</span>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 w-20 sm:w-24 justify-end"><img src="/cubeta.webp" alt="" className="w-3 h-3 object-contain" />Cub. 19L</span>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide w-16 sm:w-20 text-right">Rend.</span>
-                                          </div>
-                                          {/* Rows */}
-                                          <div className="flex flex-col gap-1.5">
-                                            {selected.map((opt) => {
-                                              const price = pubDurabilityPrices[String(opt.years)];
-                                              const galon = pubGalonPrices[String(opt.years)];
-                                              const cubSale = durabilityOnSale.includes(opt.years);
-                                              const galSale = galonOnSale.includes(opt.years);
-                                              if (!price && !galon) return null;
-                                              return (
-                                                <div key={opt.years} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 px-3 py-2 rounded-lg text-[11px] bg-teal-50 border border-teal-200">
-                                                  <span className="font-semibold text-teal-700">{opt.years} años</span>
-                                                  {/* Galón price */}
-                                                  <div className="flex flex-col items-end w-20 sm:w-24">
-                                                    {galSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                    <span className={`font-extrabold ${galon ? (galSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{galon ?? "—"}</span>
-                                                  </div>
-                                                  {/* Cubeta price */}
-                                                  <div className="flex flex-col items-end w-20 sm:w-24">
-                                                    {cubSale && <span className="oferta-pulse text-[9px] font-extrabold bg-orange-500 text-white px-1.5 py-0.5 rounded-full leading-none mb-1 whitespace-nowrap">🔥 OFERTA</span>}
-                                                    <span className={`font-extrabold ${price ? (cubSale ? "text-orange-500 text-sm oferta-pulse" : "text-teal-700 text-xs") : "text-gray-300 text-xs"}`}>{price ?? "—"}</span>
-                                                  </div>
-                                                  <span className="text-xs text-right w-20 text-teal-500">{opt.yield}</span>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ) : null;
-                                  })()}
-                                </>
+                                /* ── Público ── */ fichaPublica
                               )}
                             </div>
                           </div>
