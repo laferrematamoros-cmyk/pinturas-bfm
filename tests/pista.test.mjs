@@ -1,4 +1,4 @@
-import { relativa, variablesDelRecorrido, DEDO, KIOSKO_INACTIVO_MS } from "../src/lib/pista.ts";
+import { relativa, variablesDelRecorrido, DEDO, KIOSKO_INACTIVO_MS, ENTRADA_GOTAS_MS } from "../src/lib/pista.ts";
 
 let fail = 0;
 const ok = (c, m) => { if (!c) { fail++; console.log("  ✗", m); } else console.log("  ✓", m); };
@@ -10,6 +10,7 @@ const verdes = { left: 280, top: 220, width: 48, height: 48 };
 
 console.log("constantes:");
 ok(KIOSKO_INACTIVO_MS === 60000, "el kiosko espera 60 s");
+ok(ENTRADA_GOTAS_MS === 1700, "la pista espera a que caigan las gotas");
 same(DEDO, { ancho: 28, punta: 4 }, "tamaño del dedo");
 
 console.log("relativa:");

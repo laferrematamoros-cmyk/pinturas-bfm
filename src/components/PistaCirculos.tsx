@@ -9,9 +9,10 @@ import { relativa, variablesDelRecorrido, type Caja } from "@/lib/pista";
 // cuando cambia el tamaño, porque en teléfono van en dos filas y en tablet/PC en una.
 const OBJETIVOS = [1, 3];
 
-function caja(n: Element): Caja {
-  const r = n.getBoundingClientRect();
-  return { left: r.left, top: r.top, width: r.width, height: r.height };
+// Posición real (sin transformaciones): offsetLeft/Top relativos al contenedor
+// (position: relative). Con getBoundingClientRect, las gotas que caen darían otra posición.
+function caja(n: HTMLElement): Caja {
+  return { left: n.offsetLeft, top: n.offsetTop, width: n.offsetWidth, height: n.offsetHeight };
 }
 
 export default function PistaCirculos({ contenedor, activa }: {
@@ -24,8 +25,8 @@ export default function PistaCirculos({ contenedor, activa }: {
     const el = contenedor.current;
     if (!el) return;
     const medir = () => {
-      const cont = caja(el);
-      const circulos = [...el.querySelectorAll("[data-circulo]")];
+      const cont: Caja = { left: 0, top: 0, width: el.offsetWidth, height: el.offsetHeight };
+      const circulos = [...el.querySelectorAll<HTMLElement>("[data-circulo]")];
       const objetivos = OBJETIVOS.map((i) => circulos[i]).filter(Boolean).map(caja);
       const vars = variablesDelRecorrido(cont, objetivos);
       setMedidas(vars ? { vars, anillos: objetivos.map((c) => relativa(cont, c)) } : null);

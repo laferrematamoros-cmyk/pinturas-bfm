@@ -4,6 +4,9 @@
 /** En el kiosko, la pista vuelve tras este tiempo sin ninguna interacción. */
 export const KIOSKO_INACTIVO_MS = 60_000;
 
+/** Lo que tardan las gotas de pintura en caer al entrar; la pista aparece después. */
+export const ENTRADA_GOTAS_MS = 1700;
+
 /** Tamaño del 👆 (px) y cuánto baja su punta desde el borde superior del emoji. */
 export const DEDO = { ancho: 28, punta: 4 };
 
