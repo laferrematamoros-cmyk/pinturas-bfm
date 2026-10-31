@@ -255,3 +255,91 @@ body {
   .pista-anillo-1 { box-shadow: 0 0 0 3px rgba(0, 113, 227, 1), 0 0 14px rgba(0, 113, 227, 0.55); }
   .pista-anillo-2 { display: none; }
 }
+
+/* ═══ Rediseño "Aurora" (ver docs/superpowers/specs/2026-10-31-rediseno-aurora-design.md) ═══
+   Selectores con más especificidad que .design-apple a propósito. */
+@property --c { syntax: "<color>"; inherits: false; initial-value: #888888; }
+
+.aurora {
+  position: relative; isolation: isolate; overflow: hidden;
+  margin: 0 12px 6px; min-height: 250px; border-radius: 26px; background: #15152b;
+  display: flex; flex-direction: column; justify-content: space-between; padding: 26px 20px 16px;
+}
+@media (min-width: 640px) {
+  .aurora { margin: 0 max(24px, calc((100% - 1100px) / 2)) 10px; min-height: 300px; padding: 40px 40px 24px; border-radius: 32px; }
+}
+.aurora-mancha {
+  position: absolute; z-index: -1; border-radius: 50%; aspect-ratio: 1; width: 70%;
+  mix-blend-mode: screen; will-change: transform; transition: --c 1.2s ease;
+  background: radial-gradient(circle, var(--c) 0%, color-mix(in srgb, var(--c) 80%, transparent) 30%, transparent 70%);
+}
+.aurora-m1 { top: -35%; left: -20%; animation: aurora-d1 16s ease-in-out infinite alternate; }
+.aurora-m2 { bottom: -50%; right: -25%; animation: aurora-d2 18s ease-in-out infinite alternate; }
+.aurora-m3 { top: -5%; right: -10%; width: 55%; animation: aurora-d3 14s ease-in-out infinite alternate; }
+.aurora-m4 { bottom: -40%; left: -5%; width: 60%; animation: aurora-d1 20s ease-in-out infinite alternate-reverse; }
+.aurora-pausa .aurora-mancha { animation-play-state: paused; }
+@keyframes aurora-d1 { to { transform: translate(30%, 20%) scale(1.15); } }
+@keyframes aurora-d2 { to { transform: translate(-25%, -15%) scale(0.9); } }
+@keyframes aurora-d3 { to { transform: translate(-22%, 25%) scale(1.2); } }
+.aurora .aurora-titulo {
+  color: #fff; font-weight: 800; letter-spacing: -0.035em; line-height: 1.03; margin: 0 0 8px;
+  font-size: clamp(30px, 6vw, 56px); text-shadow: 0 2px 14px rgba(0, 0, 0, 0.22); text-align: left;
+}
+.aurora .aurora-sub { color: rgba(255, 255, 255, 0.95); font-size: 13px; margin: 0; }
+.aurora .aurora-sub b { font-weight: 800; }
+.aurora .aurora-buscar { position: relative; margin-top: 22px; }
+.aurora .aurora-buscar svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #fff; pointer-events: none; }
+.aurora .aurora-buscar input.aurora-input {
+  width: 100%; background: rgba(255, 255, 255, 0.2); color: #fff; font-size: 16px;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 16px; padding: 12px 14px 12px 42px;
+  box-shadow: none; outline: none;
+}
+.aurora .aurora-buscar input.aurora-input::placeholder { color: rgba(255, 255, 255, 0.85); }
+.aurora .aurora-buscar input.aurora-input:focus { background: rgba(255, 255, 255, 0.28); border-color: rgba(255, 255, 255, 0.8); }
+
+/* Círculos: brillo de gota + entrada "Gotas de pintura" */
+.circulo-gota { position: relative; }
+.circulo-gota::before {
+  content: ""; position: absolute; left: 20%; top: 14%; width: 38%; height: 30%;
+  border-radius: 50%; background: rgba(255, 255, 255, 0.5); filter: blur(1px); pointer-events: none;
+}
+.gota-entra { animation: gota-cae 0.9s cubic-bezier(0.5, 0, 0.5, 1) both; animation-delay: calc(0.25s + var(--i, 0) * 90ms); }
+.gota-entra::after {
+  content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid var(--col, #888);
+  opacity: 0; pointer-events: none; animation: gota-salpica 0.6s ease-out both;
+  animation-delay: calc(0.8s + var(--i, 0) * 90ms);
+}
+@keyframes gota-cae {
+  0% { opacity: 0; transform: translateY(-160px) scale(0.45, 0.8); border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%; }
+  55% { opacity: 1; transform: translateY(0) scale(0.7, 1.15); }
+  68% { transform: translateY(3px) scale(1.35, 0.62); border-radius: 50%; }
+  82% { transform: translateY(-3px) scale(0.92, 1.08); }
+  100% { transform: none; }
+}
+@keyframes gota-salpica { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(2.3); } }
+
+/* Tarjeta de precio y "Oferta" */
+.design-apple .tarjeta-precio.border {
+  border-radius: 24px; border-color: rgba(0, 0, 0, 0.06); padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 26px rgba(0, 0, 0, 0.07);
+}
+.design-apple .oferta-degradado.rounded-full { background: linear-gradient(90deg, #f97316, #ef4444); color: #fff; }
+
+/* Barra de tonos de la familia */
+.barra-tonos { height: 5px; border-radius: 99px; margin-top: 12px; max-width: 320px; }
+
+/* Tarjetas de color más premium + saltito al cambiar de familia */
+.design-apple .group.bg-white.tarjeta-color {
+  border-radius: 16px; border-color: rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+@media (hover: hover) and (pointer: fine) {
+  .design-apple .group.bg-white.tarjeta-color:hover { box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12); }
+}
+.tarjeta-salta { animation: tarjeta-salta 0.55s cubic-bezier(0.3, 1.5, 0.5, 1) both; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes tarjeta-salta { 0% { opacity: 0; transform: translateY(26px) scale(0.94); } 70% { opacity: 1; transform: translateY(-5px) scale(1.02); } 100% { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-mancha, .gota-entra, .gota-entra::after, .tarjeta-salta { animation: none; }
+}
