@@ -59,6 +59,21 @@ function revisar(){if(hecho)return;hecho=true;if(rota())recargar();}
 window.addEventListener('load',function(){setTimeout(revisar,5000);});setTimeout(revisar,20000);})();`,
           }}
         />
+        {/* El teclado no se abre solo: en Android, al abrir la app instalada, el cursor
+            aparecía en el buscador sin tocar nada (ningún código lo pide; lo restaura el
+            sistema). Si un campo recibe el cursor antes de que la persona toque la pantalla,
+            se le quita. Al volver a la app se vuelve a vigilar. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var toco=false;function marcar(){toco=true;}
+function quitar(){if(toco)return;var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable))a.blur();}
+function vigilar(){toco=false;setTimeout(quitar,0);}
+addEventListener('pointerdown',marcar,true);addEventListener('touchstart',marcar,{capture:true,passive:true});addEventListener('keydown',marcar,true);
+document.addEventListener('focusin',function(){if(!toco)setTimeout(quitar,0);},true);
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')vigilar();});
+addEventListener('pageshow',vigilar);}catch(e){}})();`,
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col bg-white text-gray-900">
         {children}
