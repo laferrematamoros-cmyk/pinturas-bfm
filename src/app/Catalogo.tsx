@@ -3084,7 +3084,9 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
       : (familyColors[selectedFamily] ?? "#888888");
 
   return (
-    <div className={`flex flex-col min-h-screen overflow-x-hidden${designPreview ? " design-apple" : ""}`}>
+    // overflow-x-clip (no hidden): corta igual lo que se sale por los lados, pero sin volverse
+    // contenedor de scroll, así la barra de arriba (sticky) sí se queda pegada al bajar.
+    <div className={`flex flex-col min-h-screen overflow-x-clip${designPreview ? " design-apple" : ""}`}>
       <Navbar isAdmin={isAdmin} onUserClick={handleUserClick} siteName={siteName} logoUrl={logoUrl} logo2Url={logo2Url} announcementText={announcementText} kioskMode={kioskMode} cartCount={cart.length} onCartClick={() => setCartOpen(true)} onSecretAccess={handleLogoAccess} onOrdersClick={openOrders} onSayerSecret={handleSayerSecret} editMode={editMode} kioskOrdersAvailable={kioskMode && !!kioskOrdersToken} />
       {kioskMode && (
         <>
@@ -3930,7 +3932,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
         </div>
       )}
 
-      <main className="flex-1 pt-6">
+      <main className="flex-1 pt-2">
         <>
             {/* Aurora: título, familia y buscador sobre manchas de color de la familia elegida */}
             <HeroAurora
