@@ -5,7 +5,9 @@ import Navbar from "@/components/Navbar";
 import ColorFromPhoto from "@/components/ColorFromPhoto";
 import PistaCirculos from "@/components/PistaCirculos";
 import HeroAurora from "@/components/HeroAurora";
+import TiraTonos from "@/components/TiraTonos";
 import { tonosDeFamilia } from "@/lib/tonos";
+import { letraSobre, finDeFila, cargaParaVer } from "@/lib/tira";
 import { KIOSKO_INACTIVO_MS, ENTRADA_GOTAS_MS } from "@/lib/pista";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "@/lib/validation";
 import { withoutPaused, colorHasActiveQuality, colorCountLabel } from "@/lib/durability";
@@ -464,29 +466,47 @@ const colorFamilies: ColorFamily[] = [
   },
 ];
 
-function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFavorite, onToggleFavorite, bulkSelectMode, bulkSelected, reorderMode, indice }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; cardHeight?: number; isFavorite?: boolean; onToggleFavorite?: () => void; bulkSelectMode?: boolean; bulkSelected?: boolean; reorderMode?: boolean; indice?: number }) {
+// Tarjeta "color protagonista": toda la tarjeta es el color, con el nombre encima en la
+// letra que mejor se lee. La de afuera salta al entrar; la "cara" de adentro se inclina
+// siguiendo el mouse (en teléfono solo se hunde al tocar). Estilos en globals.css.
+function ColorSwatch({ color, onClick, selected, onDelete, isFavorite, onToggleFavorite, bulkSelectMode, bulkSelected, reorderMode, indice, brilla }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; isFavorite?: boolean; onToggleFavorite?: () => void; bulkSelectMode?: boolean; bulkSelected?: boolean; reorderMode?: boolean; indice?: number; brilla?: boolean }) {
+  const letra = letraSobre(color.hex);
+  const inclinar = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse" || reorderMode || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const cara = e.currentTarget.firstElementChild as HTMLElement | null;
+    cara?.style.setProperty("--ry", `${(((e.clientX - r.left) / r.width) - 0.5) * 14}deg`);
+    cara?.style.setProperty("--rx", `${-(((e.clientY - r.top) / r.height) - 0.5) * 14}deg`);
+  };
+  const enderezar = (e: React.PointerEvent<HTMLDivElement>) => {
+    const cara = e.currentTarget.firstElementChild as HTMLElement | null;
+    cara?.style.removeProperty("--rx");
+    cara?.style.removeProperty("--ry");
+  };
+  // Con botón de borrar o casilla en la esquina, la página se hace a un lado.
+  const recorrer = !!onDelete || !!bulkSelectMode;
   return (
     <div
       onClick={onClick}
-      className={`tarjeta-color tarjeta-salta flex flex-col ${reorderMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} group relative z-0 hover:z-10 hover:-translate-y-1 hover:shadow-xl hover:border-gray-400 transition-all duration-150 rounded-lg overflow-hidden border bg-white shadow-sm ${bulkSelected ? "border-teal-500 ring-2 ring-teal-400" : reorderMode ? "border-orange-200" : "border-gray-200"}`}
+      onPointerMove={inclinar}
+      onPointerLeave={enderezar}
+      data-indice={indice}
+      className={`tarjeta-color tarjeta-salta tarjeta-${letra}${selected ? " tarjeta-elegida" : ""}${bulkSelected ? " tarjeta-marcada" : ""}${brilla ? " tarjeta-brilla" : ""} ${reorderMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} hover:z-10`}
       style={{ ["--i" as string]: Math.min(indice ?? 0, 12) }}
     >
-      <div
-        className="w-full transition-all duration-150 relative"
-        style={{ backgroundColor: color.hex, height: `${cardHeight}px` }}
-      >
+      <div className="tarjeta-cara" style={{ backgroundColor: color.hex }}>
         {color.pageNumber != null && (
-          <span className="absolute bottom-1.5 right-1.5 text-[9px] font-bold text-gray-800 bg-white/85 rounded-full px-1.5 py-0.5 leading-none">{color.pageNumber}</span>
+          <span className="tarjeta-pagina" style={recorrer ? { right: 34 } : undefined}>{color.pageNumber}</span>
         )}
         {reorderMode && (
-          <div className="absolute top-1 left-1/2 -translate-x-1/2 w-5 h-5 rounded-md bg-black/40 flex items-center justify-center">
+          <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-5 h-5 rounded-md bg-black/40 flex items-center justify-center">
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </div>
         )}
         {bulkSelectMode && (
-          <div className={`absolute top-1 right-1 w-5 h-5 rounded-md flex items-center justify-center shadow transition-colors ${bulkSelected ? "bg-teal-500" : "bg-black/30 border border-white/60"}`}>
+          <div className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-md flex items-center justify-center shadow transition-colors ${bulkSelected ? "bg-teal-500" : "bg-black/30 border border-white/60"}`}>
             {bulkSelected && (
               <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -496,8 +516,8 @@ function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFa
         )}
         {!bulkSelectMode && selected && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-6 h-6 rounded-full bg-white/80 flex items-center justify-center shadow">
-              <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+              <svg className="w-5 h-5 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
@@ -506,10 +526,11 @@ function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFa
         {onToggleFavorite && (
           <button
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-            className="absolute top-1 left-1 w-5 h-5 flex items-center justify-center transition-transform hover:scale-125"
+            className="absolute top-1.5 left-1.5 w-6 h-6 flex items-center justify-center transition-transform hover:scale-125"
             title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+            aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
           >
-            <svg className={`w-4 h-4 drop-shadow ${isFavorite ? "text-red-500 fill-red-500 heart-beat" : "text-white/80 fill-white/30"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className={`w-4 h-4 ${isFavorite ? "text-red-500 fill-red-500 heart-beat" : letra === "negra" ? "text-black/35 fill-black/5" : "text-white/85 fill-white/25 drop-shadow"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
           </button>
@@ -517,24 +538,26 @@ function ColorSwatch({ color, onClick, selected, onDelete, cardHeight = 52, isFa
         {onDelete && (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/40 hover:bg-red-500 flex items-center justify-center transition-colors"
+            className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/40 hover:bg-red-500 flex items-center justify-center transition-colors"
             title="Eliminar color"
+            aria-label="Eliminar color"
           >
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         )}
-      </div>
-      <div className="bg-white px-2.5 py-2 group-hover:bg-gray-50 transition-colors duration-150" style={{ minHeight: "44px" }}>
-        <p className="text-[11px] sm:text-xs font-bold text-gray-900 leading-tight line-clamp-2">
-          {color.name}
-        </p>
-        <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{color.code}</p>
+        <div className="tarjeta-texto">
+          <p className="tarjeta-nombre">{color.name}</p>
+          <p className="tarjeta-codigo">{color.code}</p>
+        </div>
       </div>
     </div>
   );
 }
+
+// Cuadrícula de tarjetas: 3 columnas en teléfono, 4 en tablet y 6 en computadora/kiosko.
+const CUADRICULA = "grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3.5";
 
 // Representative color for each family (defaults — can be overridden from admin)
 const DEFAULT_FAMILY_COLORS = [
@@ -2987,6 +3010,49 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
     [displayedColors, visibleCount]
   );
 
+  // Columnas de la cuadrícula de colores (3/4/6 según el ancho; las pone el CSS). Se leen
+  // de la cuadrícula para abrir la ficha después del último color de la fila elegida.
+  const [columnas, setColumnas] = useState(3);
+  const cuadriculaRef = useRef<HTMLDivElement | null>(null);
+  const observadorColumnas = useRef<ResizeObserver | null>(null);
+  const medirCuadricula = React.useCallback((el: HTMLDivElement | null) => {
+    observadorColumnas.current?.disconnect();
+    cuadriculaRef.current = el;
+    if (!el) return;
+    const medir = () => setColumnas(getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length || 3);
+    medir();
+    observadorColumnas.current = new ResizeObserver(medir);
+    observadorColumnas.current.observe(el);
+  }, []);
+
+  // Tira de tonos: al elegir un color se amplía la carga si hace falta, se baja hasta él
+  // y brilla un momento (no abre la ficha).
+  const tonosTira = useMemo(
+    () => displayedColors.map((c) => ({ hex: getEffectiveHex(c), name: c.name, code: c.code })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [displayedColors, overrides]
+  );
+  const [saltarA, setSaltarA] = useState<number | null>(null);
+  const [brilla, setBrilla] = useState<string | null>(null);
+  const elegirDeTira = (i: number) => {
+    setVisibleCount((v) => Math.max(v, cargaParaVer(i, COLORS_BATCH, displayedColors.length)));
+    setSaltarA(i);
+  };
+  useEffect(() => {
+    if (saltarA === null) return;
+    const el = cuadriculaRef.current?.querySelector<HTMLElement>(`[data-indice="${saltarA}"]`);
+    if (!el) return; // el lote todavía no se dibuja: el efecto vuelve a correr cuando llegue
+    const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "center", behavior: quieto ? "auto" : "smooth" });
+    setBrilla(displayedColors[saltarA]?.code ?? null);
+    setSaltarA(null);
+  }, [saltarA, visibleFamilyColors, displayedColors]);
+  useEffect(() => {
+    if (!brilla) return;
+    const t = setTimeout(() => setBrilla(null), 1600);
+    return () => clearTimeout(t);
+  }, [brilla]);
+
   const allSearchResults = useMemo(() => {
     if (!search.trim()) return [];
     const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -3560,21 +3626,8 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
               })}
             </div>
 
-            {/* Card height */}
-            <div className="py-3 border-t border-gray-100 mt-2">
-              <p className="text-sm font-medium text-gray-700 mb-1">Altura de las tarjetas de color</p>
-              <div className="flex items-center gap-3">
-                <input
-                  type="range"
-                  min={36} max={120} step={4}
-                  value={editCardHeight}
-                  onChange={e => setEditCardHeight(Number(e.target.value))}
-                  className="flex-1 accent-teal-500"
-                />
-                <span className="text-sm font-bold text-teal-600 w-14 text-right">{editCardHeight}px</span>
-              </div>
-              <div className="mt-2 rounded-lg overflow-hidden border border-gray-200" style={{ height: `${editCardHeight}px`, backgroundColor: "#c4849a" }} />
-            </div>
+            {/* "Altura de las tarjetas de color" se quitó: la tarjeta "color protagonista" tiene
+                forma fija (4:5). El valor guardado no se borra. */}
 
             {/* Rendimiento label */}
             <div className="py-3 border-t border-gray-100 mt-2">
@@ -4198,37 +4251,31 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                   ? `${globalList.length} color${globalList.length !== 1 ? "es" : ""} favorito${globalList.length !== 1 ? "s" : ""}`
                   : `${globalList.length} colores encontrados`;
                 return (
-              <div className="px-4 pb-10">
+              <div className="px-4 pb-10 max-w-6xl mx-auto">
                 {globalList.length === 0 ? (
                     <p className="text-center text-gray-400 py-20">{emptyMsg}</p>
                   ) : (
                   <>
                     <p className="text-sm text-gray-500 mb-4 text-center">{countMsg}</p>
+                    <div ref={medirCuadricula} className={CUADRICULA}>
                     {(() => {
-                      const rows: Color[][] = [];
-                      for (let i = 0; i < visibleGlobal.length; i += 3) rows.push(visibleGlobal.slice(i, i + 3));
-                      const selectedRowIdx = selectedColor ? Math.floor(visibleGlobal.findIndex(c => c.code === selectedColor.code) / 3) : -1;
-                      return rows.map((rowColors, rowIndex) => (
-                        <React.Fragment key={rowIndex}>
-                          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
-                            {rowColors.map((color) => (
+                      const selIdx = selectedColor ? visibleGlobal.findIndex(c => c.code === selectedColor.code) : -1;
+                      const finFila = selIdx >= 0 ? finDeFila(selIdx, columnas, visibleGlobal.length) : -1;
+                      return visibleGlobal.map((color, i) => (
+                        <React.Fragment key={`${color.id ?? color.code}-${i}`}>
                               <ColorSwatch
-                                key={color.id ?? color.code}
                                 color={{ ...color, hex: getEffectiveHex(color) }}
                                 onClick={() => { setSelectedColor(selectedColor?.code === color.code ? null : color); setRoomPreviewOpen(false); }}
                                 selected={selectedColor?.code === color.code}
-                                cardHeight={cardHeight}
                                 isFavorite={favorites.includes(color.code)}
                                 onToggleFavorite={() => toggleFavorite(color.code)}
                               />
-                            ))}
-                          </div>
-                          {selectedRowIdx === rowIndex && selectedColor && (
-                            <div ref={selectedDetailRef} className="flex flex-col sm:flex-row w-full mb-3 scroll-mt-28">
+                          {i === finFila && selectedColor && (
+                            <div ref={selectedDetailRef} className="flex flex-col sm:flex-row w-full mb-3 scroll-mt-28" style={{ gridColumn: "1 / -1" }}>
                               <div className="relative w-full sm:w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex, minHeight: "80px" }}>
                                 <div>
-                                  <p className="text-white text-xs font-semibold drop-shadow leading-tight">{selectedColor.name}</p>
-                                  <p className="text-white/80 text-[10px] drop-shadow mt-0.5">{selectedColor.code}</p>
+                                  <p className={`text-xs font-semibold leading-tight ${letraSobre(editHex) === "negra" ? "text-gray-900" : "text-white drop-shadow"}`}>{selectedColor.name}</p>
+                                  <p className={`text-[10px] mt-0.5 ${letraSobre(editHex) === "negra" ? "text-gray-900/70" : "text-white/80 drop-shadow"}`}>{selectedColor.code}</p>
                                 </div>
                               </div>
                               <div className="relative flex-1 bg-white flex flex-col justify-center gap-3 px-5 py-4 border-t sm:border-t-0 sm:border-l border-gray-100">
@@ -4406,6 +4453,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                         </React.Fragment>
                       ));
                     })()}
+                    </div>
                     {visibleGlobal.length < globalList.length && (
                       <div ref={loadMoreRef} className="flex flex-col items-center gap-2 py-6">
                         <div className="w-6 h-6 border-2 border-teal-300 border-t-teal-600 rounded-full animate-spin" />
@@ -4442,7 +4490,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
 
                 {/* Family name / encabezado de familia */}
                 {designPreview ? (
-                  <div className="px-4 mb-4 mt-2">
+                  <div className="px-4 mb-2 mt-2 max-w-6xl mx-auto">
                     <p className="text-[11px] font-semibold tracking-[0.18em] text-gray-400 uppercase mb-1">Familia</p>
                     <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-none">
                       {familyDisplayNames[selectedFamily] ?? currentFamily.name}
@@ -4451,7 +4499,9 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                       <span className="font-extrabold text-[#0071e3] text-lg sm:text-xl">{displayedColors.length}</span>{" "}
                       color{displayedColors.length !== 1 ? "es" : ""} disponibles
                     </p>
-                    <div aria-hidden className="barra-tonos" style={{ background: `linear-gradient(90deg, ${tonosFamilia.join(", ")})` }} />
+                    {!reorderMode && displayedColors.length >= 12 && (
+                      <p className="mt-1 text-xs text-gray-400">Toca o desliza la tira para ir a un tono</p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-center text-sm font-medium text-gray-600 mb-4">
@@ -4459,9 +4509,14 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                   </p>
                 )}
 
+                {/* Tira de tonos: todos los colores de la familia; se pega bajo la isla */}
+                {!reorderMode && displayedColors.length >= 12 && (
+                  <TiraTonos tonos={tonosTira} cargados={visibleFamilyColors.length} contenedor={cuadriculaRef} onElegir={elegirDeTira} />
+                )}
+
                 {/* Add color button + bulk select toggle — admin only */}
                 {canEdit && (
-                  <div className="flex justify-start gap-2 px-3 mb-3 flex-wrap">
+                  <div className="flex justify-start gap-2 px-3 mb-3 flex-wrap max-w-6xl mx-auto">
                     <button
                       onClick={() => openAddColorModal(familyDisplayNames[selectedFamily])}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-teal-400 text-teal-500 text-xs font-semibold hover:bg-teal-50 transition-colors"
@@ -4535,9 +4590,9 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
 
                 {/* Color swatches grid */}
                 {reorderMode ? (
-                  <div className="pb-10 px-3">
+                  <div className="pb-10 px-3 max-w-6xl mx-auto">
                     <p className="text-xs text-orange-500 font-medium mb-3 text-center">Arrastra los colores para reorganizarlos — se guarda automáticamente</p>
-                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className={CUADRICULA}>
                       {displayedColors.map((color, idx) => (
                         <div
                           key={color.id ?? color.code}
@@ -4546,13 +4601,12 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                           onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
                           onDrop={() => handleReorderDrop(idx)}
                           onDragEnd={() => { setDragSrcIdx(null); setDragOverIdx(null); }}
-                          className={`transition-all duration-100 ${dragSrcIdx === idx ? "opacity-30 scale-95" : ""} ${dragOverIdx === idx && dragSrcIdx !== idx ? "ring-2 ring-orange-400 rounded-lg scale-105" : ""}`}
+                          className={`transition-all duration-100 ${dragSrcIdx === idx ? "opacity-30 scale-95" : ""} ${dragOverIdx === idx && dragSrcIdx !== idx ? "ring-2 ring-orange-400 rounded-2xl scale-105" : ""}`}
                         >
                           <ColorSwatch
                             color={{ ...color, hex: getEffectiveHex(color) }}
                             onClick={() => {}}
                             selected={false}
-                            cardHeight={cardHeight}
                             isFavorite={favorites.includes(color.code)}
                             reorderMode={true}
                           />
@@ -4561,21 +4615,18 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                     </div>
                   </div>
                 ) : (
-                <div key={selectedFamily} className="pb-10 px-3">
-                  {Array.from({ length: Math.ceil(visibleFamilyColors.length / 3) }, (_, rowIndex) => {
-                    const rowColors = visibleFamilyColors.slice(rowIndex * 3, rowIndex * 3 + 3);
-                    const selectedRowIndex = selectedColor
-                      ? Math.floor(visibleFamilyColors.findIndex(c => c.code === selectedColor.code) / 3)
-                      : -1;
-                    return (
-                      <React.Fragment key={rowIndex}>
-                        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
-                          {rowColors.map((color, ci) => {
+                <div key={selectedFamily} className="pb-10 px-3 max-w-6xl mx-auto">
+                  <div ref={medirCuadricula} className={CUADRICULA}>
+                  {(() => {
+                    const selIdx = selectedColor ? visibleFamilyColors.findIndex(c => c.code === selectedColor.code) : -1;
+                    const finFila = selIdx >= 0 ? finDeFila(selIdx, columnas, visibleFamilyColors.length) : -1;
+                    return visibleFamilyColors.map((color, i) => {
                             const swatchKey = color.id ? String(color.id) : color.code;
                             return (
+                      <React.Fragment key={color.id ?? color.code}>
                               <ColorSwatch
-                                key={color.id ?? color.code}
-                                indice={rowIndex * 3 + ci}
+                                indice={i}
+                                brilla={brilla === color.code}
                                 color={{ ...color, hex: getEffectiveHex(color) }}
                                 onClick={() => {
                                   if (bulkSelectMode) {
@@ -4592,7 +4643,6 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                                 selected={!bulkSelectMode && selectedColor?.code === color.code}
                                 bulkSelectMode={bulkSelectMode}
                                 bulkSelected={bulkSelectedCodes.has(swatchKey)}
-                                cardHeight={cardHeight}
                                 isFavorite={favorites.includes(color.code)}
                                 onToggleFavorite={bulkSelectMode ? undefined : () => toggleFavorite(color.code)}
                                 onDelete={canEdit && !bulkSelectMode ? () => {
@@ -4601,16 +4651,13 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                                   }
                                 } : undefined}
                               />
-                            );
-                          })}
-                        </div>
-                        {selectedRowIndex === rowIndex && selectedColor && (
-                          <div ref={selectedDetailRef} className="flex flex-col sm:flex-row w-full mb-1.5 scroll-mt-28">
+                        {i === finFila && selectedColor && (
+                          <div ref={selectedDetailRef} className="flex flex-col sm:flex-row w-full mb-1.5 scroll-mt-28" style={{ gridColumn: "1 / -1" }}>
                             {/* Top/Left: flat color block */}
                             <div className="relative w-full sm:w-2/5 flex-shrink-0 flex flex-col justify-between p-4 transition-colors duration-200" style={{ backgroundColor: editHex, minHeight: "80px" }}>
                               <div>
-                                <p className="text-white text-xs font-semibold drop-shadow leading-tight">{selectedColor.name}</p>
-                                <p className="text-white/80 text-[10px] drop-shadow mt-0.5">{selectedColor.code}</p>
+                                <p className={`text-xs font-semibold leading-tight ${letraSobre(editHex) === "negra" ? "text-gray-900" : "text-white drop-shadow"}`}>{selectedColor.name}</p>
+                                <p className={`text-[10px] mt-0.5 ${letraSobre(editHex) === "negra" ? "text-gray-900/70" : "text-white/80 drop-shadow"}`}>{selectedColor.code}</p>
                               </div>
                             </div>
 
@@ -4891,8 +4938,10 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                           </div>
                         )}
                       </React.Fragment>
-                    );
-                  })}
+                            );
+                    });
+                  })()}
+                  </div>
                   {visibleFamilyColors.length < displayedColors.length && (
                     <div ref={loadMoreRef} className="flex flex-col items-center gap-2 py-6">
                       <div className="w-6 h-6 border-2 border-teal-300 border-t-teal-600 rounded-full animate-spin" />
