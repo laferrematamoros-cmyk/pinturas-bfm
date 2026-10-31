@@ -432,3 +432,11 @@ En la cuadrícula de familias, `rowColors.map((color) => {` → `rowColors.map((
 - [ ] `src/components/TiraTonos.tsx`: props `colores` ({hex,name}[]), `cargados`, `contenedor` (ref de la cuadrícula), `onElegir(i)`; puntero con captura, burbuja, teclado (`role="slider"`), ventanita con IntersectionObserver sobre `[data-indice]`, alto de la isla medido con ResizeObserver.
 - [ ] `Catalogo.tsx`: `ColorSwatch` nuevo (sin `cardHeight`, con `brilla`, `data-indice`, inclinación con puntero de mouse); cuadrículas de familia y búsqueda como una sola grid con la ficha `gridColumn: 1 / -1`; `columnas` medidas; `max-w-6xl`; tira en la familia; salto (ampliar carga → scroll → brillo); "Mover colores" con las mismas columnas; esconder el ajuste de altura; `scroll-mt` mayor por la tira pegada.
 - [ ] Build, pruebas, fotos (teléfono, PC 1920, kiosko, reducir movimiento, admin con borrar/selección), CLS, y reiniciar `next start -p 3002 -H 0.0.0.0`.
+
+### Task 8: Ficha del color "en tu pared + más claro / más oscuro" (agregada 2026-10-31)
+
+- [ ] `src/lib/vecinos.ts` + `tests/vecinos.test.mjs` (TDD): `hexALab`, `tonosVecinos(actual, candidatos, n=3) → { claros, oscuros }` (más claros/oscuros por L* con margen de 1, ordenados por distancia Lab con peso 0.5 a la claridad, luego de claro a oscuro; sin el propio, sin hex repetidos).
+- [ ] `src/components/FichaColor.tsx`: `ESCENAS`, `ParedColor` (escena, botones, etiqueta, ampliar, liso si no hay vista en casa) y `FichaPublica` (vecinos, precios por calidad, favorito, carrito en kiosko).
+- [ ] `globals.css`: `.ficha-*` (contenedor, entrada, pared, escenas, etiqueta, info con tinte `--c`, vecinos, precios, acciones) y reducir movimiento.
+- [ ] `Catalogo.tsx`: estado `escena` y `anclaFicha` (la ficha se queda en su fila al cambiar de vecino; el scroll solo al abrir desde una tarjeta); `vecinos` con `tonosTira`; las dos fichas (familia y búsqueda) usan `ParedColor`/`FichaPublica`; `RoomPreviewModal` acepta la escena inicial.
+- [ ] Build, pruebas, fotos (teléfono, PC, kiosko, búsqueda, vista en casa apagada no se puede probar sin admin), y reiniciar `next start -p 3002 -H 0.0.0.0`.

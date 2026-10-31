@@ -67,6 +67,24 @@ Reemplaza las tarjetas de 2.4 (en pantalla ancha quedaban 3 tarjetas enormes por
   desplazando la página (`touch-action: pan-y`).
 - **Reducir movimiento:** sin inclinación, destello, saltito ni pulso; el salto es directo.
 
+### 2.4c Ficha del color "en tu pared + más claro / más oscuro" (agregado 2026-10-31, opción C)
+- **Contenedor:** tarjeta redonda (24 px) con sombra, que entra deslizándose. En teléfono va
+  apilada (pared arriba 4:3); desde 640 px son dos columnas 2fr/3fr (mín. 360 px).
+- **Pared (izquierda):** la foto de la escena con la pared transparente sobre el color
+  (`editHex`, cambia en 0.5 s). Botones Sala · Recámara · Cocina · Fachada (la escena elegida
+  se recuerda entre colores). Etiqueta de vidrio abajo con cuadrito de color, nombre, código y
+  página. Botón para ampliar que abre la vista grande existente en la misma escena. Si
+  `roomPreviewEnabled` está apagado, la pared es el color liso con brillo (sin foto).
+- **¿Más claro o más oscuro? (solo vista de familia):** hasta 3 tonos más claros, el actual
+  (anillo azul) y hasta 3 más oscuros, elegidos por cercanía de color en Lab (con menos peso a
+  la claridad) entre los colores visibles de la familia. Tocar uno cambia el color elegido
+  **sin mover la ficha** (se queda anclada a la fila donde se abrió; no hace scroll).
+- **Precios:** título = `rendimientoLabel` (Ajustes); por calidad, una tarjeta de galón y
+  otra de cubeta (con "Oferta" si aplica) y "Rinde …". Botón Favorito; en kiosko "Agregar
+  al carrito" como principal. Se quita el circulito de color repetido.
+- **Admin:** el editor de la derecha no cambia; a la izquierda también va la pared.
+- **Reducir movimiento:** sin el deslizamiento de entrada.
+
 ### 2.5 Lo demás
 Ficha del color, calculadoras, carrito y ventanas conservan su estructura; el estilo
 redondeado ya lo da `.design-apple`. La barra de arriba (`Navbar.tsx`) **no se toca**
