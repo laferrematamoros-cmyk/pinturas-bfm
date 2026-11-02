@@ -24,6 +24,13 @@ export function colorHasActiveQuality(colorYears: number[] | undefined, paused: 
   return colorYears.some((y) => !paused.includes(y));
 }
 
+/** Calidades de un color después de poner o quitar una (cambio en bloque desde el admin): sin repetir y ordenadas. */
+export function ajustarCalidad(colorYears: number[] | undefined, years: number, poner: boolean): number[] {
+  const set = new Set(colorYears ?? []);
+  if (poner) set.add(years); else set.delete(years);
+  return [...set].sort((a, b) => a - b);
+}
+
 /** Limpia lo que llega del cliente: solo calidades conocidas, sin repetir, ordenadas. */
 export function sanitizePaused(years: unknown): number[] {
   if (!Array.isArray(years)) return [];

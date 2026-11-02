@@ -5,7 +5,7 @@ import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import { timingSafeEqual, randomBytes } from "crypto";
 import { sanitizeText, isValidHex, isValidPrice, LIMITS } from "./validation";
-import { sanitizePaused, DURABILITY_YEARS } from "./durability";
+import { sanitizePaused, DURABILITY_YEARS, ajustarCalidad } from "./durability";
 import { requireAdmin, setAdminSession, clearAdminSession, isAdmin, verifyPassword } from "./auth";
 
 // ── Rate limit anti-spam para createOrder (público) ─────────
@@ -307,6 +307,59 @@ export async function saveColorDurability(code: string, years: number[]): Promis
     .single();
   if (verifyError) throw new Error("VERIFY error: " + verifyError.message);
   return (verify as { durability_years: number[] } | null)?.durability_years ?? null;
+}
+
+/**
+ * Pone o quita una calidad a varios colores a la vez (Selección múltiple del admin).
+ * Parte de lo que hay en la base, no de lo que trae el navegador; agrupa los UPDATE por
+ * resultado (casi siempre uno o dos) y devuelve lo que quedó guardado, ya verificado.
+ */
+export async function saveColorsDurabilityBulk(codes: string[], years: number, poner: boolean): Promise<Record<string, number[]>> {
+  await requireAdmin();
+  if (!(DURABILITY_YEARS as readonly number[]).includes(years)) throw new Error("Calidad desconocida: " + years);
+  const unicos = [...new Set((Array.isArray(codes) ? codes : []).filter((c) => typeof c === "string" && c.trim() !== ""))].slice(0, 1000);
+  if (unicos.length === 0) return {};
+  updateTag(CATALOG_TAG);
+  const TROZO = 100;
+  const trozos = (lista: string[]) => Array.from({ length: Math.ceil(lista.length / TROZO) }, (_, i) => lista.slice(i * TROZO, (i + 1) * TROZO));
+
+  const actuales: Record<string, number[]> = {};
+  for (const t of trozos(unicos)) {
+    const { data, error } = await supabaseAdmin.from("color_settings").select("code,durability_years").in("code", t);
+    if (error) throw new Error("SELECT error: " + error.message);
+    for (const r of data ?? []) actuales[r.code as string] = (r.durability_years as number[]) ?? [];
+  }
+
+  const grupos = new Map<string, string[]>();
+  const nuevas: { code: string; durability_years: number[] }[] = [];
+  for (const code of unicos) {
+    const resultado = ajustarCalidad(actuales[code], years, poner);
+    if (code in actuales) {
+      const k = JSON.stringify(resultado);
+      grupos.set(k, [...(grupos.get(k) ?? []), code]);
+    } else {
+      nuevas.push({ code, durability_years: resultado });
+    }
+  }
+  const ahora = new Date().toISOString();
+  for (const [k, lista] of grupos) {
+    for (const t of trozos(lista)) {
+      const { error } = await supabaseAdmin.from("color_settings").update({ durability_years: JSON.parse(k), updated_at: ahora }).in("code", t);
+      if (error) throw new Error("UPDATE error: " + error.message);
+    }
+  }
+  if (nuevas.length > 0) {
+    const { error } = await supabaseAdmin.from("color_settings").insert(nuevas);
+    if (error) throw new Error("INSERT error: " + error.message);
+  }
+
+  const guardado: Record<string, number[]> = {};
+  for (const t of trozos(unicos)) {
+    const { data, error } = await supabaseAdmin.from("color_settings").select("code,durability_years").in("code", t);
+    if (error) throw new Error("VERIFY error: " + error.message);
+    for (const r of data ?? []) guardado[r.code as string] = (r.durability_years as number[]) ?? [];
+  }
+  return guardado;
 }
 
 // ── Site settings ───────────────────────────────────────────

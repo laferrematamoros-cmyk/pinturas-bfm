@@ -19,6 +19,7 @@ import {
   saveColorHex,
   deleteColorHex,
   saveColorDurability,
+  saveColorsDurabilityBulk,
   saveDurabilityPrices,
   saveDurabilityOnSale,
   saveDurabilityPaused,
@@ -471,7 +472,7 @@ const colorFamilies: ColorFamily[] = [
 // Tarjeta "color protagonista": toda la tarjeta es el color, con el nombre encima en la
 // letra que mejor se lee. La de afuera salta al entrar; la "cara" de adentro se inclina
 // siguiendo el mouse (en teléfono solo se hunde al tocar). Estilos en globals.css.
-function ColorSwatch({ color, onClick, selected, onDelete, isFavorite, onToggleFavorite, bulkSelectMode, bulkSelected, reorderMode, indice, brilla }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; isFavorite?: boolean; onToggleFavorite?: () => void; bulkSelectMode?: boolean; bulkSelected?: boolean; reorderMode?: boolean; indice?: number; brilla?: boolean }) {
+function ColorSwatch({ color, onClick, selected, onDelete, isFavorite, onToggleFavorite, bulkSelectMode, bulkSelected, reorderMode, indice, brilla, calidades }: { color: Color; onClick: () => void; selected: boolean; onDelete?: () => void; isFavorite?: boolean; onToggleFavorite?: () => void; bulkSelectMode?: boolean; bulkSelected?: boolean; reorderMode?: boolean; indice?: number; brilla?: boolean; calidades?: { anos: number[]; pausadas: number[]; oculto: boolean } }) {
   const letra = letraSobre(color.hex);
   const inclinar = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== "mouse" || reorderMode || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -493,7 +494,7 @@ function ColorSwatch({ color, onClick, selected, onDelete, isFavorite, onToggleF
       onPointerMove={inclinar}
       onPointerLeave={enderezar}
       data-indice={indice}
-      className={`tarjeta-color tarjeta-salta tarjeta-${letra}${selected ? " tarjeta-elegida" : ""}${bulkSelected ? " tarjeta-marcada" : ""}${brilla ? " tarjeta-brilla" : ""} ${reorderMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} hover:z-10`}
+      className={`tarjeta-color tarjeta-salta tarjeta-${letra}${selected ? " tarjeta-elegida" : ""}${bulkSelected ? " tarjeta-marcada" : ""}${brilla ? " tarjeta-brilla" : ""}${calidades?.oculto ? " tarjeta-oculta" : ""} ${reorderMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} hover:z-10`}
       style={{ ["--i" as string]: Math.min(indice ?? 0, 12) }}
     >
       <div className="tarjeta-cara" style={{ backgroundColor: color.hex }}>
@@ -550,6 +551,15 @@ function ColorSwatch({ color, onClick, selected, onDelete, isFavorite, onToggleF
           </button>
         )}
         <div className="tarjeta-texto">
+          {/* Modo edición: las calidades marcadas (las pausadas, tenues) y si el público no lo ve */}
+          {calidades && (
+            <div className="tarjeta-calidades">
+              {calidades.anos.length === 0
+                ? <span className="sin">Sin calidad</span>
+                : calidades.anos.map((y) => <span key={y} className={calidades.pausadas.includes(y) ? "pausada" : "activa"}>{y}</span>)}
+              {calidades.oculto && <span className="oculto">Oculto</span>}
+            </div>
+          )}
           <p className="tarjeta-nombre">{color.name}</p>
           <p className="tarjeta-codigo">{color.code}</p>
         </div>
@@ -2096,6 +2106,9 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
   const [bulkSelectedCodes, setBulkSelectedCodes] = useState<Set<string>>(new Set());
   const [bulkTargetFamily, setBulkTargetFamily] = useState<number>(0);
   const [bulkMoving, setBulkMoving] = useState(false);
+  // Selección múltiple: poner o quitar una calidad a todos los marcados de un jalón.
+  const [bulkAnio, setBulkAnio] = useState(3);
+  const [bulkCalidadGuardando, setBulkCalidadGuardando] = useState(false);
   const [colorOrders, setColorOrders] = useState<Record<string, string[]>>(initialData.colorOrders);
   const [reorderMode, setReorderMode] = useState(false);
   const [dragSrcIdx, setDragSrcIdx] = useState<number | null>(null);
@@ -2868,6 +2881,36 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
       setSaveError(String(err instanceof Error ? err.message : err));
     } finally {
       setMovingColor(false);
+    }
+  }
+
+  // Lo que muestra cada tarjeta en modo edición: sus calidades y si el público la ve.
+  function calidadesDeTarjeta(color: Color) {
+    const anos = [...(durability[origCode(color)] ?? [])].sort((a, b) => a - b);
+    return { anos, pausadas: durabilityPaused, oculto: !colorHasActiveQuality(anos, durabilityPaused) };
+  }
+
+  async function handleBulkCalidad(poner: boolean) {
+    const colores = displayedColors.filter((c) => bulkSelectedCodes.has(c.id ? String(c.id) : c.code));
+    if (colores.length === 0) return;
+    const codes = [...new Set(colores.map(origCode))];
+    const n = codes.length;
+    const pausada = durabilityPaused.includes(bulkAnio);
+    const aviso = poner
+      ? `¿Marcar ${bulkAnio} años a ${n} color${n !== 1 ? "es" : ""}?`
+      : `¿Quitar ${bulkAnio} años a ${n} color${n !== 1 ? "es" : ""}?` +
+        (pausada ? "" : " Los que se queden sin una calidad a la venta dejarán de verse en la página.");
+    if (!window.confirm(aviso)) return;
+    setBulkCalidadGuardando(true);
+    setSaveError("");
+    try {
+      const guardado = await saveColorsDurabilityBulk(codes, bulkAnio, poner);
+      setDurability((prev) => ({ ...prev, ...guardado }));
+      setBulkSelectedCodes(new Set());
+    } catch (err) {
+      setSaveError(String(err instanceof Error ? err.message : err));
+    } finally {
+      setBulkCalidadGuardando(false);
     }
   }
 
@@ -4337,6 +4380,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                                 selected={selectedColor?.code === color.code}
                                 isFavorite={favorites.includes(color.code)}
                                 onToggleFavorite={() => toggleFavorite(color.code)}
+                                calidades={canEdit ? calidadesDeTarjeta(color) : undefined}
                               />
                           {i === finFila && selectedColor && (
                             <div ref={selectedDetailRef} className="ficha-color scroll-mt-28" style={{ gridColumn: "1 / -1", ["--color-ficha" as string]: editHex }}>
@@ -4600,6 +4644,7 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                               <ColorSwatch
                                 indice={i}
                                 brilla={brilla === color.code}
+                                calidades={canEdit ? calidadesDeTarjeta(color) : undefined}
                                 color={{ ...color, hex: getEffectiveHex(color) }}
                                 onClick={() => {
                                   if (bulkSelectMode) {
@@ -4844,6 +4889,33 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
               )}
               {bulkMoving ? "Moviendo..." : "Mover"}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+            <label className="text-xs text-gray-500 font-medium flex-shrink-0">Calidad:</label>
+            <select
+              value={bulkAnio}
+              onChange={(e) => setBulkAnio(Number(e.target.value))}
+              aria-label="Calidad a marcar o quitar"
+              className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-teal-400 bg-white"
+            >
+              {DURABILITY_OPTIONS.map((opt) => (
+                <option key={opt.years} value={opt.years}>{opt.years} años{durabilityPaused.includes(opt.years) ? " (pausada)" : ""}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => handleBulkCalidad(true)}
+              disabled={bulkSelectedCodes.size === 0 || bulkCalidadGuardando}
+              className="px-3 py-1.5 rounded-lg bg-[#0071e3] text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Marcar
+            </button>
+            <button
+              onClick={() => handleBulkCalidad(false)}
+              disabled={bulkSelectedCodes.size === 0 || bulkCalidadGuardando}
+              className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {bulkCalidadGuardando ? "Guardando..." : "Quitar"}
             </button>
           </div>
           <button

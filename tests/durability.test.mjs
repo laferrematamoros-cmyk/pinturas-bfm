@@ -1,5 +1,5 @@
 import {
-  withoutPaused, colorHasActiveQuality, sanitizePaused, colorCountLabel,
+  withoutPaused, colorHasActiveQuality, sanitizePaused, colorCountLabel, ajustarCalidad,
 } from "../src/lib/durability.ts";
 
 let fail = 0;
@@ -33,6 +33,15 @@ ok(colorCountLabel(1056) === "Más de 1,000", "1,056 → Más de 1,000");
 ok(colorCountLabel(1000) === "1,000", "1,000 exacto no dice 'más de'");
 ok(colorCountLabel(987) === "Más de 900", "987 → Más de 900");
 ok(colorCountLabel(42) === "42", "42 → 42");
+
+console.log("ajustarCalidad (cambio en bloque):");
+same(ajustarCalidad([3, 4, 7], 3, false), [4, 7], "quitar 3 años");
+same(ajustarCalidad([7, 4], 3, true), [3, 4, 7], "poner 3 años y queda ordenado");
+same(ajustarCalidad([3, 7], 3, true), [3, 7], "poner una que ya tiene no la repite");
+same(ajustarCalidad([4, 7], 3, false), [4, 7], "quitar una que no tiene no cambia nada");
+same(ajustarCalidad(undefined, 3, true), [3], "color sin registro: poner 3 años");
+same(ajustarCalidad(undefined, 3, false), [], "color sin registro: quitar deja vacío");
+same(ajustarCalidad([3, 3, 7], 7, false), [3], "limpia repetidos viejos");
 
 if (fail) { console.log(`\n${fail} FALLARON`); process.exit(1); }
 console.log("\nTodo bien.");
