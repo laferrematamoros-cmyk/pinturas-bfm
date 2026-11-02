@@ -260,13 +260,18 @@ body {
    Selectores con más especificidad que .design-apple a propósito. */
 @property --c { syntax: "<color>"; inherits: false; initial-value: #888888; }
 
+/* Compacta (2026-11-02): antes medía 250 px en teléfono y 300 en PC; ahora ~140 y ~110.
+   Desde 900 px el título y el buscador van en un solo renglón. */
 .aurora {
   position: relative; isolation: isolate; overflow: hidden;
-  margin: 0 12px 6px; min-height: 250px; border-radius: 26px; background: #15152b;
-  display: flex; flex-direction: column; justify-content: space-between; padding: 26px 20px 16px;
+  margin: 0 12px 6px; border-radius: 22px; background: #15152b;
+  display: flex; flex-direction: column; gap: 14px; padding: 18px 16px 14px;
 }
 @media (min-width: 640px) {
-  .aurora { margin: 0 max(24px, calc((100% - 1100px) / 2)) 10px; min-height: 300px; padding: 40px 40px 24px; border-radius: 32px; }
+  .aurora { margin: 0 max(24px, calc((100% - 1100px) / 2)) 10px; padding: 22px 26px; border-radius: 26px; }
+}
+@media (min-width: 900px) {
+  .aurora { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 440px); align-items: center; gap: 28px; padding: 24px 32px; }
 }
 .aurora-mancha {
   position: absolute; z-index: -1; border-radius: 50%; aspect-ratio: 1; width: 70%;
@@ -282,17 +287,17 @@ body {
 @keyframes aurora-d2 { to { transform: translate(-25%, -15%) scale(0.9); } }
 @keyframes aurora-d3 { to { transform: translate(-22%, 25%) scale(1.2); } }
 .aurora .aurora-titulo {
-  color: #fff; font-weight: 800; letter-spacing: -0.035em; line-height: 1.03; margin: 0 0 8px;
-  font-size: clamp(30px, 6vw, 56px); text-shadow: 0 2px 14px rgba(0, 0, 0, 0.22); text-align: left;
+  color: #fff; font-weight: 800; letter-spacing: -0.035em; line-height: 1.03; margin: 0 0 6px;
+  font-size: clamp(26px, 3.4vw, 40px); text-shadow: 0 2px 14px rgba(0, 0, 0, 0.22); text-align: left;
 }
 .aurora .aurora-sub { color: rgba(255, 255, 255, 0.95); font-size: 13px; margin: 0; }
 .aurora .aurora-sub b { font-weight: 800; }
-.aurora .aurora-buscar { position: relative; margin-top: 22px; }
+.aurora .aurora-buscar { position: relative; }
 .aurora .aurora-buscar svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #fff; pointer-events: none; }
 .aurora .aurora-buscar input.aurora-input {
   width: 100%; background: rgba(255, 255, 255, 0.2); color: #fff; font-size: 16px;
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 16px; padding: 12px 14px 12px 42px;
+  border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 16px; padding: 11px 14px 11px 42px;
   box-shadow: none; outline: none;
 }
 .aurora .aurora-buscar input.aurora-input::placeholder { color: rgba(255, 255, 255, 0.85); }
