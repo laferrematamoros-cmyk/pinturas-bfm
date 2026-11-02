@@ -147,16 +147,24 @@ export default function Navbar({ isAdmin, siteName, logoUrl, logo2Url, announcem
         </div>
       </nav>
 
-      {/* Pastillas: estado en vivo, horario y anuncio (dirección) — solo en la página pública */}
+      {/* Pastillas: estado en vivo, horario y anuncio (dirección) — solo en la página pública.
+          En celular giran solas como letrero de noticias (la copia hace que la vuelta no
+          tenga corte) y se detienen al tocarlas; en PC caben todas y se quedan quietas. */}
       {!kioskMode && (
         <div className="isla-chips no-scrollbar">
-          <EstadoEnVivo />
-          <span className="isla-chip">
-            <svg className="w-3.5 h-3.5 text-[#0071e3] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 6v6l4 2" /></svg>
-            <span className="sm:hidden">{HORARIO_CORTO}</span>
-            <span className="hidden sm:inline">{HORARIO_LARGO}</span>
-          </span>
-          {announcementText && <span className="isla-chip">{announcementText}</span>}
+          <div className="isla-cinta">
+            {[false, true].map((copia) => (
+              <div key={String(copia)} className={`isla-grupo${copia ? " isla-copia" : ""}`} aria-hidden={copia || undefined}>
+                <EstadoEnVivo />
+                <span className="isla-chip">
+                  <svg className="w-3.5 h-3.5 text-[#0071e3] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden><circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 6v6l4 2" /></svg>
+                  <span className="sm:hidden">{HORARIO_CORTO}</span>
+                  <span className="hidden sm:inline">{HORARIO_LARGO}</span>
+                </span>
+                {announcementText && <span className="isla-chip">{announcementText}</span>}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </>
