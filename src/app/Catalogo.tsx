@@ -6,7 +6,7 @@ import ColorFromPhoto from "@/components/ColorFromPhoto";
 import PistaCirculos from "@/components/PistaCirculos";
 import HeroAurora from "@/components/HeroAurora";
 import TiraTonos from "@/components/TiraTonos";
-import { ParedColor, FichaPublica, type Escena, type Calidad } from "@/components/FichaColor";
+import { ParedColor, FichaPublica, VentanaEstudio, type Escena, type Calidad } from "@/components/FichaColor";
 import { tonosDeFamilia } from "@/lib/tonos";
 import { letraSobre, finDeFila, cargaParaVer } from "@/lib/tira";
 import { tonosVecinos } from "@/lib/vecinos";
@@ -590,109 +590,6 @@ const QUALITY_GRID_COLS: Record<number, string> = {
   2: "grid-cols-2 max-w-xl mx-auto",
   3: "grid-cols-2 sm:grid-cols-3 max-w-4xl mx-auto",
 };
-
-// ── Room preview ──────────────────────────────────────────────
-
-const ROOM_TABS = [
-  { id: "sala",     label: "Sala",     emoji: "🛋" },
-  { id: "recamara", label: "Recámara", emoji: "🛏" },
-  { id: "cocina",   label: "Cocina",   emoji: "🍳" },
-  { id: "fachada",  label: "Fachada",  emoji: "🏠" },
-] as const;
-type RoomTab = typeof ROOM_TABS[number]["id"];
-
-function SalaRoom({ hex }: { hex: string }) {
-  return (
-    <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img src="/sala-sofa.webp" alt="Sala" className="w-full block" />
-    </div>
-  );
-}
-
-function RecamaraRoom({ hex }: { hex: string }) {
-  return (
-    <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img src="/recamara.webp" alt="Recámara" className="w-full block" />
-    </div>
-  );
-}
-
-function CocinaRoom({ hex }: { hex: string }) {
-  return (
-    <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img src="/cocina.webp" alt="Cocina" className="w-full block" />
-    </div>
-  );
-}
-
-function FachadaRoom({ hex }: { hex: string }) {
-  return (
-    <div className="w-full relative" style={{ backgroundColor: hex }}>
-      <img src="/fachada.webp" alt="Fachada" className="w-full block" />
-    </div>
-  );
-}
-
-function RoomPreviewModal({ color, hex, inicial, onClose }: {
-  color: { name: string; code: string };
-  hex: string;
-  inicial?: RoomTab;
-  onClose: () => void;
-}) {
-  const [tab, setTab] = useState<RoomTab>(inicial ?? "sala");
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
-  return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 bg-black/75" style={{ zIndex: 80 }} onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight:"95vh" }} onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 bg-gray-900 text-white flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full border-2 border-white/30" style={{ backgroundColor: hex }}/>
-            <div>
-              <p className="font-bold text-sm leading-tight">{color.name}</p>
-              <p className="text-xs text-gray-400 font-mono">{color.code}</p>
-            </div>
-          </div>
-          <button aria-label="Cerrar" onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
-        </div>
-        {/* Tabs */}
-        <div className="flex bg-gray-900 gap-1 p-1.5 flex-shrink-0">
-          {ROOM_TABS.map(rt => (
-            <button key={rt.id} onClick={() => setTab(rt.id)}
-              className={`neon-hover flex-1 py-2 text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1 select-none rounded-lg border ${
-                tab === rt.id
-                  ? "bg-teal-500/20 text-teal-300 border-teal-400 scale-105"
-                  : "bg-transparent text-gray-400 border-transparent hover:text-teal-300 hover:bg-teal-500/10 hover:border-teal-400 hover:scale-110 active:scale-95"
-              }`}
-              style={{
-                boxShadow: tab === rt.id ? "0 0 8px #2dd4bf, 0 0 20px #0d9488, inset 0 0 8px #0d948820" : undefined,
-                ["--neon-hover" as string]: "0 0 8px #2dd4bf, 0 0 20px #0d9488, inset 0 0 8px #0d948820",
-              } as React.CSSProperties}
-            >
-              <span className={`transition-all duration-200 ${tab === rt.id ? "text-xl" : "text-base"}`}>{rt.emoji}</span>
-              <span>{rt.label}</span>
-            </button>
-          ))}
-        </div>
-        {/* Room image */}
-        <div className="overflow-y-auto flex-shrink-0">
-          {tab === "sala"     && <SalaRoom     hex={hex}/>}
-          {tab === "recamara" && <RecamaraRoom hex={hex}/>}
-          {tab === "cocina"   && <CocinaRoom   hex={hex}/>}
-          {tab === "fachada"  && <FachadaRoom  hex={hex}/>}
-        </div>
-        {/* Footer */}
-        <div className="px-5 py-2.5 bg-gray-50 border-t border-gray-100 flex-shrink-0">
-          <p className="text-[11px] text-gray-400 text-center">Los colores son aproximados. Consulta nuestro catálogo físico en tienda.</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Paint yield (conservative lower bound per durability tier) ──
 const YIELD_MAP: Record<number, number> = { 2: 4, 3: 6, 4: 7, 7: 7 };
@@ -3283,13 +3180,18 @@ export default function Catalogo({ initialData }: { initialData: InitialData }) 
         </>
       )}
 
-      {/* Room preview modal */}
+      {/* Ventana grande "Estudio": tono y cuarto son los mismos de la ficha */}
       {roomPreviewOpen && selectedColor && (
-        <RoomPreviewModal
-          color={selectedColor}
+        <VentanaEstudio
           hex={editHex}
-          inicial={escena}
-          onClose={() => setRoomPreviewOpen(false)}
+          nombre={selectedColor.name}
+          codigo={selectedColor.code}
+          pagina={selectedColor.pageNumber}
+          vecinos={vecinosFicha}
+          onVecino={elegirVecino}
+          escena={escena}
+          onEscena={setEscena}
+          onCerrar={() => setRoomPreviewOpen(false)}
         />
       )}
 

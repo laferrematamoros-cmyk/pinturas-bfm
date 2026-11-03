@@ -84,6 +84,27 @@ Reemplaza las tarjetas de 2.4 (en pantalla ancha quedaban 3 tarjetas enormes por
   al carrito" como principal. Se quita el circulito de color repetido.
 - **Admin:** el editor de la derecha no cambia; a la izquierda también va la pared.
 - **Reducir movimiento:** sin el deslizamiento de entrada.
+- **Una sola fila de tonos:** con seis vecinos en teléfono los círculos se encogen (mín. 24 px)
+  en vez de bajar "Oscuro" a otra línea (agregado 2026-11-03).
+
+### 2.4d Ventana grande "Estudio" (agregado 2026-11-03, opción B)
+Reemplaza la vista grande vieja (encabezado azul marino, pestañas turquesa con emojis y la foto
+cortada, sin el aviso de abajo).
+- **Forma:** en teléfono sube desde abajo (esquinas de arriba redondas, máx. 94dvh): foto
+  arriba (52dvh) y panel abajo, que se desliza si no cabe. Desde 640 px es una tarjeta de
+  máx. 1080 × 720 px con la foto a la izquierda (58%) y el panel a la derecha (42%, mín. 300 px).
+  Fondo oscuro desenfocado; se cierra con la ✕, tocando fuera o con Esc.
+- **Foto:** la escena con la pared transparente sobre el color (cambia en 0.5 s); pastillas de
+  Sala · Recámara · Cocina · Fachada encima. Llena su espacio (`cover`): la fachada, que es
+  horizontal, pierde un poco de los lados.
+- **Panel (teñido del color):** "Así se ve en tu casa", nombre, código · Página; la misma
+  fila "¿Más claro o más oscuro?" de la ficha (solo vista de familia); "Velo en otro cuarto"
+  con los cuatro cuartos en miniatura ya pintados (2 × 2 en PC, 4 en fila en teléfono); al
+  pie, "Los colores son aproximados…". Sin precios ni botones de compra.
+- **Comparte estado con la ficha:** el tono y el cuarto que se eligen aquí son los de la ficha
+  (`elegirVecino`, `escena`); al cerrar, la ficha queda en lo último elegido y no se mueve.
+- **Reducir movimiento:** sin la subida/entrada ni el fundido de la foto; sin transición de
+  color.
 
 ### 2.5 Lo demás
 Ficha del color, calculadoras, carrito y ventanas conservan su estructura; el estilo

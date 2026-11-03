@@ -95,7 +95,6 @@ body {
 .design-apple nav.bg-white {
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-bottom-color: transparent;
 }
 /* Info-bar de la barra: blanco (fondo totalmente limpio) */
@@ -143,7 +142,6 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .design-apple nav.bg-white {
     backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 }
 
@@ -296,7 +294,7 @@ body {
 .aurora .aurora-buscar svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #fff; pointer-events: none; }
 .aurora .aurora-buscar input.aurora-input {
   width: 100%; background: rgba(255, 255, 255, 0.2); color: #fff; font-size: 16px;
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 16px; padding: 11px 14px 11px 42px;
   box-shadow: none; outline: none;
 }
@@ -401,7 +399,7 @@ body {
    z-index 51 (uno más que la isla) para que la burbuja pueda salir por encima de ella. */
 .tira-envoltura { position: sticky; top: var(--alto-isla, 64px); z-index: 51; max-width: 1152px; margin: 0 auto 8px; padding: 4px 12px 6px; }
 .tira-vidrio {
-  background: rgba(255, 255, 255, 0.82); backdrop-filter: saturate(180%) blur(16px); -webkit-backdrop-filter: saturate(180%) blur(16px);
+  background: rgba(255, 255, 255, 0.82); backdrop-filter: saturate(180%) blur(16px);
   border: 1px solid rgba(0, 0, 0, 0.05); border-radius: 18px; padding: 6px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -442,20 +440,20 @@ body {
 .ficha-escenas { position: absolute; top: 12px; left: 12px; right: 56px; display: flex; flex-wrap: wrap; gap: 6px; }
 .ficha-escena {
   font-size: 11.5px; font-weight: 600; color: #1d1d1f; padding: 7px 12px; border-radius: 999px; cursor: pointer;
-  background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); transition: background-color 0.2s, color 0.2s;
 }
 .ficha-escena[aria-pressed="true"] { background: #1d1d1f; color: #fff; }
 .ficha-ampliar {
   position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; color: #1d1d1f; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 .ficha-ampliar svg { width: 16px; height: 16px; }
 .ficha-etiqueta {
   position: absolute; left: 12px; bottom: 12px; max-width: calc(100% - 24px); display: flex; align-items: center; gap: 10px;
   padding: 8px 14px 8px 8px; border-radius: 16px; color: #1d1d1f;
-  background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(14px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 .ficha-etiqueta i { width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08); transition: background-color 0.5s ease; }
 .ficha-etiqueta b { display: block; font-size: 14px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; }
@@ -473,15 +471,16 @@ body {
 .ficha-cerrar svg { width: 16px; height: 16px; }
 .ficha-eti { font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a93; margin-bottom: 8px; }
 .ficha-titulo { font-size: 15px; font-weight: 800; color: #1d1d1f; padding-right: 40px; }
-.ficha-vecinos { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.ficha-vecinos small { font-size: 11px; font-weight: 700; color: #8a8a93; }
+/* Una sola fila: con seis vecinos en teléfono los círculos se encogen en vez de bajar "Oscuro". */
+.ficha-vecinos { display: flex; align-items: center; gap: 6px; }
+.ficha-vecinos small { flex-shrink: 0; font-size: 11px; font-weight: 700; color: #8a8a93; }
 .ficha-vecino {
-  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
+  flex: 0 1 34px; min-width: 24px; aspect-ratio: 1; border-radius: 50%; cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.1); transition: transform 0.15s ease;
 }
 button.ficha-vecino:hover { transform: scale(1.12); }
-.ficha-vecino-actual { width: 44px; height: 44px; cursor: default; box-shadow: 0 0 0 3px #fff, 0 0 0 5px #0071e3; margin: 0 4px; transition: background-color 0.5s ease; }
-@media (min-width: 640px) { .ficha-vecino { width: 38px; height: 38px; } .ficha-vecino-actual { width: 48px; height: 48px; } }
+.ficha-vecino-actual { flex-basis: 44px; min-width: 34px; cursor: default; box-shadow: 0 0 0 3px #fff, 0 0 0 5px #0071e3; margin: 0 4px; transition: background-color 0.5s ease; }
+@media (min-width: 640px) { .ficha-vecino { flex-basis: 38px; } .ficha-vecino-actual { flex-basis: 48px; } }
 .ficha-precios { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .ficha-precio {
   position: relative; display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 18px; background: #fff;
@@ -508,6 +507,75 @@ button.ficha-vecino:hover { transform: scale(1.12); }
 .ficha-boton-favorito { color: #ef4444; box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.4); background: #fef2f2; }
 .ficha-boton-principal { color: #fff; background: #1d1d1f; box-shadow: none; }
 
+/* ── Ventana grande "Estudio" (ver VentanaEstudio en FichaColor.tsx). En teléfono sube desde
+   abajo: foto arriba y panel abajo (se desliza si no cabe). Desde 640px: foto a la izquierda y
+   panel a la derecha. La pared y las miniaturas se repintan despacio al cambiar de tono. ── */
+.estudio-fondo {
+  position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(16, 16, 20, 0.55); backdrop-filter: blur(8px);
+  animation: estudio-velo 0.25s ease both;
+}
+@media (min-width: 640px) { .estudio-fondo { align-items: center; padding: 24px; } }
+.estudio {
+  position: relative; width: 100%; max-height: 94dvh; display: flex; flex-direction: column; overflow: hidden; outline: none;
+  background: #fff; border-radius: 24px 24px 0 0; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  animation: estudio-sube 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (min-width: 640px) {
+  .estudio {
+    max-width: 1080px; height: min(720px, calc(100dvh - 48px)); max-height: none; border-radius: 24px;
+    display: grid; grid-template-columns: minmax(0, 58fr) minmax(300px, 42fr); animation-name: estudio-entra;
+  }
+}
+@keyframes estudio-velo { from { opacity: 0; } }
+@keyframes estudio-sube { from { opacity: 0; transform: translateY(48px); } }
+@keyframes estudio-entra { from { opacity: 0; transform: translateY(16px) scale(0.98); } }
+.estudio-foto { position: relative; flex-shrink: 0; height: 52dvh; overflow: hidden; background-color: var(--color-ficha); transition: background-color 0.5s ease; }
+@media (min-width: 640px) { .estudio-foto { height: auto; } }
+.estudio-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: estudio-foto 0.35s ease both; }
+@keyframes estudio-foto { from { opacity: 0; } }
+.estudio-escenas { position: absolute; top: 12px; left: 12px; right: 60px; display: flex; flex-wrap: wrap; gap: 6px; }
+@media (min-width: 640px) { .estudio-escenas { top: 16px; left: 16px; right: 16px; } }
+.estudio-panel {
+  position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 18px; padding: 20px 18px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--color-ficha) 14%, #fff), #fff 65%);
+}
+@media (min-width: 640px) { .estudio-panel { gap: 22px; padding: 30px 28px 22px; } }
+.estudio-nombre { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; color: #1d1d1f; }
+@media (min-width: 640px) { .estudio-nombre { font-size: 28px; padding-right: 44px; } }
+.estudio-codigo { font-size: 12px; color: #6b6b6b; margin-top: 4px; }
+.estudio-minis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media (min-width: 640px) { .estudio-minis { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+.estudio-mini {
+  position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; cursor: pointer; background-color: var(--color-ficha);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06); transition: background-color 0.5s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+.estudio-mini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.estudio-mini span {
+  position: absolute; left: 5px; bottom: 5px; font-size: 9.5px; font-weight: 700; color: #1d1d1f;
+  background: rgba(255, 255, 255, 0.88); padding: 2px 7px; border-radius: 999px;
+}
+@media (min-width: 640px) { .estudio-mini span { left: 8px; bottom: 8px; font-size: 11px; padding: 3px 9px; } }
+.estudio-mini[aria-pressed="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1d1d1f; }
+.estudio-mini:active { transform: scale(0.97); }
+.estudio-aviso { margin-top: auto; font-size: 11px; color: #9a9aa2; }
+.estudio-cerrar {
+  position: absolute; top: 12px; right: 12px; z-index: 1; width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: #1d1d1f;
+  background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(10px); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+@media (min-width: 640px) {
+  .estudio-cerrar { top: 18px; right: 18px; color: #6b6b6b; background: rgba(0, 0, 0, 0.05); box-shadow: none; backdrop-filter: none; transition: background-color 0.2s; }
+  .estudio-cerrar:hover { background: rgba(0, 0, 0, 0.1); color: #1d1d1f; }
+}
+.estudio-cerrar svg { width: 16px; height: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .estudio-fondo, .estudio, .estudio-foto img { animation: none; }
+  .estudio-foto, .estudio-mini { transition: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ficha-color { animation: none; }
   .aurora-mancha, .gota-entra, .gota-entra::after, .tarjeta-salta, .tarjeta-color.tarjeta-brilla .tarjeta-cara { animation: none; }
@@ -523,7 +591,7 @@ button.ficha-vecino:hover { transform: scale(1.12); }
 @media (min-width: 640px) { .isla-envoltura { padding: 14px max(24px, calc((100% - 1100px) / 2)) 8px; } }
 .isla {
   pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: rgba(255, 255, 255, 0.82); backdrop-filter: saturate(180%) blur(18px); -webkit-backdrop-filter: saturate(180%) blur(18px);
+  background: rgba(255, 255, 255, 0.82); backdrop-filter: saturate(180%) blur(18px);
   border: 1px solid rgba(0, 0, 0, 0.05); border-radius: 999px; padding: 6px 6px 6px 16px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
