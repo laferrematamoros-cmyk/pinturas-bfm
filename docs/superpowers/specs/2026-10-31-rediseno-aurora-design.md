@@ -92,11 +92,12 @@ Reemplaza la vista grande vieja (encabezado azul marino, pestañas turquesa con 
 cortada, sin el aviso de abajo).
 - **Forma:** en teléfono sube desde abajo (esquinas de arriba redondas, máx. 94dvh): foto
   arriba (52dvh) y panel abajo, que se desliza si no cabe. Desde 640 px es una tarjeta de
-  máx. 1080 × 720 px con la foto a la izquierda (58%) y el panel a la derecha (42%, mín. 300 px).
+  máx. 1480 × 880 px con la foto a la izquierda y el panel a la derecha (32%, entre 300 y 420 px).
   Fondo oscuro desenfocado; se cierra con la ✕, tocando fuera o con Esc.
 - **Foto:** la escena con la pared transparente sobre el color (cambia en 0.5 s); pastillas de
-  Sala · Recámara · Cocina · Fachada encima. Llena su espacio (`cover`): la fachada, que es
-  horizontal, pierde un poco de los lados.
+  Sala · Recámara · Cocina · Fachada encima. Va **completa, sin recortar**: el lienzo toma la
+  forma de la foto (`--ar`, la fachada es horizontal y las demás verticales) y lo que sobra
+  alrededor es la misma foto desenfocada (José pidió que no se recortaran, 2026-11-03).
 - **Panel (teñido del color):** "Así se ve en tu casa", nombre, código · Página; la misma
   fila "¿Más claro o más oscuro?" de la ficha (solo vista de familia); "Velo en otro cuarto"
   con los cuatro cuartos en miniatura ya pintados (2 × 2 en PC, 4 en fila en teléfono); al

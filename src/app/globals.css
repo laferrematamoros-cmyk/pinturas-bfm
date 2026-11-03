@@ -523,16 +523,28 @@ button.ficha-vecino:hover { transform: scale(1.12); }
 }
 @media (min-width: 640px) {
   .estudio {
-    max-width: 1080px; height: min(720px, calc(100dvh - 48px)); max-height: none; border-radius: 24px;
-    display: grid; grid-template-columns: minmax(0, 58fr) minmax(300px, 42fr); animation-name: estudio-entra;
+    max-width: 1480px; height: min(880px, calc(100dvh - 48px)); max-height: none; border-radius: 24px;
+    display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 32%, 420px); animation-name: estudio-entra;
   }
 }
 @keyframes estudio-velo { from { opacity: 0; } }
 @keyframes estudio-sube { from { opacity: 0; transform: translateY(48px); } }
 @keyframes estudio-entra { from { opacity: 0; transform: translateY(16px) scale(0.98); } }
-.estudio-foto { position: relative; flex-shrink: 0; height: 52dvh; overflow: hidden; background-color: var(--color-ficha); transition: background-color 0.5s ease; }
+/* Las fotos tienen formas distintas (la fachada es horizontal, las demás verticales): el lienzo
+   toma la forma de la foto (--ar) y cabe completo; alrededor va la misma foto desenfocada. */
+.estudio-foto { position: relative; flex-shrink: 0; height: 52dvh; overflow: hidden; container-type: size; background: #2a2a2e; }
 @media (min-width: 640px) { .estudio-foto { height: auto; } }
-.estudio-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: estudio-foto 0.35s ease both; }
+.estudio-ambiente {
+  position: absolute; inset: -48px; background-color: var(--color-ficha); filter: blur(32px) brightness(0.88);
+  transition: background-color 0.5s ease; animation: estudio-foto 0.35s ease both;
+}
+.estudio-ambiente img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.estudio-lienzo {
+  position: absolute; inset: 0; margin: auto; background-color: var(--color-ficha); transition: background-color 0.5s ease;
+  width: min(100cqw, 100cqh * var(--ar)); height: min(100cqh, 100cqw / var(--ar));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+.estudio-lienzo img { display: block; width: 100%; height: 100%; animation: estudio-foto 0.35s ease both; }
 @keyframes estudio-foto { from { opacity: 0; } }
 .estudio-escenas { position: absolute; top: 12px; left: 12px; right: 60px; display: flex; flex-wrap: wrap; gap: 6px; }
 @media (min-width: 640px) { .estudio-escenas { top: 16px; left: 16px; right: 16px; } }
@@ -572,8 +584,8 @@ button.ficha-vecino:hover { transform: scale(1.12); }
 .estudio-cerrar svg { width: 16px; height: 16px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .estudio-fondo, .estudio, .estudio-foto img { animation: none; }
-  .estudio-foto, .estudio-mini { transition: none; }
+  .estudio-fondo, .estudio, .estudio-ambiente, .estudio-lienzo img { animation: none; }
+  .estudio-ambiente, .estudio-lienzo, .estudio-mini { transition: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

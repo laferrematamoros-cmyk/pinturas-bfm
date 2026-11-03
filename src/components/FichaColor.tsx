@@ -6,11 +6,12 @@ import React, { useEffect, useRef } from "react";
 // oscuro, precios y botones). El editor de admin sigue en Catalogo. Estilos .ficha-* en
 // globals.css. Al final, la ventana grande "Estudio" (estilos .estudio-*).
 
+// ar = ancho / alto de la foto: la ventana grande la muestra completa con esa forma.
 export const ESCENAS = [
-  { id: "sala", label: "Sala", img: "/sala-sofa.webp", pos: "center 62%" },
-  { id: "recamara", label: "Recámara", img: "/recamara.webp", pos: "center" },
-  { id: "cocina", label: "Cocina", img: "/cocina.webp", pos: "center" },
-  { id: "fachada", label: "Fachada", img: "/fachada.webp", pos: "center" },
+  { id: "sala", label: "Sala", img: "/sala-sofa.webp", pos: "center 62%", ar: 848 / 1264 },
+  { id: "recamara", label: "Recámara", img: "/recamara.webp", pos: "center", ar: 600 / 900 },
+  { id: "cocina", label: "Cocina", img: "/cocina.webp", pos: "center", ar: 600 / 742 },
+  { id: "fachada", label: "Fachada", img: "/fachada.webp", pos: "center", ar: 1408 / 768 },
 ] as const;
 export type Escena = typeof ESCENAS[number]["id"];
 
@@ -183,8 +184,12 @@ export function VentanaEstudio({ hex, nombre, codigo, pagina, vecinos, onVecino,
         style={{ ["--color-ficha" as string]: hex } as React.CSSProperties}
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="estudio-foto">
-          <img key={e.id} src={e.img} alt={`${e.label} con la pared pintada de ${nombre}`} decoding="async" style={{ objectPosition: e.pos }} />
+        {/* La foto va completa (sin recortar) y lo que sobra alrededor es la misma foto desenfocada. */}
+        <div className="estudio-foto" style={{ ["--ar" as string]: e.ar } as React.CSSProperties}>
+          <div key={`fondo-${e.id}`} className="estudio-ambiente" aria-hidden><img src={e.img} alt="" decoding="async" /></div>
+          <div className="estudio-lienzo">
+            <img key={e.id} src={e.img} alt={`${e.label} con la pared pintada de ${nombre}`} decoding="async" />
+          </div>
           <div className="estudio-escenas" role="group" aria-label="Cuarto">
             {ESCENAS.map((x) => (
               <button key={x.id} type="button" className="ficha-escena" aria-pressed={x.id === escena} onClick={() => onEscena(x.id)}>
