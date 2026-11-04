@@ -95,7 +95,8 @@ cortada, sin el aviso de abajo).
   máx. 1480 × 880 px con la foto a la izquierda y el panel a la derecha (32%, entre 300 y 420 px).
   Fondo oscuro desenfocado; se cierra con la ✕, tocando fuera o con Esc.
 - **Foto:** la escena con la pared transparente sobre el color (cambia en 0.5 s); pastillas de
-  Sala · Recámara · Cocina · Fachada encima. Va **completa, sin recortar**: el lienzo toma la
+  Sala · Recámara · Cocina · Fachada encima (solo desde 640 px: en teléfono sobraban y el
+  cuarto se cambia con las miniaturas, 2026-11-04). Va **completa, sin recortar**: el lienzo toma la
   forma de la foto (`--ar`, la fachada es horizontal y las demás verticales) y lo que sobra
   alrededor es la misma foto desenfocada (José pidió que no se recortaran, 2026-11-03).
 - **Panel (teñido del color):** "Así se ve en tu casa", nombre, código · Página; la misma

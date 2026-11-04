@@ -546,8 +546,9 @@ button.ficha-vecino:hover { transform: scale(1.12); }
 }
 .estudio-lienzo img { display: block; width: 100%; height: 100%; animation: estudio-foto 0.35s ease both; }
 @keyframes estudio-foto { from { opacity: 0; } }
-.estudio-escenas { position: absolute; top: 12px; left: 12px; right: 60px; display: flex; flex-wrap: wrap; gap: 6px; }
-@media (min-width: 640px) { .estudio-escenas { top: 16px; left: 16px; right: 16px; } }
+/* En teléfono no van: las miniaturas del panel ya cambian el cuarto (lo pidió José). */
+.estudio-escenas { display: none; }
+@media (min-width: 640px) { .estudio-escenas { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; flex-wrap: wrap; gap: 6px; } }
 .estudio-panel {
   position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   display: flex; flex-direction: column; gap: 18px; padding: 20px 18px calc(16px + env(safe-area-inset-bottom));
